@@ -1,0 +1,5061 @@
+[
+  {
+    "proc_id": "p-6c409f89",
+    "technology": "Kubernetes",
+    "category": "Pods & Containers",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o wide",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl logs <x> -n <x> --all-containers --tail=<n>",
+      "kubectl logs <x> -n <x> --all-containers --previous --tail=<n>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 2,
+    "collapsed_count": 115,
+    "max_risk": 0,
+    "representative_title": "Pod stuck in ContainerCreating",
+    "collapsed_titles": [
+      "CRI reports image filesystem unavailable",
+      "CSI driver registration missing on node",
+      "CSINode object missing expected driver",
+      "CSIStorageCapacity prevents scheduling",
+      "Container exits with code 1",
+      "Container exits with code 126",
+      "Container exits with code 127",
+      "Container exits with code 137",
+      "Container exits with code 139",
+      "Container exits with code 143",
+      "Container ignores SIGTERM",
+      "Container image architecture mismatch",
+      "Container image starts wrong entrypoint",
+      "Container logs are empty",
+      "Container restart rules behave unexpectedly",
+      "Container runtime socket unavailable",
+      "Container user cannot access mounted path",
+      "Container working directory does not exist",
+      "Ephemeral container cannot attach to target process",
+      "Ephemeral container debug fails",
+      "Graceful node shutdown does not preserve expected Pods",
+      "HTTP probe gets unexpected status code",
+      "Init container is stuck",
+      "Kube reserved resources mis-sized",
+      "Kubelet certificate rotation fails",
+      "Kubelet eviction threshold repeatedly triggers",
+      "Kubelet image garbage collection fails",
+      "Kubelet serving certificate causes metrics failure",
+      "Lifecycle postStart hook fails",
+      "Lifecycle preStop hook does not finish",
+      "Liveness probe repeatedly kills healthy-looking container",
+      "Mirror Pod missing for static Pod",
+      "Multi-container pod wrong container selected",
+      "Node DNS configuration breaks Pod DNS",
+      "Node Ready condition oscillates",
+      "Node allocatable differs from capacity",
+      "Node conntrack table exhaustion suspected",
+      "Node debug Pod cannot access expected host path",
+      "Node ephemeral-storage accounting unexpected",
+      "Node filesystem inode pressure",
+      "Node heartbeat delayed",
+      "Node lease stops renewing",
+      "Node local ephemeral storage fills",
+      "Node port exhaustion suspected",
+      "Node shutdown grace period affects Pods",
+      "PV claimRef prevents reuse",
+      "PV mountOptions cause mount failure",
+      "PV nodeAffinity blocks mount",
+      "PV reclaim policy causes unexpected deletion behavior",
+      "PV reclaim policy causes unexpected retained data",
+      "PVC WaitForFirstConsumer never binds",
+      "PVC selector prevents dynamic provisioning",
+      "PVC volumeMode Block mismatch",
+      "Pod CPU throttling suspected",
+      "Pod QoS class unexpected",
+      "Pod cannot reach Kubernetes API",
+      "Pod cannot read mounted ConfigMap",
+      "Pod cannot read mounted Secret",
+      "Pod cannot resolve its own service name",
+      "Pod clock/timezone appears wrong",
+      "Pod command/args override breaks startup",
+      "Pod condition ContainersReady false while Ready false",
+      "Pod condition DisruptionTarget is true",
+      "Pod condition PodReadyToStartContainers remains false",
+      "Pod ephemeral storage exceeded",
+      "Pod evicted for resource pressure",
+      "Pod fails with OCI runtime create error",
+      "Pod filesystem is read-only",
+      "Pod fsGroup permissions problem",
+      "Pod gets permission denied writing filesystem",
+      "Pod has high restart count",
+      "Pod has too many open files",
+      "Pod has unexpected environment variables",
+      "Pod hostname/subdomain resolution issue",
+      "Pod is Ready but application returns errors",
+      "Pod is Running but application is unavailable",
+      "Pod is Running but not Ready",
+      "Pod memory usage continuously grows",
+      "Pod process is zombie/stuck",
+      "Pod readiness gate is false",
+      "Pod restartPolicy does not match expectation",
+      "Pod sandbox creation failed",
+      "Pod sandbox garbage collection issue",
+      "Pod securityContext prevents startup",
+      "Pod shows CreateContainerConfigError",
+      "Pod shows CreateContainerError",
+      "Pod shows ErrImageNeverPull",
+      "Pod shows InvalidImageName",
+      "Pod shows RunContainerError",
+      "Pod shutdown exceeds termination grace period",
+      "Pod stuck in ContainerCreating",
+      "Pod stuck in Terminating",
+      "Previous container logs unavailable",
+      "Probe initial delay too short",
+      "Probe targets wrong named port",
+      "Probe timeout too aggressive",
+      "Projected service account token unavailable",
+      "Projected volume refresh appears stale",
+      "Readiness probe flaps under load",
+      "Sidecar container is failing",
+      "Sidecar delays Pod termination",
+      "Static Pod manifest not reflected correctly",
+      "StorageClass allowVolumeExpansion disabled",
+      "StorageClass allowedTopologies blocks provisioning",
+      "StorageClass reclaimPolicy unexpected",
+      "StorageClass volumeBindingMode unexpected",
+      "System reserved resources starve node services",
+      "TCP probe succeeds but application is unhealthy",
+      "Termination grace period too short",
+      "Volume health reports abnormal condition",
+      "VolumeAttributesClass not accepted",
+      "gRPC probe fails",
+      "kubectl debug ephemeral container lacks required tools",
+      "kubectl debug node fails authorization",
+      "kubectl debug profile lacks required privileges"
+    ],
+    "collapsed_ids": [
+      "k8s-deep-001",
+      "k8s-deep-002",
+      "k8s-deep-003",
+      "k8s-deep-004",
+      "k8s-deep-005",
+      "k8s-deep-006",
+      "k8s-deep-007",
+      "k8s-deep-008",
+      "k8s-deep-009",
+      "k8s-deep-010",
+      "k8s-deep-011",
+      "k8s-deep-012",
+      "k8s-deep-013",
+      "k8s-deep-014",
+      "k8s-deep-015",
+      "k8s-deep-016",
+      "k8s-deep-017",
+      "k8s-deep-018",
+      "k8s-deep-019",
+      "k8s-deep-020",
+      "k8s-deep-021",
+      "k8s-deep-022",
+      "k8s-deep-023",
+      "k8s-deep-024",
+      "k8s-deep-025",
+      "k8s-deep-026",
+      "k8s-deep-027",
+      "k8s-deep-028",
+      "k8s-deep-029",
+      "k8s-deep-030",
+      "k8s-deep-031",
+      "k8s-deep-032",
+      "k8s-deep-033",
+      "k8s-deep-034",
+      "k8s-deep-035",
+      "k8s-deep-036",
+      "k8s-deep-037",
+      "k8s-deep-038",
+      "k8s-deep-039",
+      "k8s-deep-040",
+      "k8s-deep-041",
+      "k8s-deep-042",
+      "k8s-deep-043",
+      "k8s-deep-044",
+      "k8s-deep-045",
+      "k8s-deep-046",
+      "k8s-deep-047",
+      "k8s-research-017",
+      "k8s-research-018",
+      "k8s-research-019",
+      "k8s-research-020",
+      "k8s-research-021",
+      "k8s-research-022",
+      "k8s-research-023",
+      "k8s-research-024",
+      "k8s-research-025",
+      "k8s-research-026",
+      "k8s-research-027",
+      "k8s-research-028",
+      "k8s-research-029",
+      "k8s-research-030",
+      "k8s-research-031",
+      "k8s-research-032",
+      "k8s-research-033",
+      "k8s-research-034",
+      "k8s-research-035",
+      "k8s-research-036",
+      "k8s-research-037",
+      "k8s-research-038",
+      "k8s-research-039",
+      "k8s-research-040",
+      "k8s-research-041",
+      "k8s-research-042",
+      "k8s-research-063",
+      "k8s-research-064",
+      "k8s-research-065",
+      "k8s-research-066",
+      "k8s-research-067",
+      "k8s-research-068",
+      "k8s-research-069",
+      "k8s-research-070",
+      "k8s-research-071",
+      "k8s-research-072",
+      "k8s-research-073",
+      "k8s-research-074",
+      "k8s-research-075",
+      "k8s-research-076",
+      "k8s-research-077",
+      "k8s-research-078",
+      "k8s-research-079",
+      "k8s-research-080",
+      "k8s-research-081",
+      "k8s-research-082",
+      "k8s-research-083",
+      "k8s-research-084",
+      "k8s-research-085",
+      "k8s-research-086",
+      "k8s-research-087",
+      "k8s-research-144",
+      "k8s-research-145",
+      "k8s-research-146",
+      "k8s-research-147",
+      "k8s-research-148",
+      "k8s-research-149",
+      "k8s-research-150",
+      "k8s-research-151",
+      "k8s-research-152",
+      "k8s-research-153",
+      "k8s-research-154",
+      "k8s-research-155",
+      "k8s-research-156",
+      "k8s-research-157",
+      "k8s-research-158",
+      "k8s-research-159",
+      "k8s-research-160"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-7b0764d0",
+    "technology": "Kubernetes",
+    "category": "Ingress, Gateway & TLS",
+    "commands": [
+      "kubectl get ingress -n <x> -o wide",
+      "kubectl describe ingress <x> -n <x>",
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x> -o wide",
+      "kubectl get pods -a -l app.kubernetes.io/component=controller -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 40,
+    "max_risk": 0,
+    "representative_title": "Ingress returns 404",
+    "collapsed_titles": [
+      "Backend HTTPS certificate validation fails",
+      "Gateway Programmed condition false",
+      "Gateway TLS listener certificate issue",
+      "Gateway has no accepted listeners",
+      "Gateway listener hostname does not match Route",
+      "Gateway listener port conflicts",
+      "GatewayClass not accepted",
+      "HTTPRoute ParentRef not accepted",
+      "HTTPRoute backendRef invalid",
+      "HTTPRoute cross-namespace backend blocked by ReferenceGrant",
+      "HTTPRoute hostname intersection empty",
+      "HTTPRoute not accepted",
+      "HTTPRoute rule matches but backend has zero weight",
+      "Ingress TLS certificate expired",
+      "Ingress TLS certificate mismatch",
+      "Ingress address never assigned",
+      "Ingress annotation ignored by controller",
+      "Ingress backend service has no endpoints",
+      "Ingress connection refused",
+      "Ingress controller cannot watch resources",
+      "Ingress controller pod unhealthy",
+      "Ingress controller sees Service but backend port is wrong",
+      "Ingress default backend handles unexpected traffic",
+      "Ingress host/path rule mismatch",
+      "Ingress pathType causes unexpected matching",
+      "Ingress returns 404",
+      "Ingress returns 502",
+      "Ingress returns 503",
+      "Ingress returns 504",
+      "Ingress secret not found",
+      "Ingress status address is stale",
+      "Ingress wildcard host does not match request",
+      "IngressClass mismatch",
+      "Large request rejected by ingress",
+      "Multiple Ingress controllers claim same resource",
+      "Rewrite rule breaks application path",
+      "TLS SNI selects wrong certificate",
+      "TLS secret contains wrong certificate chain",
+      "TLS secret key does not match certificate",
+      "WebSocket upgrade fails through ingress"
+    ],
+    "collapsed_ids": [
+      "k8s-deep-120",
+      "k8s-deep-121",
+      "k8s-deep-122",
+      "k8s-deep-123",
+      "k8s-deep-124",
+      "k8s-deep-125",
+      "k8s-deep-126",
+      "k8s-deep-127",
+      "k8s-deep-128",
+      "k8s-deep-129",
+      "k8s-deep-130",
+      "k8s-deep-131",
+      "k8s-deep-132",
+      "k8s-deep-133",
+      "k8s-deep-134",
+      "k8s-deep-135",
+      "k8s-deep-136",
+      "k8s-deep-137",
+      "k8s-deep-138",
+      "k8s-deep-139",
+      "k8s-research-124",
+      "k8s-research-125",
+      "k8s-research-126",
+      "k8s-research-127",
+      "k8s-research-128",
+      "k8s-research-129",
+      "k8s-research-130",
+      "k8s-research-131",
+      "k8s-research-132",
+      "k8s-research-133",
+      "k8s-research-134",
+      "k8s-research-135",
+      "k8s-research-136",
+      "k8s-research-137",
+      "k8s-research-138",
+      "k8s-research-139",
+      "k8s-research-140",
+      "k8s-research-141",
+      "k8s-research-142",
+      "k8s-research-143"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-737408ba",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get nodes -o wide --show-labels",
+      "kubectl get pod <x> -n <x> -o yaml",
+      "kubectl describe nodes"
+    ],
+    "step_count": 4,
+    "specific_step_count": 3,
+    "collapsed_count": 35,
+    "max_risk": 0,
+    "representative_title": "Pod Pending due to insufficient CPU",
+    "collapsed_titles": [
+      "DaemonSet not scheduled on expected node",
+      "Device plugin resource missing from node capacity",
+      "Extended resource request cannot be satisfied",
+      "GPU workload cannot schedule",
+      "HostPort conflict prevents scheduling",
+      "HugePages workload cannot schedule",
+      "Inter-pod affinity topology key mismatch",
+      "Multiple scheduler profile mismatch",
+      "NoExecute taint evicts Pod unexpectedly",
+      "NoSchedule taint blocks new Pods",
+      "Node label changed after Pod scheduling",
+      "Node-specific volume attachment limit reached",
+      "Pod Pending due to insufficient CPU",
+      "Pod Pending due to insufficient memory",
+      "Pod Pending due to max pod capacity",
+      "Pod Pending due to node affinity",
+      "Pod Pending due to nodeSelector mismatch",
+      "Pod Pending due to pod anti-affinity",
+      "Pod Pending due to taint",
+      "Pod Pending due to topology spread constraints",
+      "Pod Pending due to unbound PVC",
+      "Pod anti-affinity makes workload unschedulable",
+      "Pod blocked by requiredDuringScheduling node affinity",
+      "Pod cannot schedule on desired zone",
+      "Pod overhead causes insufficient resource scheduling",
+      "Pod unexpectedly schedules on wrong node",
+      "Preemption does not free capacity",
+      "Preferred node affinity not influencing placement",
+      "PriorityClass not taking effect",
+      "RuntimeClass scheduling constraint mismatch",
+      "Scheduler reports unschedulable and no clear reason",
+      "Storage capacity tracking prevents placement",
+      "Topology spread maxSkew prevents scheduling",
+      "Topology spread minDomains changes placement",
+      "Volume node affinity conflicts with Pod scheduling"
+    ],
+    "collapsed_ids": [
+      "k8s-deep-048",
+      "k8s-deep-049",
+      "k8s-deep-050",
+      "k8s-deep-051",
+      "k8s-deep-052",
+      "k8s-deep-053",
+      "k8s-deep-054",
+      "k8s-deep-055",
+      "k8s-deep-056",
+      "k8s-deep-057",
+      "k8s-deep-058",
+      "k8s-deep-059",
+      "k8s-deep-060",
+      "k8s-deep-061",
+      "k8s-deep-062",
+      "k8s-deep-063",
+      "k8s-deep-064",
+      "k8s-deep-065",
+      "k8s-research-043",
+      "k8s-research-044",
+      "k8s-research-045",
+      "k8s-research-046",
+      "k8s-research-047",
+      "k8s-research-048",
+      "k8s-research-049",
+      "k8s-research-050",
+      "k8s-research-051",
+      "k8s-research-054",
+      "k8s-research-055",
+      "k8s-research-056",
+      "k8s-research-057",
+      "k8s-research-058",
+      "k8s-research-059",
+      "k8s-research-060",
+      "k8s-research-061"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-0d1b6918",
+    "technology": "Kubernetes",
+    "category": "DNS & CoreDNS",
+    "commands": [
+      "kubectl get pods -n kube-system -l k8s-app=kube-dns -o wide",
+      "kubectl logs -n kube-system -l k8s-app=kube-dns --tail=<n>",
+      "kubectl get configmap coredns -n kube-system -o yaml",
+      "kubectl exec -n <x> <x> -- cat /etc/resolv.conf"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 34,
+    "max_risk": 2,
+    "representative_title": "CoreDNS pods are CrashLooping",
+    "collapsed_titles": [
+      "Cluster DNS works but external DNS fails",
+      "CoreDNS CPU throttling",
+      "CoreDNS ConfigMap change breaks resolution",
+      "CoreDNS cache causes confusing stale answer",
+      "CoreDNS cannot reach upstream resolver",
+      "CoreDNS custom server block conflicts with cluster zone",
+      "CoreDNS forward upstream fails",
+      "CoreDNS has high latency",
+      "CoreDNS log plugin produces excessive load",
+      "CoreDNS loop detected",
+      "CoreDNS pods are CrashLooping",
+      "CoreDNS pods are Pending",
+      "CoreDNS readiness plugin reports not ready",
+      "CoreDNS reload fails after ConfigMap change",
+      "CoreDNS rewrite rule causes resolution loop",
+      "DNS fails only from one node",
+      "DNS fails only in one namespace",
+      "DNS lookup returns NXDOMAIN unexpectedly",
+      "DNS lookup returns SERVFAIL",
+      "DNS lookup times out",
+      "DNS negative caching delays newly created Service resolution",
+      "DNS response truncation or TCP fallback issue",
+      "DNS search path causes unexpected lookup",
+      "External DNS works but cluster DNS fails",
+      "Headless Service returns unexpected multiple addresses",
+      "HostNetwork Pod DNS fails with ClusterFirst",
+      "HostNetwork Pod needs ClusterFirstWithHostNet",
+      "NodeLocal DNSCache issue",
+      "Pod custom dnsConfig search list incorrect",
+      "Pod dnsPolicy None missing nameservers",
+      "Service FQDN resolves to wrong address family",
+      "Short service name fails but FQDN works",
+      "StatefulSet Pod DNS record missing",
+      "ndots causes slow DNS resolution"
+    ],
+    "collapsed_ids": [
+      "k8s-deep-102",
+      "k8s-deep-103",
+      "k8s-deep-104",
+      "k8s-deep-105",
+      "k8s-deep-106",
+      "k8s-deep-107",
+      "k8s-deep-108",
+      "k8s-deep-109",
+      "k8s-deep-110",
+      "k8s-deep-111",
+      "k8s-deep-112",
+      "k8s-deep-113",
+      "k8s-deep-114",
+      "k8s-deep-115",
+      "k8s-deep-116",
+      "k8s-deep-117",
+      "k8s-deep-118",
+      "k8s-deep-119",
+      "k8s-research-108",
+      "k8s-research-109",
+      "k8s-research-110",
+      "k8s-research-111",
+      "k8s-research-112",
+      "k8s-research-113",
+      "k8s-research-114",
+      "k8s-research-115",
+      "k8s-research-116",
+      "k8s-research-117",
+      "k8s-research-118",
+      "k8s-research-119",
+      "k8s-research-120",
+      "k8s-research-121",
+      "k8s-research-122",
+      "k8s-research-123"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-03c10af2",
+    "technology": "Kubernetes",
+    "category": "Services & EndpointSlices",
+    "commands": [
+      "kubectl get svc <x> -n <x> -o yaml",
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x> -o wide",
+      "kubectl get pods -n <x> -l <x> -o wide --show-labels",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 34,
+    "max_risk": 0,
+    "representative_title": "Service has no EndpointSlices",
+    "collapsed_titles": [
+      "ClusterIP connection refused",
+      "ClusterIP times out",
+      "Dual-stack Service has missing IPv4 endpoints",
+      "Dual-stack Service has missing IPv6 endpoints",
+      "EndpointSlice contains stale endpoints",
+      "EndpointSlice missing ready endpoints",
+      "ExternalName Service resolution issue",
+      "ExternalTrafficPolicy changes source IP behavior",
+      "Headless Service DNS issue",
+      "LoadBalancer external IP pending",
+      "LoadBalancer has IP but traffic fails",
+      "LoadBalancer health check node port issue",
+      "LoadBalancer source ranges block client",
+      "NodePort unreachable",
+      "Selectorless Service has no manually managed EndpointSlice",
+      "Service EndpointSlice address family mismatch",
+      "Service EndpointSlice port name mismatch",
+      "Service IP family policy mismatch",
+      "Service externalTrafficPolicy Local has no local endpoint",
+      "Service has endpoints in wrong namespace expectation",
+      "Service has no EndpointSlices",
+      "Service intermittently fails",
+      "Service internalTrafficPolicy Local drops traffic",
+      "Service named targetPort cannot resolve to Pod port",
+      "Service port works inside pod but not through Service",
+      "Service protocol TCP UDP mismatch",
+      "Service publishNotReadyAddresses changes traffic behavior",
+      "Service routes to unready pods unexpectedly",
+      "Service selector does not match pods",
+      "Service sessionAffinity unexpected",
+      "Service targetPort does not match container port",
+      "Service trafficDistribution behaves unexpectedly",
+      "Topology-aware routing has no hints",
+      "Topology-aware routing sends traffic cross-zone"
+    ],
+    "collapsed_ids": [
+      "k8s-deep-084",
+      "k8s-deep-085",
+      "k8s-deep-086",
+      "k8s-deep-087",
+      "k8s-deep-088",
+      "k8s-deep-089",
+      "k8s-deep-090",
+      "k8s-deep-091",
+      "k8s-deep-092",
+      "k8s-deep-093",
+      "k8s-deep-094",
+      "k8s-deep-095",
+      "k8s-deep-096",
+      "k8s-deep-097",
+      "k8s-deep-098",
+      "k8s-deep-099",
+      "k8s-deep-100",
+      "k8s-deep-101",
+      "k8s-research-001",
+      "k8s-research-002",
+      "k8s-research-003",
+      "k8s-research-004",
+      "k8s-research-005",
+      "k8s-research-006",
+      "k8s-research-007",
+      "k8s-research-008",
+      "k8s-research-009",
+      "k8s-research-010",
+      "k8s-research-011",
+      "k8s-research-012",
+      "k8s-research-013",
+      "k8s-research-014",
+      "k8s-research-015",
+      "k8s-research-016"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-23dae24f",
+    "technology": "Kubernetes",
+    "category": "Network & NetworkPolicy",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o wide",
+      "kubectl get networkpolicy -n <x> -o wide",
+      "kubectl describe networkpolicy -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 4,
+    "specific_step_count": 3,
+    "collapsed_count": 24,
+    "max_risk": 0,
+    "representative_title": "Pod-to-pod traffic fails same namespace",
+    "collapsed_titles": [
+      "Conntrack stale entry suspected after endpoint change",
+      "Direct Pod IP works but Service IP fails",
+      "Hairpin Service traffic fails",
+      "HostNetwork Pod connectivity differs from normal Pod",
+      "IPv4 connectivity fails in dual-stack cluster",
+      "IPv6 Pod connectivity fails in dual-stack cluster",
+      "Large packets fail while small packets work",
+      "NetworkPolicy allows traffic in one direction only",
+      "NetworkPolicy controller/CNI does not enforce policy as expected",
+      "NetworkPolicy endPort range does not allow traffic",
+      "NetworkPolicy except CIDR behaves unexpectedly",
+      "NetworkPolicy ipBlock CIDR excludes expected client",
+      "NetworkPolicy named port does not match Pod port",
+      "NetworkPolicy policyTypes unintentionally enables egress isolation",
+      "NetworkPolicy policyTypes unintentionally enables ingress isolation",
+      "Pod DNS works but direct Service IP fails",
+      "Pod localhost communication between containers fails",
+      "Pod outbound internet access fails",
+      "Pod-to-pod traffic fails cross namespace",
+      "Pod-to-pod traffic fails same namespace",
+      "Pod-to-service traffic fails",
+      "SNAT behavior breaks source-address allowlist",
+      "Service IP works but direct Pod IP fails",
+      "hostPort workload unreachable"
+    ],
+    "collapsed_ids": [
+      "k8s-deep-140",
+      "k8s-deep-141",
+      "k8s-deep-142",
+      "k8s-deep-143",
+      "k8s-research-088",
+      "k8s-research-089",
+      "k8s-research-090",
+      "k8s-research-091",
+      "k8s-research-092",
+      "k8s-research-093",
+      "k8s-research-094",
+      "k8s-research-095",
+      "k8s-research-096",
+      "k8s-research-097",
+      "k8s-research-098",
+      "k8s-research-099",
+      "k8s-research-100",
+      "k8s-research-101",
+      "k8s-research-102",
+      "k8s-research-103",
+      "k8s-research-104",
+      "k8s-research-105",
+      "k8s-research-106",
+      "k8s-research-107"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-0844d55c",
+    "technology": "Docker",
+    "category": "Registry, Auth & TLS",
+    "commands": [
+      "docker pull <x>",
+      "docker image inspect <x> --format '{{json .repodigests}}'",
+      "docker info",
+      "docker context show"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 2,
+    "representative_title": "Registry login — Registry, Auth & TLS: fails completely",
+    "collapsed_titles": [
+      "Credential helper — Registry, Auth & TLS: behaves differently than configured",
+      "Credential helper — Registry, Auth & TLS: fails completely",
+      "Credential helper — Registry, Auth & TLS: fails intermittently under load or restart",
+      "Multi-platform manifest — Registry, Auth & TLS: behaves differently than configured",
+      "Multi-platform manifest — Registry, Auth & TLS: fails completely",
+      "Multi-platform manifest — Registry, Auth & TLS: fails intermittently under load or restart",
+      "Registry DNS/connectivity — Registry, Auth & TLS: behaves differently than configured",
+      "Registry DNS/connectivity — Registry, Auth & TLS: fails completely",
+      "Registry DNS/connectivity — Registry, Auth & TLS: fails intermittently under load or restart",
+      "Registry TLS trust — Registry, Auth & TLS: behaves differently than configured",
+      "Registry TLS trust — Registry, Auth & TLS: fails completely",
+      "Registry TLS trust — Registry, Auth & TLS: fails intermittently under load or restart",
+      "Registry login — Registry, Auth & TLS: behaves differently than configured",
+      "Registry login — Registry, Auth & TLS: fails completely",
+      "Registry login — Registry, Auth & TLS: fails intermittently under load or restart",
+      "Registry pull authorization — Registry, Auth & TLS: behaves differently than configured",
+      "Registry pull authorization — Registry, Auth & TLS: fails completely",
+      "Registry pull authorization — Registry, Auth & TLS: fails intermittently under load or restart",
+      "Registry push authorization — Registry, Auth & TLS: behaves differently than configured",
+      "Registry push authorization — Registry, Auth & TLS: fails completely",
+      "Registry push authorization — Registry, Auth & TLS: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-232",
+      "docker-233",
+      "docker-234",
+      "docker-235",
+      "docker-236",
+      "docker-237",
+      "docker-238",
+      "docker-239",
+      "docker-240",
+      "docker-241",
+      "docker-242",
+      "docker-243",
+      "docker-244",
+      "docker-245",
+      "docker-246",
+      "docker-247",
+      "docker-248",
+      "docker-249",
+      "docker-250",
+      "docker-251",
+      "docker-252"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-1027bd72",
+    "technology": "Docker",
+    "category": "Build Context & .dockerignore",
+    "commands": [
+      "docker buildx build --progress=plain -f <x> <x>",
+      "docker buildx build --check -f <x> <x>",
+      "docker buildx build --call=targets -f <x> <x>",
+      "docker buildx inspect --bootstrap"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 2,
+    "representative_title": "Build context size — Build Context & .dockerignore: fails completely",
+    "collapsed_titles": [
+      ".dockerignore rule — Build Context & .dockerignore: behaves differently than configured",
+      ".dockerignore rule — Build Context & .dockerignore: fails completely",
+      ".dockerignore rule — Build Context & .dockerignore: fails intermittently under load or restart",
+      "Build context size — Build Context & .dockerignore: behaves differently than configured",
+      "Build context size — Build Context & .dockerignore: fails completely",
+      "Build context size — Build Context & .dockerignore: fails intermittently under load or restart",
+      "Context permissions — Build Context & .dockerignore: behaves differently than configured",
+      "Context permissions — Build Context & .dockerignore: fails completely",
+      "Context permissions — Build Context & .dockerignore: fails intermittently under load or restart",
+      "Dockerfile/context path — Build Context & .dockerignore: behaves differently than configured",
+      "Dockerfile/context path — Build Context & .dockerignore: fails completely",
+      "Dockerfile/context path — Build Context & .dockerignore: fails intermittently under load or restart",
+      "Git build context — Build Context & .dockerignore: behaves differently than configured",
+      "Git build context — Build Context & .dockerignore: fails completely",
+      "Git build context — Build Context & .dockerignore: fails intermittently under load or restart",
+      "Named build context — Build Context & .dockerignore: behaves differently than configured",
+      "Named build context — Build Context & .dockerignore: fails completely",
+      "Named build context — Build Context & .dockerignore: fails intermittently under load or restart",
+      "Required context file — Build Context & .dockerignore: behaves differently than configured",
+      "Required context file — Build Context & .dockerignore: fails completely",
+      "Required context file — Build Context & .dockerignore: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-274",
+      "docker-275",
+      "docker-276",
+      "docker-277",
+      "docker-278",
+      "docker-279",
+      "docker-280",
+      "docker-281",
+      "docker-282",
+      "docker-283",
+      "docker-284",
+      "docker-285",
+      "docker-286",
+      "docker-287",
+      "docker-288",
+      "docker-289",
+      "docker-290",
+      "docker-291",
+      "docker-292",
+      "docker-293",
+      "docker-294"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-76e47f16",
+    "technology": "Docker",
+    "category": "BuildKit & Cache",
+    "commands": [
+      "docker buildx inspect --bootstrap",
+      "docker buildx du",
+      "docker buildx build --progress=plain -f <x> <x>",
+      "docker buildx build --no-cache --progress=plain -f <x> <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 2,
+    "representative_title": "BuildKit cache reuse — BuildKit & Cache: fails completely",
+    "collapsed_titles": [
+      "Build result output — BuildKit & Cache: behaves differently than configured",
+      "Build result output — BuildKit & Cache: fails completely",
+      "Build result output — BuildKit & Cache: fails intermittently under load or restart",
+      "Build secret — BuildKit & Cache: behaves differently than configured",
+      "Build secret — BuildKit & Cache: fails completely",
+      "Build secret — BuildKit & Cache: fails intermittently under load or restart",
+      "BuildKit cache reuse — BuildKit & Cache: behaves differently than configured",
+      "BuildKit cache reuse — BuildKit & Cache: fails completely",
+      "BuildKit cache reuse — BuildKit & Cache: fails intermittently under load or restart",
+      "Cache invalidation — BuildKit & Cache: behaves differently than configured",
+      "Cache invalidation — BuildKit & Cache: fails completely",
+      "Cache invalidation — BuildKit & Cache: fails intermittently under load or restart",
+      "Cache mount — BuildKit & Cache: behaves differently than configured",
+      "Cache mount — BuildKit & Cache: fails completely",
+      "Cache mount — BuildKit & Cache: fails intermittently under load or restart",
+      "External cache import/export — BuildKit & Cache: behaves differently than configured",
+      "External cache import/export — BuildKit & Cache: fails completely",
+      "External cache import/export — BuildKit & Cache: fails intermittently under load or restart",
+      "SSH mount — BuildKit & Cache: behaves differently than configured",
+      "SSH mount — BuildKit & Cache: fails completely",
+      "SSH mount — BuildKit & Cache: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-295",
+      "docker-296",
+      "docker-297",
+      "docker-298",
+      "docker-299",
+      "docker-300",
+      "docker-301",
+      "docker-302",
+      "docker-303",
+      "docker-304",
+      "docker-305",
+      "docker-306",
+      "docker-307",
+      "docker-308",
+      "docker-309",
+      "docker-310",
+      "docker-311",
+      "docker-312",
+      "docker-313",
+      "docker-314",
+      "docker-315"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-4b22e5c0",
+    "technology": "Docker",
+    "category": "Buildx & Multi-platform",
+    "commands": [
+      "docker buildx ls",
+      "docker buildx inspect --bootstrap",
+      "docker buildx imagetools inspect <x>",
+      "docker buildx build --platform <x> --progress=plain -f <x> <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 2,
+    "representative_title": "Selected builder — Buildx & Multi-platform: fails completely",
+    "collapsed_titles": [
+      "BUILDPLATFORM/TARGETPLATFORM — Buildx & Multi-platform: behaves differently than configured",
+      "BUILDPLATFORM/TARGETPLATFORM — Buildx & Multi-platform: fails completely",
+      "BUILDPLATFORM/TARGETPLATFORM — Buildx & Multi-platform: fails intermittently under load or restart",
+      "Builder node — Buildx & Multi-platform: behaves differently than configured",
+      "Builder node — Buildx & Multi-platform: fails completely",
+      "Builder node — Buildx & Multi-platform: fails intermittently under load or restart",
+      "Multi-platform cache — Buildx & Multi-platform: behaves differently than configured",
+      "Multi-platform cache — Buildx & Multi-platform: fails completely",
+      "Multi-platform cache — Buildx & Multi-platform: fails intermittently under load or restart",
+      "Multi-platform manifest — Buildx & Multi-platform: behaves differently than configured",
+      "Multi-platform manifest — Buildx & Multi-platform: fails completely",
+      "Multi-platform manifest — Buildx & Multi-platform: fails intermittently under load or restart",
+      "QEMU emulation — Buildx & Multi-platform: behaves differently than configured",
+      "QEMU emulation — Buildx & Multi-platform: fails completely",
+      "QEMU emulation — Buildx & Multi-platform: fails intermittently under load or restart",
+      "Selected builder — Buildx & Multi-platform: behaves differently than configured",
+      "Selected builder — Buildx & Multi-platform: fails completely",
+      "Selected builder — Buildx & Multi-platform: fails intermittently under load or restart",
+      "Target platform — Buildx & Multi-platform: behaves differently than configured",
+      "Target platform — Buildx & Multi-platform: fails completely",
+      "Target platform — Buildx & Multi-platform: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-316",
+      "docker-317",
+      "docker-318",
+      "docker-319",
+      "docker-320",
+      "docker-321",
+      "docker-322",
+      "docker-323",
+      "docker-324",
+      "docker-325",
+      "docker-326",
+      "docker-327",
+      "docker-328",
+      "docker-329",
+      "docker-330",
+      "docker-331",
+      "docker-332",
+      "docker-333",
+      "docker-334",
+      "docker-335",
+      "docker-336"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-33e29505",
+    "technology": "Docker",
+    "category": "DNS, Proxy & Egress",
+    "commands": [
+      "docker inspect <x> --format 'dns={{json .hostconfig.dns}} search={{json .hostconfig.dnssearch}} extrahosts={{json .hostconfig.extrahosts}}'",
+      "docker inspect <x> --format '{{json .networksettings.networks}}'",
+      "docker inspect <x> --format '{{json .config.env}}'",
+      "docker info"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 1,
+    "representative_title": "Container DNS — DNS, Proxy & Egress: fails completely",
+    "collapsed_titles": [
+      "Container DNS — DNS, Proxy & Egress: behaves differently than configured",
+      "Container DNS — DNS, Proxy & Egress: fails completely",
+      "Container DNS — DNS, Proxy & Egress: fails intermittently under load or restart",
+      "Embedded DNS service discovery — DNS, Proxy & Egress: behaves differently than configured",
+      "Embedded DNS service discovery — DNS, Proxy & Egress: fails completely",
+      "Embedded DNS service discovery — DNS, Proxy & Egress: fails intermittently under load or restart",
+      "External egress — DNS, Proxy & Egress: behaves differently than configured",
+      "External egress — DNS, Proxy & Egress: fails completely",
+      "External egress — DNS, Proxy & Egress: fails intermittently under load or restart",
+      "HTTP proxy — DNS, Proxy & Egress: behaves differently than configured",
+      "HTTP proxy — DNS, Proxy & Egress: fails completely",
+      "HTTP proxy — DNS, Proxy & Egress: fails intermittently under load or restart",
+      "HTTPS proxy — DNS, Proxy & Egress: behaves differently than configured",
+      "HTTPS proxy — DNS, Proxy & Egress: fails completely",
+      "HTTPS proxy — DNS, Proxy & Egress: fails intermittently under load or restart",
+      "NO_PROXY — DNS, Proxy & Egress: behaves differently than configured",
+      "NO_PROXY — DNS, Proxy & Egress: fails completely",
+      "NO_PROXY — DNS, Proxy & Egress: fails intermittently under load or restart",
+      "VPN/MTU path — DNS, Proxy & Egress: behaves differently than configured",
+      "VPN/MTU path — DNS, Proxy & Egress: fails completely",
+      "VPN/MTU path — DNS, Proxy & Egress: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-148",
+      "docker-149",
+      "docker-150",
+      "docker-151",
+      "docker-152",
+      "docker-153",
+      "docker-154",
+      "docker-155",
+      "docker-156",
+      "docker-157",
+      "docker-158",
+      "docker-159",
+      "docker-160",
+      "docker-161",
+      "docker-162",
+      "docker-163",
+      "docker-164",
+      "docker-165",
+      "docker-166",
+      "docker-167",
+      "docker-168"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-c451aab4",
+    "technology": "Docker",
+    "category": "Security, Users & Capabilities",
+    "commands": [
+      "docker inspect <x> --format 'user={{.config.user}} privileged={{.hostconfig.privileged}} readonlyrootfs={{.hostconfig.readonlyrootfs}} capadd={{json .hostconfig.capadd}} capdrop={{json .hostconfig.capdrop}} securityopt={{json .hostconfig.securityopt}}'",
+      "docker inspect <x> --format '{{json .mounts}}'",
+      "docker inspect <x> --format '{{json .config.env}}'",
+      "docker top <x> -eo pid,ppid,user,group,args"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 1,
+    "representative_title": "Container user/UID — Security, Users & Capabilities: fails completely",
+    "collapsed_titles": [
+      "Container user/UID — Security, Users & Capabilities: behaves differently than configured",
+      "Container user/UID — Security, Users & Capabilities: fails completely",
+      "Container user/UID — Security, Users & Capabilities: fails intermittently under load or restart",
+      "Device access — Security, Users & Capabilities: behaves differently than configured",
+      "Device access — Security, Users & Capabilities: fails completely",
+      "Device access — Security, Users & Capabilities: fails intermittently under load or restart",
+      "Docker socket mount — Security, Users & Capabilities: behaves differently than configured",
+      "Docker socket mount — Security, Users & Capabilities: fails completely",
+      "Docker socket mount — Security, Users & Capabilities: fails intermittently under load or restart",
+      "Linux capability — Security, Users & Capabilities: behaves differently than configured",
+      "Linux capability — Security, Users & Capabilities: fails completely",
+      "Linux capability — Security, Users & Capabilities: fails intermittently under load or restart",
+      "Read-only root filesystem — Security, Users & Capabilities: behaves differently than configured",
+      "Read-only root filesystem — Security, Users & Capabilities: fails completely",
+      "Read-only root filesystem — Security, Users & Capabilities: fails intermittently under load or restart",
+      "Seccomp/AppArmor/SELinux — Security, Users & Capabilities: behaves differently than configured",
+      "Seccomp/AppArmor/SELinux — Security, Users & Capabilities: fails completely",
+      "Seccomp/AppArmor/SELinux — Security, Users & Capabilities: fails intermittently under load or restart",
+      "Secret exposure — Security, Users & Capabilities: behaves differently than configured",
+      "Secret exposure — Security, Users & Capabilities: fails completely",
+      "Secret exposure — Security, Users & Capabilities: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-379",
+      "docker-380",
+      "docker-381",
+      "docker-382",
+      "docker-383",
+      "docker-384",
+      "docker-385",
+      "docker-386",
+      "docker-387",
+      "docker-388",
+      "docker-389",
+      "docker-390",
+      "docker-391",
+      "docker-392",
+      "docker-393",
+      "docker-394",
+      "docker-395",
+      "docker-396",
+      "docker-397",
+      "docker-398",
+      "docker-399"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-db74e7d9",
+    "technology": "Docker",
+    "category": "Engine & Daemon",
+    "commands": [
+      "docker version",
+      "docker info",
+      "docker context show",
+      "docker context ls"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Daemon startup — Engine & Daemon: fails completely",
+    "collapsed_titles": [
+      "Daemon API responsiveness — Engine & Daemon: behaves differently than configured",
+      "Daemon API responsiveness — Engine & Daemon: fails completely",
+      "Daemon API responsiveness — Engine & Daemon: fails intermittently under load or restart",
+      "Daemon configuration — Engine & Daemon: behaves differently than configured",
+      "Daemon configuration — Engine & Daemon: fails completely",
+      "Daemon configuration — Engine & Daemon: fails intermittently under load or restart",
+      "Daemon proxy/DNS — Engine & Daemon: behaves differently than configured",
+      "Daemon proxy/DNS — Engine & Daemon: fails completely",
+      "Daemon proxy/DNS — Engine & Daemon: fails intermittently under load or restart",
+      "Daemon startup — Engine & Daemon: behaves differently than configured",
+      "Daemon startup — Engine & Daemon: fails completely",
+      "Daemon startup — Engine & Daemon: fails intermittently under load or restart",
+      "Data-root access — Engine & Daemon: behaves differently than configured",
+      "Data-root access — Engine & Daemon: fails completely",
+      "Data-root access — Engine & Daemon: fails intermittently under load or restart",
+      "Docker context endpoint — Engine & Daemon: behaves differently than configured",
+      "Docker context endpoint — Engine & Daemon: fails completely",
+      "Docker context endpoint — Engine & Daemon: fails intermittently under load or restart",
+      "Docker socket access — Engine & Daemon: behaves differently than configured",
+      "Docker socket access — Engine & Daemon: fails completely",
+      "Docker socket access — Engine & Daemon: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-001",
+      "docker-002",
+      "docker-003",
+      "docker-004",
+      "docker-005",
+      "docker-006",
+      "docker-007",
+      "docker-008",
+      "docker-009",
+      "docker-010",
+      "docker-011",
+      "docker-012",
+      "docker-013",
+      "docker-014",
+      "docker-015",
+      "docker-016",
+      "docker-017",
+      "docker-018",
+      "docker-019",
+      "docker-020",
+      "docker-021"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-f28e764b",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "commands": [
+      "docker inspect <x> --format '{{json .state}}'",
+      "docker logs --tail 200 --timestamps <x>",
+      "docker inspect <x> --format 'path={{.path}} args={{json .args}}'",
+      "docker inspect <x> --format '{{json .hostconfig.restartpolicy}}'"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Container startup — Container Lifecycle: fails completely",
+    "collapsed_titles": [
+      "Container pause/unpause — Container Lifecycle: behaves differently than configured",
+      "Container pause/unpause — Container Lifecycle: fails completely",
+      "Container pause/unpause — Container Lifecycle: fails intermittently under load or restart",
+      "Container removal — Container Lifecycle: behaves differently than configured",
+      "Container removal — Container Lifecycle: fails completely",
+      "Container removal — Container Lifecycle: fails intermittently under load or restart",
+      "Container restart loop — Container Lifecycle: behaves differently than configured",
+      "Container restart loop — Container Lifecycle: fails completely",
+      "Container restart loop — Container Lifecycle: fails intermittently under load or restart",
+      "Container shutdown — Container Lifecycle: behaves differently than configured",
+      "Container shutdown — Container Lifecycle: fails completely",
+      "Container shutdown — Container Lifecycle: fails intermittently under load or restart",
+      "Container startup — Container Lifecycle: behaves differently than configured",
+      "Container startup — Container Lifecycle: fails completely",
+      "Container startup — Container Lifecycle: fails intermittently under load or restart",
+      "Runtime command — Container Lifecycle: behaves differently than configured",
+      "Runtime command — Container Lifecycle: fails completely",
+      "Runtime command — Container Lifecycle: fails intermittently under load or restart",
+      "Runtime working directory — Container Lifecycle: behaves differently than configured",
+      "Runtime working directory — Container Lifecycle: fails completely",
+      "Runtime working directory — Container Lifecycle: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-022",
+      "docker-023",
+      "docker-024",
+      "docker-025",
+      "docker-026",
+      "docker-027",
+      "docker-028",
+      "docker-029",
+      "docker-030",
+      "docker-031",
+      "docker-032",
+      "docker-033",
+      "docker-034",
+      "docker-035",
+      "docker-036",
+      "docker-037",
+      "docker-038",
+      "docker-039",
+      "docker-040",
+      "docker-041",
+      "docker-042"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-82cfff14",
+    "technology": "Docker",
+    "category": "Entrypoint, PID 1 & Signals",
+    "commands": [
+      "docker image inspect <x> --format 'entrypoint={{json .config.entrypoint}} cmd={{json .config.cmd}} stopsignal={{.config.stopsignal}} user={{.config.user}} workingdir={{.config.workingdir}}'",
+      "docker inspect <x> --format 'path={{.path}} args={{json .args}}'",
+      "docker top <x> -eo pid,ppid,user,stat,args",
+      "docker inspect <x> --format 'stopsignal={{.config.stopsignal}} stoptimeout={{.config.stoptimeout}}'"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "ENTRYPOINT executable — Entrypoint, PID 1 & Signals: fails completely",
+    "collapsed_titles": [
+      "CMD arguments — Entrypoint, PID 1 & Signals: behaves differently than configured",
+      "CMD arguments — Entrypoint, PID 1 & Signals: fails completely",
+      "CMD arguments — Entrypoint, PID 1 & Signals: fails intermittently under load or restart",
+      "Child process reaping — Entrypoint, PID 1 & Signals: behaves differently than configured",
+      "Child process reaping — Entrypoint, PID 1 & Signals: fails completely",
+      "Child process reaping — Entrypoint, PID 1 & Signals: fails intermittently under load or restart",
+      "ENTRYPOINT executable — Entrypoint, PID 1 & Signals: behaves differently than configured",
+      "ENTRYPOINT executable — Entrypoint, PID 1 & Signals: fails completely",
+      "ENTRYPOINT executable — Entrypoint, PID 1 & Signals: fails intermittently under load or restart",
+      "Entrypoint script permissions — Entrypoint, PID 1 & Signals: behaves differently than configured",
+      "Entrypoint script permissions — Entrypoint, PID 1 & Signals: fails completely",
+      "Entrypoint script permissions — Entrypoint, PID 1 & Signals: fails intermittently under load or restart",
+      "PID 1 signal handling — Entrypoint, PID 1 & Signals: behaves differently than configured",
+      "PID 1 signal handling — Entrypoint, PID 1 & Signals: fails completely",
+      "PID 1 signal handling — Entrypoint, PID 1 & Signals: fails intermittently under load or restart",
+      "STOPSIGNAL behavior — Entrypoint, PID 1 & Signals: behaves differently than configured",
+      "STOPSIGNAL behavior — Entrypoint, PID 1 & Signals: fails completely",
+      "STOPSIGNAL behavior — Entrypoint, PID 1 & Signals: fails intermittently under load or restart",
+      "Shell versus exec form — Entrypoint, PID 1 & Signals: behaves differently than configured",
+      "Shell versus exec form — Entrypoint, PID 1 & Signals: fails completely",
+      "Shell versus exec form — Entrypoint, PID 1 & Signals: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-043",
+      "docker-044",
+      "docker-045",
+      "docker-046",
+      "docker-047",
+      "docker-048",
+      "docker-049",
+      "docker-050",
+      "docker-051",
+      "docker-052",
+      "docker-053",
+      "docker-054",
+      "docker-055",
+      "docker-056",
+      "docker-057",
+      "docker-058",
+      "docker-059",
+      "docker-060",
+      "docker-061",
+      "docker-062",
+      "docker-063"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-79c51095",
+    "technology": "Docker",
+    "category": "Health & Restart Policies",
+    "commands": [
+      "docker inspect <x> --format '{{json .state.health}}'",
+      "docker inspect <x> --format '{{json .config.healthcheck}}'",
+      "docker inspect <x> --format 'restarting={{.state.restarting}} restartcount={{.restartcount}} exitcode={{.state.exitcode}} oomkilled={{.state.oomkilled}}'",
+      "docker logs --tail 200 --timestamps <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Healthcheck command — Health & Restart Policies: fails completely",
+    "collapsed_titles": [
+      "Dependency readiness — Health & Restart Policies: behaves differently than configured",
+      "Dependency readiness — Health & Restart Policies: fails completely",
+      "Dependency readiness — Health & Restart Policies: fails intermittently under load or restart",
+      "Healthcheck command — Health & Restart Policies: behaves differently than configured",
+      "Healthcheck command — Health & Restart Policies: fails completely",
+      "Healthcheck command — Health & Restart Policies: fails intermittently under load or restart",
+      "Healthcheck endpoint — Health & Restart Policies: behaves differently than configured",
+      "Healthcheck endpoint — Health & Restart Policies: fails completely",
+      "Healthcheck endpoint — Health & Restart Policies: fails intermittently under load or restart",
+      "Healthcheck timing — Health & Restart Policies: behaves differently than configured",
+      "Healthcheck timing — Health & Restart Policies: fails completely",
+      "Healthcheck timing — Health & Restart Policies: fails intermittently under load or restart",
+      "Inherited image healthcheck — Health & Restart Policies: behaves differently than configured",
+      "Inherited image healthcheck — Health & Restart Policies: fails completely",
+      "Inherited image healthcheck — Health & Restart Policies: fails intermittently under load or restart",
+      "Restart count — Health & Restart Policies: behaves differently than configured",
+      "Restart count — Health & Restart Policies: fails completely",
+      "Restart count — Health & Restart Policies: fails intermittently under load or restart",
+      "Restart policy — Health & Restart Policies: behaves differently than configured",
+      "Restart policy — Health & Restart Policies: fails completely",
+      "Restart policy — Health & Restart Policies: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-064",
+      "docker-065",
+      "docker-066",
+      "docker-067",
+      "docker-068",
+      "docker-069",
+      "docker-070",
+      "docker-071",
+      "docker-072",
+      "docker-073",
+      "docker-074",
+      "docker-075",
+      "docker-076",
+      "docker-077",
+      "docker-078",
+      "docker-079",
+      "docker-080",
+      "docker-081",
+      "docker-082",
+      "docker-083",
+      "docker-084"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-dd3ccf16",
+    "technology": "Docker",
+    "category": "Logs, Exec & Debugging",
+    "commands": [
+      "docker inspect <x> --format '{{.hostconfig.logconfig.type}} {{json .hostconfig.logconfig.config}}'",
+      "docker logs --tail 200 --timestamps <x>",
+      "docker top <x> -eo pid,ppid,user,stat,args",
+      "docker diff <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Docker logs output — Logs, Exec & Debugging: fails completely",
+    "collapsed_titles": [
+      "Container process visibility — Logs, Exec & Debugging: behaves differently than configured",
+      "Container process visibility — Logs, Exec & Debugging: fails completely",
+      "Container process visibility — Logs, Exec & Debugging: fails intermittently under load or restart",
+      "Docker exec — Logs, Exec & Debugging: behaves differently than configured",
+      "Docker exec — Logs, Exec & Debugging: fails completely",
+      "Docker exec — Logs, Exec & Debugging: fails intermittently under load or restart",
+      "Docker logs output — Logs, Exec & Debugging: behaves differently than configured",
+      "Docker logs output — Logs, Exec & Debugging: fails completely",
+      "Docker logs output — Logs, Exec & Debugging: fails intermittently under load or restart",
+      "Interactive TTY — Logs, Exec & Debugging: behaves differently than configured",
+      "Interactive TTY — Logs, Exec & Debugging: fails completely",
+      "Interactive TTY — Logs, Exec & Debugging: fails intermittently under load or restart",
+      "Log rotation — Logs, Exec & Debugging: behaves differently than configured",
+      "Log rotation — Logs, Exec & Debugging: fails completely",
+      "Log rotation — Logs, Exec & Debugging: fails intermittently under load or restart",
+      "Logging driver — Logs, Exec & Debugging: behaves differently than configured",
+      "Logging driver — Logs, Exec & Debugging: fails completely",
+      "Logging driver — Logs, Exec & Debugging: fails intermittently under load or restart",
+      "Runtime filesystem inspection — Logs, Exec & Debugging: behaves differently than configured",
+      "Runtime filesystem inspection — Logs, Exec & Debugging: fails completely",
+      "Runtime filesystem inspection — Logs, Exec & Debugging: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-085",
+      "docker-086",
+      "docker-087",
+      "docker-088",
+      "docker-089",
+      "docker-090",
+      "docker-091",
+      "docker-092",
+      "docker-093",
+      "docker-094",
+      "docker-095",
+      "docker-096",
+      "docker-097",
+      "docker-098",
+      "docker-099",
+      "docker-100",
+      "docker-101",
+      "docker-102",
+      "docker-103",
+      "docker-104",
+      "docker-105"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-0cc8ebd6",
+    "technology": "Docker",
+    "category": "CPU, Memory & Cgroups",
+    "commands": [
+      "docker stats --no-stream <x>",
+      "docker inspect <x> --format 'memory={{.hostconfig.memory}} nanocpus={{.hostconfig.nanocpus}} pidslimit={{.hostconfig.pidslimit}}'",
+      "docker inspect <x> --format 'oomkilled={{.state.oomkilled}} exitcode={{.state.exitcode}} error={{.state.error}}'",
+      "docker info --format 'cgroupdriver={{.cgroupdriver}} cgroupversion={{.cgroupversion}}'"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Memory limit — CPU, Memory & Cgroups: fails completely",
+    "collapsed_titles": [
+      "Block I/O pressure — CPU, Memory & Cgroups: behaves differently than configured",
+      "Block I/O pressure — CPU, Memory & Cgroups: fails completely",
+      "Block I/O pressure — CPU, Memory & Cgroups: fails intermittently under load or restart",
+      "CPU limit — CPU, Memory & Cgroups: behaves differently than configured",
+      "CPU limit — CPU, Memory & Cgroups: fails completely",
+      "CPU limit — CPU, Memory & Cgroups: fails intermittently under load or restart",
+      "CPU throttling — CPU, Memory & Cgroups: behaves differently than configured",
+      "CPU throttling — CPU, Memory & Cgroups: fails completely",
+      "CPU throttling — CPU, Memory & Cgroups: fails intermittently under load or restart",
+      "Cgroup controller — CPU, Memory & Cgroups: behaves differently than configured",
+      "Cgroup controller — CPU, Memory & Cgroups: fails completely",
+      "Cgroup controller — CPU, Memory & Cgroups: fails intermittently under load or restart",
+      "Memory limit — CPU, Memory & Cgroups: behaves differently than configured",
+      "Memory limit — CPU, Memory & Cgroups: fails completely",
+      "Memory limit — CPU, Memory & Cgroups: fails intermittently under load or restart",
+      "OOM behavior — CPU, Memory & Cgroups: behaves differently than configured",
+      "OOM behavior — CPU, Memory & Cgroups: fails completely",
+      "OOM behavior — CPU, Memory & Cgroups: fails intermittently under load or restart",
+      "PID limit — CPU, Memory & Cgroups: behaves differently than configured",
+      "PID limit — CPU, Memory & Cgroups: fails completely",
+      "PID limit — CPU, Memory & Cgroups: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-106",
+      "docker-107",
+      "docker-108",
+      "docker-109",
+      "docker-110",
+      "docker-111",
+      "docker-112",
+      "docker-113",
+      "docker-114",
+      "docker-115",
+      "docker-116",
+      "docker-117",
+      "docker-118",
+      "docker-119",
+      "docker-120",
+      "docker-121",
+      "docker-122",
+      "docker-123",
+      "docker-124",
+      "docker-125",
+      "docker-126"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-fd997bea",
+    "technology": "Docker",
+    "category": "Networking & Port Publishing",
+    "commands": [
+      "docker port <x>",
+      "docker inspect <x> --format '{{json .networksettings.networks}}'",
+      "docker network inspect <x>",
+      "docker inspect <x> --format '{{json .networksettings.ports}}'"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Published TCP port — Networking & Port Publishing: fails completely",
+    "collapsed_titles": [
+      "Bridge connectivity — Networking & Port Publishing: behaves differently than configured",
+      "Bridge connectivity — Networking & Port Publishing: fails completely",
+      "Bridge connectivity — Networking & Port Publishing: fails intermittently under load or restart",
+      "Container listener address — Networking & Port Publishing: behaves differently than configured",
+      "Container listener address — Networking & Port Publishing: fails completely",
+      "Container listener address — Networking & Port Publishing: fails intermittently under load or restart",
+      "Host-to-container path — Networking & Port Publishing: behaves differently than configured",
+      "Host-to-container path — Networking & Port Publishing: fails completely",
+      "Host-to-container path — Networking & Port Publishing: fails intermittently under load or restart",
+      "Multi-network routing — Networking & Port Publishing: behaves differently than configured",
+      "Multi-network routing — Networking & Port Publishing: fails completely",
+      "Multi-network routing — Networking & Port Publishing: fails intermittently under load or restart",
+      "Published TCP port — Networking & Port Publishing: behaves differently than configured",
+      "Published TCP port — Networking & Port Publishing: fails completely",
+      "Published TCP port — Networking & Port Publishing: fails intermittently under load or restart",
+      "Published UDP port — Networking & Port Publishing: behaves differently than configured",
+      "Published UDP port — Networking & Port Publishing: fails completely",
+      "Published UDP port — Networking & Port Publishing: fails intermittently under load or restart",
+      "User-defined network — Networking & Port Publishing: behaves differently than configured",
+      "User-defined network — Networking & Port Publishing: fails completely",
+      "User-defined network — Networking & Port Publishing: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-127",
+      "docker-128",
+      "docker-129",
+      "docker-130",
+      "docker-131",
+      "docker-132",
+      "docker-133",
+      "docker-134",
+      "docker-135",
+      "docker-136",
+      "docker-137",
+      "docker-138",
+      "docker-139",
+      "docker-140",
+      "docker-141",
+      "docker-142",
+      "docker-143",
+      "docker-144",
+      "docker-145",
+      "docker-146",
+      "docker-147"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-12f3e8e5",
+    "technology": "Docker",
+    "category": "Volumes & Bind Mounts",
+    "commands": [
+      "docker inspect <x> --format '{{json .mounts}}'",
+      "docker volume inspect <x>",
+      "docker volume ls",
+      "docker diff <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Named volume — Volumes & Bind Mounts: fails completely",
+    "collapsed_titles": [
+      "Bind mount source — Volumes & Bind Mounts: behaves differently than configured",
+      "Bind mount source — Volumes & Bind Mounts: fails completely",
+      "Bind mount source — Volumes & Bind Mounts: fails intermittently under load or restart",
+      "Bind propagation — Volumes & Bind Mounts: behaves differently than configured",
+      "Bind propagation — Volumes & Bind Mounts: fails completely",
+      "Bind propagation — Volumes & Bind Mounts: fails intermittently under load or restart",
+      "Mount destination — Volumes & Bind Mounts: behaves differently than configured",
+      "Mount destination — Volumes & Bind Mounts: fails completely",
+      "Mount destination — Volumes & Bind Mounts: fails intermittently under load or restart",
+      "Mount permissions — Volumes & Bind Mounts: behaves differently than configured",
+      "Mount permissions — Volumes & Bind Mounts: fails completely",
+      "Mount permissions — Volumes & Bind Mounts: fails intermittently under load or restart",
+      "Named volume — Volumes & Bind Mounts: behaves differently than configured",
+      "Named volume — Volumes & Bind Mounts: fails completely",
+      "Named volume — Volumes & Bind Mounts: fails intermittently under load or restart",
+      "Runtime data persistence — Volumes & Bind Mounts: behaves differently than configured",
+      "Runtime data persistence — Volumes & Bind Mounts: fails completely",
+      "Runtime data persistence — Volumes & Bind Mounts: fails intermittently under load or restart",
+      "Volume ownership — Volumes & Bind Mounts: behaves differently than configured",
+      "Volume ownership — Volumes & Bind Mounts: fails completely",
+      "Volume ownership — Volumes & Bind Mounts: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-169",
+      "docker-170",
+      "docker-171",
+      "docker-172",
+      "docker-173",
+      "docker-174",
+      "docker-175",
+      "docker-176",
+      "docker-177",
+      "docker-178",
+      "docker-179",
+      "docker-180",
+      "docker-181",
+      "docker-182",
+      "docker-183",
+      "docker-184",
+      "docker-185",
+      "docker-186",
+      "docker-187",
+      "docker-188",
+      "docker-189"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-b368184d",
+    "technology": "Docker",
+    "category": "Storage Driver & Disk",
+    "commands": [
+      "docker system df -v",
+      "docker info --format 'driver={{.driver}} dockerrootdir={{.dockerrootdir}}'",
+      "docker ps -a --size",
+      "docker buildx du"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Docker data-root capacity — Storage Driver & Disk: fails completely",
+    "collapsed_titles": [
+      "Build cache disk usage — Storage Driver & Disk: behaves differently than configured",
+      "Build cache disk usage — Storage Driver & Disk: fails completely",
+      "Build cache disk usage — Storage Driver & Disk: fails intermittently under load or restart",
+      "Container log disk usage — Storage Driver & Disk: behaves differently than configured",
+      "Container log disk usage — Storage Driver & Disk: fails completely",
+      "Container log disk usage — Storage Driver & Disk: fails intermittently under load or restart",
+      "Container writable layer — Storage Driver & Disk: behaves differently than configured",
+      "Container writable layer — Storage Driver & Disk: fails completely",
+      "Container writable layer — Storage Driver & Disk: fails intermittently under load or restart",
+      "Docker data-root capacity — Storage Driver & Disk: behaves differently than configured",
+      "Docker data-root capacity — Storage Driver & Disk: fails completely",
+      "Docker data-root capacity — Storage Driver & Disk: fails intermittently under load or restart",
+      "Image layer extraction — Storage Driver & Disk: behaves differently than configured",
+      "Image layer extraction — Storage Driver & Disk: fails completely",
+      "Image layer extraction — Storage Driver & Disk: fails intermittently under load or restart",
+      "Inode capacity — Storage Driver & Disk: behaves differently than configured",
+      "Inode capacity — Storage Driver & Disk: fails completely",
+      "Inode capacity — Storage Driver & Disk: fails intermittently under load or restart",
+      "Overlay2 mount — Storage Driver & Disk: behaves differently than configured",
+      "Overlay2 mount — Storage Driver & Disk: fails completely",
+      "Overlay2 mount — Storage Driver & Disk: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-190",
+      "docker-191",
+      "docker-192",
+      "docker-193",
+      "docker-194",
+      "docker-195",
+      "docker-196",
+      "docker-197",
+      "docker-198",
+      "docker-199",
+      "docker-200",
+      "docker-201",
+      "docker-202",
+      "docker-203",
+      "docker-204",
+      "docker-205",
+      "docker-206",
+      "docker-207",
+      "docker-208",
+      "docker-209",
+      "docker-210"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-8e7aa277",
+    "technology": "Docker",
+    "category": "Images & Local Image Store",
+    "commands": [
+      "docker image inspect <x>",
+      "docker history --no-trunc <x>",
+      "docker image ls --digests",
+      "docker inspect <x> --format 'imageref={{.config.image}} imageid={{.image}}'"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Image tag — Images & Local Image Store: fails completely",
+    "collapsed_titles": [
+      "Image ENTRYPOINT metadata — Images & Local Image Store: behaves differently than configured",
+      "Image ENTRYPOINT metadata — Images & Local Image Store: fails completely",
+      "Image ENTRYPOINT metadata — Images & Local Image Store: fails intermittently under load or restart",
+      "Image architecture — Images & Local Image Store: behaves differently than configured",
+      "Image architecture — Images & Local Image Store: fails completely",
+      "Image architecture — Images & Local Image Store: fails intermittently under load or restart",
+      "Image digest — Images & Local Image Store: behaves differently than configured",
+      "Image digest — Images & Local Image Store: fails completely",
+      "Image digest — Images & Local Image Store: fails intermittently under load or restart",
+      "Image runtime libraries — Images & Local Image Store: behaves differently than configured",
+      "Image runtime libraries — Images & Local Image Store: fails completely",
+      "Image runtime libraries — Images & Local Image Store: fails intermittently under load or restart",
+      "Image save/load — Images & Local Image Store: behaves differently than configured",
+      "Image save/load — Images & Local Image Store: fails completely",
+      "Image save/load — Images & Local Image Store: fails intermittently under load or restart",
+      "Image size/layers — Images & Local Image Store: behaves differently than configured",
+      "Image size/layers — Images & Local Image Store: fails completely",
+      "Image size/layers — Images & Local Image Store: fails intermittently under load or restart",
+      "Image tag — Images & Local Image Store: behaves differently than configured",
+      "Image tag — Images & Local Image Store: fails completely",
+      "Image tag — Images & Local Image Store: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-211",
+      "docker-212",
+      "docker-213",
+      "docker-214",
+      "docker-215",
+      "docker-216",
+      "docker-217",
+      "docker-218",
+      "docker-219",
+      "docker-220",
+      "docker-221",
+      "docker-222",
+      "docker-223",
+      "docker-224",
+      "docker-225",
+      "docker-226",
+      "docker-227",
+      "docker-228",
+      "docker-229",
+      "docker-230",
+      "docker-231"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-caf86c7c",
+    "technology": "Docker",
+    "category": "Dockerfile Semantics",
+    "commands": [
+      "docker image inspect <x> --format 'entrypoint={{json .config.entrypoint}} cmd={{json .config.cmd}} user={{.config.user}} workingdir={{.config.workingdir}}'",
+      "docker history --no-trunc <x>",
+      "docker buildx build --check -f <x> <x>",
+      "docker buildx build --call=outline -f <x> <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "CMD/ENTRYPOINT interaction — Dockerfile Semantics: fails completely",
+    "collapsed_titles": [
+      "ARG/ENV — Dockerfile Semantics: behaves differently than configured",
+      "ARG/ENV — Dockerfile Semantics: fails completely",
+      "ARG/ENV — Dockerfile Semantics: fails intermittently under load or restart",
+      "CMD/ENTRYPOINT interaction — Dockerfile Semantics: behaves differently than configured",
+      "CMD/ENTRYPOINT interaction — Dockerfile Semantics: fails completely",
+      "CMD/ENTRYPOINT interaction — Dockerfile Semantics: fails intermittently under load or restart",
+      "COPY/ADD — Dockerfile Semantics: behaves differently than configured",
+      "COPY/ADD — Dockerfile Semantics: fails completely",
+      "COPY/ADD — Dockerfile Semantics: fails intermittently under load or restart",
+      "Dockerfile syntax feature — Dockerfile Semantics: behaves differently than configured",
+      "Dockerfile syntax feature — Dockerfile Semantics: fails completely",
+      "Dockerfile syntax feature — Dockerfile Semantics: fails intermittently under load or restart",
+      "USER — Dockerfile Semantics: behaves differently than configured",
+      "USER — Dockerfile Semantics: fails completely",
+      "USER — Dockerfile Semantics: fails intermittently under load or restart",
+      "VOLUME/EXPOSE — Dockerfile Semantics: behaves differently than configured",
+      "VOLUME/EXPOSE — Dockerfile Semantics: fails completely",
+      "VOLUME/EXPOSE — Dockerfile Semantics: fails intermittently under load or restart",
+      "WORKDIR — Dockerfile Semantics: behaves differently than configured",
+      "WORKDIR — Dockerfile Semantics: fails completely",
+      "WORKDIR — Dockerfile Semantics: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-253",
+      "docker-254",
+      "docker-255",
+      "docker-256",
+      "docker-257",
+      "docker-258",
+      "docker-259",
+      "docker-260",
+      "docker-261",
+      "docker-262",
+      "docker-263",
+      "docker-264",
+      "docker-265",
+      "docker-266",
+      "docker-267",
+      "docker-268",
+      "docker-269",
+      "docker-270",
+      "docker-271",
+      "docker-272",
+      "docker-273"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-ce3b88b3",
+    "technology": "Docker",
+    "category": "Compose Configuration",
+    "commands": [
+      "docker compose config",
+      "docker compose config --services",
+      "docker compose config --images",
+      "docker compose ls"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Compose interpolation — Compose Configuration: fails completely",
+    "collapsed_titles": [
+      ".env loading — Compose Configuration: behaves differently than configured",
+      ".env loading — Compose Configuration: fails completely",
+      ".env loading — Compose Configuration: fails intermittently under load or restart",
+      "Compose interpolation — Compose Configuration: behaves differently than configured",
+      "Compose interpolation — Compose Configuration: fails completely",
+      "Compose interpolation — Compose Configuration: fails intermittently under load or restart",
+      "Compose merge/include/extends — Compose Configuration: behaves differently than configured",
+      "Compose merge/include/extends — Compose Configuration: fails completely",
+      "Compose merge/include/extends — Compose Configuration: fails intermittently under load or restart",
+      "Compose profile — Compose Configuration: behaves differently than configured",
+      "Compose profile — Compose Configuration: fails completely",
+      "Compose profile — Compose Configuration: fails intermittently under load or restart",
+      "Compose project name — Compose Configuration: behaves differently than configured",
+      "Compose project name — Compose Configuration: fails completely",
+      "Compose project name — Compose Configuration: fails intermittently under load or restart",
+      "Compose secret/config — Compose Configuration: behaves differently than configured",
+      "Compose secret/config — Compose Configuration: fails completely",
+      "Compose secret/config — Compose Configuration: fails intermittently under load or restart",
+      "Rendered Compose model — Compose Configuration: behaves differently than configured",
+      "Rendered Compose model — Compose Configuration: fails completely",
+      "Rendered Compose model — Compose Configuration: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-337",
+      "docker-338",
+      "docker-339",
+      "docker-340",
+      "docker-341",
+      "docker-342",
+      "docker-343",
+      "docker-344",
+      "docker-345",
+      "docker-346",
+      "docker-347",
+      "docker-348",
+      "docker-349",
+      "docker-350",
+      "docker-351",
+      "docker-352",
+      "docker-353",
+      "docker-354",
+      "docker-355",
+      "docker-356",
+      "docker-357"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-f3697f20",
+    "technology": "Docker",
+    "category": "Compose Runtime & Dependencies",
+    "commands": [
+      "docker compose ps -a",
+      "docker compose logs --tail 200 --timestamps <x>",
+      "docker compose config",
+      "docker compose ps -q <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Compose service startup — Compose Runtime & Dependencies: fails completely",
+    "collapsed_titles": [
+      "Compose network — Compose Runtime & Dependencies: behaves differently than configured",
+      "Compose network — Compose Runtime & Dependencies: fails completely",
+      "Compose network — Compose Runtime & Dependencies: fails intermittently under load or restart",
+      "Compose recreation — Compose Runtime & Dependencies: behaves differently than configured",
+      "Compose recreation — Compose Runtime & Dependencies: fails completely",
+      "Compose recreation — Compose Runtime & Dependencies: fails intermittently under load or restart",
+      "Compose service DNS — Compose Runtime & Dependencies: behaves differently than configured",
+      "Compose service DNS — Compose Runtime & Dependencies: fails completely",
+      "Compose service DNS — Compose Runtime & Dependencies: fails intermittently under load or restart",
+      "Compose service startup — Compose Runtime & Dependencies: behaves differently than configured",
+      "Compose service startup — Compose Runtime & Dependencies: fails completely",
+      "Compose service startup — Compose Runtime & Dependencies: fails intermittently under load or restart",
+      "Compose shutdown — Compose Runtime & Dependencies: behaves differently than configured",
+      "Compose shutdown — Compose Runtime & Dependencies: fails completely",
+      "Compose shutdown — Compose Runtime & Dependencies: fails intermittently under load or restart",
+      "Compose volume — Compose Runtime & Dependencies: behaves differently than configured",
+      "Compose volume — Compose Runtime & Dependencies: fails completely",
+      "Compose volume — Compose Runtime & Dependencies: fails intermittently under load or restart",
+      "Service health dependency — Compose Runtime & Dependencies: behaves differently than configured",
+      "Service health dependency — Compose Runtime & Dependencies: fails completely",
+      "Service health dependency — Compose Runtime & Dependencies: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-358",
+      "docker-359",
+      "docker-360",
+      "docker-361",
+      "docker-362",
+      "docker-363",
+      "docker-364",
+      "docker-365",
+      "docker-366",
+      "docker-367",
+      "docker-368",
+      "docker-369",
+      "docker-370",
+      "docker-371",
+      "docker-372",
+      "docker-373",
+      "docker-374",
+      "docker-375",
+      "docker-376",
+      "docker-377",
+      "docker-378"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-a52a0051",
+    "technology": "Docker",
+    "category": "Rootless Docker",
+    "commands": [
+      "docker context show",
+      "docker info --format 'rootdir={{.dockerrootdir}} cgroupdriver={{.cgroupdriver}} security={{json .securityoptions}}'",
+      "docker context ls",
+      "docker info"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Rootless daemon — Rootless Docker: fails completely",
+    "collapsed_titles": [
+      "Privileged port publishing — Rootless Docker: behaves differently than configured",
+      "Privileged port publishing — Rootless Docker: fails completely",
+      "Privileged port publishing — Rootless Docker: fails intermittently under load or restart",
+      "Rootless cgroup limits — Rootless Docker: behaves differently than configured",
+      "Rootless cgroup limits — Rootless Docker: fails completely",
+      "Rootless cgroup limits — Rootless Docker: fails intermittently under load or restart",
+      "Rootless context/socket — Rootless Docker: behaves differently than configured",
+      "Rootless context/socket — Rootless Docker: fails completely",
+      "Rootless context/socket — Rootless Docker: fails intermittently under load or restart",
+      "Rootless daemon — Rootless Docker: behaves differently than configured",
+      "Rootless daemon — Rootless Docker: fails completely",
+      "Rootless daemon — Rootless Docker: fails intermittently under load or restart",
+      "Rootless networking — Rootless Docker: behaves differently than configured",
+      "Rootless networking — Rootless Docker: fails completely",
+      "Rootless networking — Rootless Docker: fails intermittently under load or restart",
+      "Rootless storage driver — Rootless Docker: behaves differently than configured",
+      "Rootless storage driver — Rootless Docker: fails completely",
+      "Rootless storage driver — Rootless Docker: fails intermittently under load or restart",
+      "Rootless volume ownership — Rootless Docker: behaves differently than configured",
+      "Rootless volume ownership — Rootless Docker: fails completely",
+      "Rootless volume ownership — Rootless Docker: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-400",
+      "docker-401",
+      "docker-402",
+      "docker-403",
+      "docker-404",
+      "docker-405",
+      "docker-406",
+      "docker-407",
+      "docker-408",
+      "docker-409",
+      "docker-410",
+      "docker-411",
+      "docker-412",
+      "docker-413",
+      "docker-414",
+      "docker-415",
+      "docker-416",
+      "docker-417",
+      "docker-418",
+      "docker-419",
+      "docker-420"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-2737ac0c",
+    "technology": "Docker",
+    "category": "Host Integration & Performance",
+    "commands": [
+      "docker info",
+      "docker stats --no-stream",
+      "docker system df -v",
+      "docker events --since <x> --until <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 21,
+    "max_risk": 0,
+    "representative_title": "Host firewall/VPN — Host Integration & Performance: fails completely",
+    "collapsed_titles": [
+      "Container I/O performance — Host Integration & Performance: behaves differently than configured",
+      "Container I/O performance — Host Integration & Performance: fails completely",
+      "Container I/O performance — Host Integration & Performance: fails intermittently under load or restart",
+      "Daemon overload — Host Integration & Performance: behaves differently than configured",
+      "Daemon overload — Host Integration & Performance: fails completely",
+      "Daemon overload — Host Integration & Performance: fails intermittently under load or restart",
+      "Docker Desktop file sharing — Host Integration & Performance: behaves differently than configured",
+      "Docker Desktop file sharing — Host Integration & Performance: fails completely",
+      "Docker Desktop file sharing — Host Integration & Performance: fails intermittently under load or restart",
+      "Host DNS/proxy — Host Integration & Performance: behaves differently than configured",
+      "Host DNS/proxy — Host Integration & Performance: fails completely",
+      "Host DNS/proxy — Host Integration & Performance: fails intermittently under load or restart",
+      "Host firewall/VPN — Host Integration & Performance: behaves differently than configured",
+      "Host firewall/VPN — Host Integration & Performance: fails completely",
+      "Host firewall/VPN — Host Integration & Performance: fails intermittently under load or restart",
+      "Host kernel/cgroup — Host Integration & Performance: behaves differently than configured",
+      "Host kernel/cgroup — Host Integration & Performance: fails completely",
+      "Host kernel/cgroup — Host Integration & Performance: fails intermittently under load or restart",
+      "Host reboot behavior — Host Integration & Performance: behaves differently than configured",
+      "Host reboot behavior — Host Integration & Performance: fails completely",
+      "Host reboot behavior — Host Integration & Performance: fails intermittently under load or restart"
+    ],
+    "collapsed_ids": [
+      "docker-421",
+      "docker-422",
+      "docker-423",
+      "docker-424",
+      "docker-425",
+      "docker-426",
+      "docker-427",
+      "docker-428",
+      "docker-429",
+      "docker-430",
+      "docker-431",
+      "docker-432",
+      "docker-433",
+      "docker-434",
+      "docker-435",
+      "docker-436",
+      "docker-437",
+      "docker-438",
+      "docker-439",
+      "docker-440",
+      "docker-441"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-ef8df8eb",
+    "technology": "Kubernetes",
+    "category": "Workloads & Rollouts",
+    "commands": [
+      "kubectl get deployment <x> -n <x> -o wide",
+      "kubectl rollout status deployment/<x> -n <x>",
+      "kubectl describe deployment <x> -n <x>",
+      "kubectl get rs,pods -n <x> -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 18,
+    "max_risk": 0,
+    "representative_title": "Deployment rollout exceeds progress deadline",
+    "collapsed_titles": [
+      "DaemonSet desired number scheduled mismatch",
+      "DaemonSet pods unavailable on some nodes",
+      "DaemonSet rollout stuck",
+      "Deployment generation observedGeneration lagging",
+      "Deployment has old ReplicaSets not scaling down",
+      "Deployment has unavailable replicas",
+      "Deployment revision history confusing",
+      "Deployment rollback does not restore service",
+      "Deployment rollout exceeds progress deadline",
+      "Deployment scaled but replicas do not appear",
+      "PodDisruptionBudget blocks rollout or maintenance",
+      "Recreate strategy causes downtime",
+      "ReplicaSet desired and current counts differ",
+      "RollingUpdate causes temporary capacity issue",
+      "StatefulSet cannot recreate pod",
+      "StatefulSet pod ordinal missing",
+      "StatefulSet rollout stuck",
+      "StatefulSet update partition unexpected"
+    ],
+    "collapsed_ids": [
+      "k8s-deep-066",
+      "k8s-deep-067",
+      "k8s-deep-068",
+      "k8s-deep-069",
+      "k8s-deep-070",
+      "k8s-deep-071",
+      "k8s-deep-072",
+      "k8s-deep-073",
+      "k8s-deep-074",
+      "k8s-deep-075",
+      "k8s-deep-076",
+      "k8s-deep-077",
+      "k8s-deep-078",
+      "k8s-deep-079",
+      "k8s-deep-080",
+      "k8s-deep-081",
+      "k8s-deep-082",
+      "k8s-deep-083"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-76e79ec7",
+    "technology": "Kubernetes",
+    "category": "Control Plane & Cluster Health",
+    "commands": [
+      "kubectl get --raw='/readyz?verbose'",
+      "kubectl api-resources",
+      "kubectl get events -a --sort-by=.metadata.creationtimestamp",
+      "kubectl get pods -n kube-system -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 16,
+    "max_risk": 0,
+    "representative_title": "API server unreachable from kubectl",
+    "collapsed_titles": [
+      "API Priority and Fairness delays requests",
+      "API discovery unusually slow",
+      "API server intermittently times out",
+      "API server returns 429 Too Many Requests",
+      "API server returns 500 Internal Server Error",
+      "API server returns 503 Service Unavailable",
+      "API server unreachable from kubectl",
+      "Control-plane certificate expiration suspected",
+      "Controller manager cannot update resources",
+      "Controller manager leader election unstable",
+      "Scheduler leader election unstable",
+      "Scheduler running but Pods remain unscheduled",
+      "etcd latency affects API operations",
+      "etcd member unhealthy",
+      "etcd space alarm suspected",
+      "etcd storage quota exhausted"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-001",
+      "k8s-v3-002",
+      "k8s-v3-003",
+      "k8s-v3-004",
+      "k8s-v3-005",
+      "k8s-v3-006",
+      "k8s-v3-007",
+      "k8s-v3-008",
+      "k8s-v3-009",
+      "k8s-v3-010",
+      "k8s-v3-011",
+      "k8s-v3-012",
+      "k8s-v3-013",
+      "k8s-v3-014",
+      "k8s-v3-015",
+      "k8s-v3-016"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-ec6a9d1d",
+    "technology": "Kubernetes",
+    "category": "Advanced Debugging",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o yaml",
+      "kubectl logs <x> -n <x> --all-containers --tail=<n>",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl debug <x> -n <x> -it --image=busybox --target=<x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 3,
+    "collapsed_count": 15,
+    "max_risk": 2,
+    "representative_title": "Distroless container has no shell",
+    "collapsed_titles": [
+      "Capture evidence before Pod recreation",
+      "Compare failing Pod with working Pod",
+      "Container has no curl wget or nslookup",
+      "Debug Pod blocked by Pod Security",
+      "Debug without modifying application image",
+      "Distroless container has no shell",
+      "Ephemeral debug container cannot access expected filesystem",
+      "Ephemeral debug container cannot see target process",
+      "Node debug Pod cannot access host filesystem",
+      "Node debug Pod lacks privileges",
+      "kubectl cp fails because tar is missing",
+      "kubectl exec fails because container exited",
+      "kubectl exec unable to upgrade connection",
+      "kubectl port-forward address already in use",
+      "kubectl port-forward disconnects repeatedly"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-046",
+      "k8s-v3-047",
+      "k8s-v3-048",
+      "k8s-v3-049",
+      "k8s-v3-050",
+      "k8s-v3-051",
+      "k8s-v3-052",
+      "k8s-v3-053",
+      "k8s-v3-054",
+      "k8s-v3-055",
+      "k8s-v3-056",
+      "k8s-v3-057",
+      "k8s-v3-058",
+      "k8s-v3-059",
+      "k8s-v3-060"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-f7185c19",
+    "technology": "Kubernetes",
+    "category": "Image & Registry",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{range .spec.containers[*]}{.name}{\"\\t\"}{.image}{\"\\t\"}{.imagepullpolicy}{\"\\n\"}{end}'",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.imagepullsecrets[*].name}'",
+      "kubectl get pod <x> -n <x> -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 2,
+    "collapsed_count": 15,
+    "max_risk": 0,
+    "representative_title": "ImagePullBackOff registry authentication",
+    "collapsed_titles": [
+      "Image digest differs from expected build",
+      "Image tag points to unexpected content",
+      "ImagePullBackOff missing tag",
+      "ImagePullBackOff only on one node",
+      "ImagePullBackOff registry DNS failure",
+      "ImagePullBackOff registry TLS error",
+      "ImagePullBackOff registry authentication",
+      "ImagePullBackOff registry timeout",
+      "Large image pull delays startup",
+      "Multi-architecture image selects wrong platform",
+      "Private registry imagePullSecret missing",
+      "Registry rate limit blocks image pull",
+      "imagePullPolicy prevents refresh",
+      "imagePullSecret credentials expired",
+      "imagePullSecret in wrong namespace"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-031",
+      "k8s-v3-032",
+      "k8s-v3-033",
+      "k8s-v3-034",
+      "k8s-v3-035",
+      "k8s-v3-036",
+      "k8s-v3-037",
+      "k8s-v3-038",
+      "k8s-v3-039",
+      "k8s-v3-040",
+      "k8s-v3-041",
+      "k8s-v3-042",
+      "k8s-v3-043",
+      "k8s-v3-044",
+      "k8s-v3-045"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-0d1d7d28",
+    "technology": "Kubernetes",
+    "category": "Certificates & Authentication",
+    "commands": [
+      "kubectl config current-context",
+      "kubectl config view --minify",
+      "kubectl auth can-i get pods -a",
+      "kubectl get csr"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 14,
+    "max_risk": 0,
+    "representative_title": "kubectl x509 certificate expired",
+    "collapsed_titles": [
+      "Approved CSR certificate not issued",
+      "Bearer token authentication fails",
+      "CSR is Denied",
+      "CSR remains Pending",
+      "Client certificate authentication fails",
+      "Kubeconfig authenticates as unexpected user",
+      "Kubeconfig client certificate expired",
+      "Kubeconfig wrong certificate authority",
+      "ServiceAccount token audience rejected",
+      "ServiceAccount token issuer mismatch",
+      "Webhook TLS handshake fails",
+      "kubectl certificate hostname mismatch",
+      "kubectl certificate signed by unknown authority",
+      "kubectl x509 certificate expired"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-017",
+      "k8s-v3-018",
+      "k8s-v3-019",
+      "k8s-v3-020",
+      "k8s-v3-021",
+      "k8s-v3-022",
+      "k8s-v3-023",
+      "k8s-v3-024",
+      "k8s-v3-025",
+      "k8s-v3-026",
+      "k8s-v3-027",
+      "k8s-v3-028",
+      "k8s-v3-029",
+      "k8s-v3-030"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-55267951",
+    "technology": "Kubernetes",
+    "category": "Upgrades & API Compatibility",
+    "commands": [
+      "kubectl version",
+      "kubectl api-resources",
+      "kubectl explain <x>",
+      "kubectl get events -a --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 12,
+    "max_risk": 0,
+    "representative_title": "Manifest uses removed Kubernetes API version",
+    "collapsed_titles": [
+      "CNI component incompatible after cluster upgrade",
+      "CRD uses deprecated API version",
+      "CSI driver incompatible after cluster upgrade",
+      "CoreDNS fails after cluster upgrade",
+      "Ingress manifest rejected after cluster upgrade",
+      "Kubelet version skew exceeds support",
+      "Manifest uses removed Kubernetes API version",
+      "Metrics Server fails after cluster upgrade",
+      "PodSecurityPolicy resource no longer exists",
+      "Webhook incompatible after API upgrade",
+      "Workload fails only after Kubernetes upgrade",
+      "kubectl client server version skew"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-061",
+      "k8s-v3-062",
+      "k8s-v3-063",
+      "k8s-v3-064",
+      "k8s-v3-065",
+      "k8s-v3-066",
+      "k8s-v3-067",
+      "k8s-v3-068",
+      "k8s-v3-069",
+      "k8s-v3-070",
+      "k8s-v3-071",
+      "k8s-v3-072"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-79cb6a81",
+    "technology": "Kubernetes",
+    "category": "Resource Ownership & Apply",
+    "commands": [
+      "kubectl get <x> <x> -n <x> -o yaml",
+      "kubectl get <x> <x> -n <x> -o json --show-managed-fields",
+      "kubectl get <x> <x> -n <x> -o jsonpath='{.metadata.generation}{\" / \"}{.status.observedgeneration}'",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 10,
+    "max_risk": 0,
+    "representative_title": "kubectl apply field manager conflict",
+    "collapsed_titles": [
+      "Controller observedGeneration does not advance",
+      "Immutable field blocks workload update",
+      "Label selector immutable change",
+      "ManagedFields ownership confusing",
+      "Patch targets wrong list item",
+      "Server-side apply owns unexpected field",
+      "Strategic merge patch unsupported for CRD",
+      "Update rejected object was modified",
+      "kubectl apply field manager conflict",
+      "kubectl replace resourceVersion conflict"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-073",
+      "k8s-v3-074",
+      "k8s-v3-075",
+      "k8s-v3-076",
+      "k8s-v3-077",
+      "k8s-v3-078",
+      "k8s-v3-079",
+      "k8s-v3-080",
+      "k8s-v3-081",
+      "k8s-v3-082"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-be88bb37",
+    "technology": "Kubernetes",
+    "category": "Namespaces & Lifecycle",
+    "commands": [
+      "kubectl get namespace <x> -o yaml",
+      "kubectl describe namespace <x>",
+      "kubectl api-resources --verbs=list --namespaced -o name",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 9,
+    "max_risk": 0,
+    "representative_title": "Namespace deletion blocked by API discovery",
+    "collapsed_titles": [
+      "Finalizer controller no longer exists",
+      "Foreground deletion waits indefinitely",
+      "Garbage collector does not remove dependent object",
+      "Namespace deletion blocked by API discovery",
+      "Namespace deletion blocked by finalizers",
+      "Namespace deletion blocked by remaining resources",
+      "Orphan deletion leaves unexpected dependents",
+      "OwnerReference points to deleted owner",
+      "Resource deletionTimestamp set but object remains"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-083",
+      "k8s-v3-084",
+      "k8s-v3-085",
+      "k8s-v3-086",
+      "k8s-v3-087",
+      "k8s-v3-088",
+      "k8s-v3-089",
+      "k8s-v3-090",
+      "k8s-v3-091"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-fcc1c5eb",
+    "technology": "Kubernetes",
+    "category": "Multi-Cluster & Context Safety",
+    "commands": [
+      "kubectl config current-context",
+      "kubectl config get-contexts",
+      "kubectl config view --minify -o jsonpath='{..namespace}'",
+      "kubectl auth can-i get pods -n <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 8,
+    "max_risk": 0,
+    "representative_title": "kubectl pointed at wrong cluster",
+    "collapsed_titles": [
+      "Context user has different RBAC than expected",
+      "Current context unexpectedly changed",
+      "Kubeconfig merge selects unexpected context",
+      "Resource exists in one cluster but not another",
+      "Same namespace exists in multiple clusters",
+      "kubectl command targets unintended environment",
+      "kubectl pointed at wrong cluster",
+      "kubectl using wrong namespace"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-092",
+      "k8s-v3-093",
+      "k8s-v3-094",
+      "k8s-v3-095",
+      "k8s-v3-096",
+      "k8s-v3-097",
+      "k8s-v3-098",
+      "k8s-v3-099"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-3d6b10ab",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o wide",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pvc -n <x>",
+      "kubectl get nodes --show-labels"
+    ],
+    "step_count": 4,
+    "specific_step_count": 2,
+    "collapsed_count": 3,
+    "max_risk": 0,
+    "representative_title": "Pod stuck Pending",
+    "collapsed_titles": [
+      "Pod specifies nonexistent schedulerName",
+      "Pod stuck Pending",
+      "PreferNoSchedule placement unexpected"
+    ],
+    "collapsed_ids": [
+      "k8s-research-052",
+      "k8s-research-062",
+      "run-003"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-3b372551",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o jsonpath='{.status.reason}{\" | \"}{.status.message}{\"\\n\"}'",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.nodename}{\"\\n\"}'",
+      "kubectl get nodes"
+    ],
+    "step_count": 4,
+    "specific_step_count": 3,
+    "collapsed_count": 2,
+    "max_risk": 0,
+    "representative_title": "Pod is evicted",
+    "collapsed_titles": [
+      "Pod is evicted",
+      "Pod tolerationSeconds expires and Pod is evicted"
+    ],
+    "collapsed_ids": [
+      "k8s-research-053",
+      "run-115"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-85860c7c",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl apply -f <x> --dry-run=server",
+      "kubectl diff -f <x>",
+      "kubectl apply -f <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 2,
+    "representative_title": "Compare manifest before applying",
+    "collapsed_titles": [
+      "Compare manifest before applying"
+    ],
+    "collapsed_ids": [
+      "run-020"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-274c0fcb",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl get cronjob <x> -n <x> -o jsonpath='{.spec.suspend}'",
+      "kubectl describe cronjob <x> -n <x>",
+      "kubectl patch cronjob <x> -n <x> -p '{\"spec\":{\"suspend\":false}}'"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 2,
+    "representative_title": "CronJob is suspended",
+    "collapsed_titles": [
+      "CronJob is suspended"
+    ],
+    "collapsed_ids": [
+      "run-099"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-65350610",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get service <x> -n <x>",
+      "kubectl run -it --rm --restart=never dns-debug -n <x> --image=registry.k8s.io/busybox:1.36 -- sh",
+      "nslookup <x>.<x>.svc.cluster.local"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 2,
+    "representative_title": "Need to test Service DNS from a disposable pod",
+    "collapsed_titles": [
+      "Need to test Service DNS from a disposable pod"
+    ],
+    "collapsed_ids": [
+      "run-109"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-bd0b46dd",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl rollout history deployment/<x> -n <x>",
+      "kubectl describe deployment <x> -n <x>",
+      "kubectl rollout history deployment/<x> -n <x> --revision=<x>",
+      "kubectl rollout undo deployment/<x> -n <x> --to-revision=<x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 2,
+    "representative_title": "Deployment rollback decision",
+    "collapsed_titles": [
+      "Deployment rollback decision"
+    ],
+    "collapsed_ids": [
+      "run-098"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-8a1e7b31",
+    "technology": "Kubernetes",
+    "category": "Nodes",
+    "commands": [
+      "kubectl describe node <x>",
+      "kubectl get pods -a --field-selector spec.nodename=<x> -o wide",
+      "kubectl get pdb -a",
+      "kubectl cordon <x>",
+      "kubectl drain <x> --ignore-daemonsets"
+    ],
+    "step_count": 5,
+    "specific_step_count": 5,
+    "collapsed_count": 1,
+    "max_risk": 2,
+    "representative_title": "Prepare node for maintenance",
+    "collapsed_titles": [
+      "Prepare node for maintenance"
+    ],
+    "collapsed_ids": [
+      "run-019"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-be721771",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o wide",
+      "kubectl describe node <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 1,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod evicted",
+    "collapsed_titles": [
+      "Pod evicted"
+    ],
+    "collapsed_ids": [
+      "run-078"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-2b0d1f83",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o wide",
+      "kubectl logs <x> -n <x> -c <x> --previous --tail=<n>",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl top pod <x> -n <x> --containers"
+    ],
+    "step_count": 4,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "CrashLoopBackOff / pod keeps restarting",
+    "collapsed_titles": [
+      "CrashLoopBackOff / pod keeps restarting"
+    ],
+    "collapsed_ids": [
+      "run-001"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-e7a636f2",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.containers[*].image}'",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.imagepullsecrets}'"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ImagePullBackOff / ErrImagePull",
+    "collapsed_titles": [
+      "ImagePullBackOff / ErrImagePull"
+    ],
+    "collapsed_ids": [
+      "run-004"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-2a9488b8",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.containers[*].resources}'",
+      "kubectl top pod <x> -n <x> --containers"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod OOMKilled",
+    "collapsed_titles": [
+      "Pod OOMKilled"
+    ],
+    "collapsed_ids": [
+      "run-005"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-cb14654d",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl get pod <x> -n <x>",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl logs <x> -n <x> --tail=<n>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod Running but not Ready",
+    "collapsed_titles": [
+      "Pod Running but not Ready"
+    ],
+    "collapsed_ids": [
+      "run-006"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-c6f683e5",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o yaml",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get node <x> -o wide"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod stuck Terminating",
+    "collapsed_titles": [
+      "Pod stuck Terminating"
+    ],
+    "collapsed_ids": [
+      "run-007"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-18b3e987",
+    "technology": "Kubernetes",
+    "category": "Storage",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pvc -n <x>",
+      "kubectl get volumeattachments"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod cannot mount volume",
+    "collapsed_titles": [
+      "Pod cannot mount volume"
+    ],
+    "collapsed_ids": [
+      "run-069"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-c17c60c5",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o yaml",
+      "kubectl logs <x> -n <x> --tail=<n>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Readiness probe failing",
+    "collapsed_titles": [
+      "Readiness probe failing"
+    ],
+    "collapsed_ids": [
+      "run-074"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-6ae1f4a0",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl logs <x> -n <x> -c <x> --previous --tail=<n>",
+      "kubectl get pod <x> -n <x> -o yaml"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Liveness probe restarting container",
+    "collapsed_titles": [
+      "Liveness probe restarting container"
+    ],
+    "collapsed_ids": [
+      "run-075"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-35bdf60d",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl logs <x> -n <x> --tail=<n>",
+      "kubectl get pod <x> -n <x> -o yaml"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Startup probe never succeeds",
+    "collapsed_titles": [
+      "Startup probe never succeeds"
+    ],
+    "collapsed_ids": [
+      "run-076"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-5b14db42",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl logs <x> -n <x> -c <x> --tail=<n>",
+      "kubectl get pod <x> -n <x> -o yaml"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Init container failed",
+    "collapsed_titles": [
+      "Init container failed"
+    ],
+    "collapsed_ids": [
+      "run-077"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-0736626c",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get nodes -o custom-columns=node:.metadata.name,taints:.spec.taints",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.tolerations}'"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod cannot schedule because of taint",
+    "collapsed_titles": [
+      "Pod cannot schedule because of taint"
+    ],
+    "collapsed_ids": [
+      "run-081"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-5e13b105",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.nodeselector}'",
+      "kubectl get nodes --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod cannot schedule because of node selector",
+    "collapsed_titles": [
+      "Pod cannot schedule because of node selector"
+    ],
+    "collapsed_ids": [
+      "run-082"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-c9a14ce8",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.containers[*].resources.requests}'",
+      "kubectl get nodes -o custom-columns=node:.metadata.name,cpu:.status.allocatable.cpu"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod cannot schedule because of insufficient CPU",
+    "collapsed_titles": [
+      "Pod cannot schedule because of insufficient CPU"
+    ],
+    "collapsed_ids": [
+      "run-083"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-bcf03405",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.containers[*].resources.requests}'",
+      "kubectl get nodes -o custom-columns=node:.metadata.name,memory:.status.allocatable.memory"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod cannot schedule because of insufficient memory",
+    "collapsed_titles": [
+      "Pod cannot schedule because of insufficient memory"
+    ],
+    "collapsed_ids": [
+      "run-084"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-9adbea74",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get configmap <x> -n <x> -o yaml",
+      "kubectl get pod <x> -n <x> -o yaml",
+      "kubectl describe pod <x> -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ConfigMap missing key",
+    "collapsed_titles": [
+      "ConfigMap missing key"
+    ],
+    "collapsed_ids": [
+      "run-091"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-fe6f84f0",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl describe secret <x> -n <x>",
+      "kubectl get pod <x> -n <x> -o yaml",
+      "kubectl describe pod <x> -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Secret missing key",
+    "collapsed_titles": [
+      "Secret missing key"
+    ],
+    "collapsed_ids": [
+      "run-092"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-4eedbd78",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x> -o yaml",
+      "kubectl get pods -n <x> -o wide",
+      "kubectl describe pod <x> -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "EndpointSlice shows not-ready endpoints",
+    "collapsed_titles": [
+      "EndpointSlice shows not-ready endpoints"
+    ],
+    "collapsed_ids": [
+      "run-104"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-1d3ba6c6",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o jsonpath='{.metadata.ownerreferences}'",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl get deployment,replicaset,statefulset,daemonset,job -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Need to find which workload owns a pod",
+    "collapsed_titles": [
+      "Need to find which workload owns a pod"
+    ],
+    "collapsed_ids": [
+      "run-106"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-3a0249ca",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.containers[*].name}'",
+      "kubectl logs <x> -n <x> --all-containers=true --tail=<n>",
+      "kubectl describe pod <x> -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 2,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Need to check application logs across all containers",
+    "collapsed_titles": [
+      "Need to check application logs across all containers"
+    ],
+    "collapsed_ids": [
+      "run-108"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-5482cbcc",
+    "technology": "Kubernetes",
+    "category": "Storage",
+    "commands": [
+      "kubectl describe pvc <x> -n <x>",
+      "kubectl get storageclass",
+      "kubectl get pv"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PVC remains Pending",
+    "collapsed_titles": [
+      "PVC remains Pending"
+    ],
+    "collapsed_ids": [
+      "run-011"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-398df1c8",
+    "technology": "Kubernetes",
+    "category": "Nodes",
+    "commands": [
+      "kubectl get node <x> -o wide",
+      "kubectl describe node <x>",
+      "kubectl get pods -a --field-selector spec.nodename=<x> -o wide"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Node NotReady",
+    "collapsed_titles": [
+      "Node NotReady"
+    ],
+    "collapsed_ids": [
+      "run-012"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-9323d6eb",
+    "technology": "Kubernetes",
+    "category": "RBAC",
+    "commands": [
+      "kubectl auth can-i <x> <x> -n <x>",
+      "kubectl auth can-i --list -n <x>",
+      "kubectl get rolebindings -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Forbidden / RBAC denied",
+    "collapsed_titles": [
+      "Forbidden / RBAC denied"
+    ],
+    "collapsed_ids": [
+      "run-013"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-b4bc9c8c",
+    "technology": "Kubernetes",
+    "category": "Autoscaling",
+    "commands": [
+      "kubectl get hpa <x> -n <x>",
+      "kubectl describe hpa <x> -n <x>",
+      "kubectl top pods -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "HPA is not scaling",
+    "collapsed_titles": [
+      "HPA is not scaling"
+    ],
+    "collapsed_ids": [
+      "run-014"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-3f4048de",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl describe job <x> -n <x>",
+      "kubectl get pods -n <x> -l job-name=<x>",
+      "kubectl describe pod <x> -n <x>",
+      "kubectl logs <x> -n <x> --tail=<n>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Job failed",
+    "collapsed_titles": [
+      "Job failed"
+    ],
+    "collapsed_ids": [
+      "run-015"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-5e6cc0fe",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl describe cronjob <x> -n <x>",
+      "kubectl get cronjob <x> -n <x> -o yaml",
+      "kubectl get jobs -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "CronJob did not run",
+    "collapsed_titles": [
+      "CronJob did not run"
+    ],
+    "collapsed_ids": [
+      "run-016"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-ca7374e0",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get networkpolicy -n <x>",
+      "kubectl describe networkpolicy -n <x>",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "NetworkPolicy may block traffic",
+    "collapsed_titles": [
+      "NetworkPolicy may block traffic"
+    ],
+    "collapsed_ids": [
+      "run-017"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-debb1429",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get deployments -n <x>",
+      "kubectl get deployments -a",
+      "kubectl auth can-i get deployments -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Deployment not found or wrong namespace",
+    "collapsed_titles": [
+      "Deployment not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-021"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-598319bd",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get deployment <x> -n <x> -o yaml",
+      "kubectl describe deployment <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Deployment status changed unexpectedly",
+    "collapsed_titles": [
+      "Deployment status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-022"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-f224a7eb",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get deployment <x> -n <x> --show-labels",
+      "kubectl get deployment <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Deployment labels or selectors look wrong",
+    "collapsed_titles": [
+      "Deployment labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-023"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-a3182e11",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get statefulsets -n <x>",
+      "kubectl get statefulsets -a",
+      "kubectl auth can-i get statefulsets -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "StatefulSet not found or wrong namespace",
+    "collapsed_titles": [
+      "StatefulSet not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-024"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-eb8fc744",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get statefulset <x> -n <x> -o yaml",
+      "kubectl describe statefulset <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "StatefulSet status changed unexpectedly",
+    "collapsed_titles": [
+      "StatefulSet status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-025"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-29d4b560",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get statefulset <x> -n <x> --show-labels",
+      "kubectl get statefulset <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "StatefulSet labels or selectors look wrong",
+    "collapsed_titles": [
+      "StatefulSet labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-026"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-e778185f",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get daemonsets -n <x>",
+      "kubectl get daemonsets -a",
+      "kubectl auth can-i get daemonsets -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "DaemonSet not found or wrong namespace",
+    "collapsed_titles": [
+      "DaemonSet not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-027"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-25677c62",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get daemonset <x> -n <x> -o yaml",
+      "kubectl describe daemonset <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "DaemonSet status changed unexpectedly",
+    "collapsed_titles": [
+      "DaemonSet status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-028"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-522855f5",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get daemonset <x> -n <x> --show-labels",
+      "kubectl get daemonset <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "DaemonSet labels or selectors look wrong",
+    "collapsed_titles": [
+      "DaemonSet labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-029"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-e2c120f3",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get replicasets -n <x>",
+      "kubectl get replicasets -a",
+      "kubectl auth can-i get replicasets -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ReplicaSet not found or wrong namespace",
+    "collapsed_titles": [
+      "ReplicaSet not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-030"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-5bbd393a",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get replicaset <x> -n <x> -o yaml",
+      "kubectl describe replicaset <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ReplicaSet status changed unexpectedly",
+    "collapsed_titles": [
+      "ReplicaSet status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-031"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-5effbc60",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get replicaset <x> -n <x> --show-labels",
+      "kubectl get replicaset <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ReplicaSet labels or selectors look wrong",
+    "collapsed_titles": [
+      "ReplicaSet labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-032"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-cef84707",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get services -n <x>",
+      "kubectl get services -a",
+      "kubectl auth can-i get services -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Service not found or wrong namespace",
+    "collapsed_titles": [
+      "Service not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-033"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-8797b894",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get service <x> -n <x> -o yaml",
+      "kubectl describe service <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Service status changed unexpectedly",
+    "collapsed_titles": [
+      "Service status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-034"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-b0d31031",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get service <x> -n <x> --show-labels",
+      "kubectl get service <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Service labels or selectors look wrong",
+    "collapsed_titles": [
+      "Service labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-035"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-ecf2321a",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get ingresses -n <x>",
+      "kubectl get ingresses -a",
+      "kubectl auth can-i get ingresses -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Ingress not found or wrong namespace",
+    "collapsed_titles": [
+      "Ingress not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-036"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-4583dd5a",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get ingress <x> -n <x> -o yaml",
+      "kubectl describe ingress <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Ingress status changed unexpectedly",
+    "collapsed_titles": [
+      "Ingress status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-037"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-72efcff8",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get ingress <x> -n <x> --show-labels",
+      "kubectl get ingress <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Ingress labels or selectors look wrong",
+    "collapsed_titles": [
+      "Ingress labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-038"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-26f74d16",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get networkpolicies -n <x>",
+      "kubectl get networkpolicies -a",
+      "kubectl auth can-i get networkpolicies -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "NetworkPolicy not found or wrong namespace",
+    "collapsed_titles": [
+      "NetworkPolicy not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-039"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-99409d3f",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get networkpolicy <x> -n <x> -o yaml",
+      "kubectl describe networkpolicy <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "NetworkPolicy status changed unexpectedly",
+    "collapsed_titles": [
+      "NetworkPolicy status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-040"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-a1ec0f9c",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get networkpolicy <x> -n <x> --show-labels",
+      "kubectl get networkpolicy <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "NetworkPolicy labels or selectors look wrong",
+    "collapsed_titles": [
+      "NetworkPolicy labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-041"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-77b8e845",
+    "technology": "Kubernetes",
+    "category": "Storage",
+    "commands": [
+      "kubectl get persistentvolumeclaims -n <x>",
+      "kubectl get persistentvolumeclaims -a",
+      "kubectl auth can-i get persistentvolumeclaims -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PersistentVolumeClaim not found or wrong namespace",
+    "collapsed_titles": [
+      "PersistentVolumeClaim not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-042"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-62a4a022",
+    "technology": "Kubernetes",
+    "category": "Storage",
+    "commands": [
+      "kubectl get pvc <x> -n <x> -o yaml",
+      "kubectl describe pvc <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PersistentVolumeClaim status changed unexpectedly",
+    "collapsed_titles": [
+      "PersistentVolumeClaim status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-043"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-01769783",
+    "technology": "Kubernetes",
+    "category": "Storage",
+    "commands": [
+      "kubectl get pvc <x> -n <x> --show-labels",
+      "kubectl get pvc <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PersistentVolumeClaim labels or selectors look wrong",
+    "collapsed_titles": [
+      "PersistentVolumeClaim labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-044"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-84f64ff4",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl get jobs -n <x>",
+      "kubectl get jobs -a",
+      "kubectl auth can-i get jobs -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Job not found or wrong namespace",
+    "collapsed_titles": [
+      "Job not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-045"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-550e9343",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl get job <x> -n <x> -o yaml",
+      "kubectl describe job <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Job status changed unexpectedly",
+    "collapsed_titles": [
+      "Job status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-046"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-1e1361ba",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl get job <x> -n <x> --show-labels",
+      "kubectl get job <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Job labels or selectors look wrong",
+    "collapsed_titles": [
+      "Job labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-047"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-a1efe6fd",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl get cronjobs -n <x>",
+      "kubectl get cronjobs -a",
+      "kubectl auth can-i get cronjobs -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "CronJob not found or wrong namespace",
+    "collapsed_titles": [
+      "CronJob not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-048"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-b0771c9b",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl get cronjob <x> -n <x> -o yaml",
+      "kubectl describe cronjob <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "CronJob status changed unexpectedly",
+    "collapsed_titles": [
+      "CronJob status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-049"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-fbd96a8d",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl get cronjob <x> -n <x> --show-labels",
+      "kubectl get cronjob <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "CronJob labels or selectors look wrong",
+    "collapsed_titles": [
+      "CronJob labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-050"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-a1d5fcf1",
+    "technology": "Kubernetes",
+    "category": "Autoscaling",
+    "commands": [
+      "kubectl get horizontalpodautoscalers -n <x>",
+      "kubectl get horizontalpodautoscalers -a",
+      "kubectl auth can-i get horizontalpodautoscalers -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "HorizontalPodAutoscaler not found or wrong namespace",
+    "collapsed_titles": [
+      "HorizontalPodAutoscaler not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-051"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-30661e4f",
+    "technology": "Kubernetes",
+    "category": "Autoscaling",
+    "commands": [
+      "kubectl get hpa <x> -n <x> -o yaml",
+      "kubectl describe hpa <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "HorizontalPodAutoscaler status changed unexpectedly",
+    "collapsed_titles": [
+      "HorizontalPodAutoscaler status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-052"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-a94f9a08",
+    "technology": "Kubernetes",
+    "category": "Autoscaling",
+    "commands": [
+      "kubectl get hpa <x> -n <x> --show-labels",
+      "kubectl get hpa <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "HorizontalPodAutoscaler labels or selectors look wrong",
+    "collapsed_titles": [
+      "HorizontalPodAutoscaler labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-053"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-3b4f1c36",
+    "technology": "Kubernetes",
+    "category": "Availability",
+    "commands": [
+      "kubectl get poddisruptionbudgets -n <x>",
+      "kubectl get poddisruptionbudgets -a",
+      "kubectl auth can-i get poddisruptionbudgets -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PodDisruptionBudget not found or wrong namespace",
+    "collapsed_titles": [
+      "PodDisruptionBudget not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-054"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-8ee02452",
+    "technology": "Kubernetes",
+    "category": "Availability",
+    "commands": [
+      "kubectl get pdb <x> -n <x> -o yaml",
+      "kubectl describe pdb <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PodDisruptionBudget status changed unexpectedly",
+    "collapsed_titles": [
+      "PodDisruptionBudget status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-055"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-ec301e06",
+    "technology": "Kubernetes",
+    "category": "Availability",
+    "commands": [
+      "kubectl get pdb <x> -n <x> --show-labels",
+      "kubectl get pdb <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PodDisruptionBudget labels or selectors look wrong",
+    "collapsed_titles": [
+      "PodDisruptionBudget labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-056"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-423f2817",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get configmaps -n <x>",
+      "kubectl get configmaps -a",
+      "kubectl auth can-i get configmaps -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ConfigMap not found or wrong namespace",
+    "collapsed_titles": [
+      "ConfigMap not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-057"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-f1433ec9",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get configmap <x> -n <x> -o yaml",
+      "kubectl describe configmap <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ConfigMap status changed unexpectedly",
+    "collapsed_titles": [
+      "ConfigMap status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-058"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-48bd167e",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get configmap <x> -n <x> --show-labels",
+      "kubectl get configmap <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ConfigMap labels or selectors look wrong",
+    "collapsed_titles": [
+      "ConfigMap labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-059"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-b2f920c0",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get secrets -n <x>",
+      "kubectl get secrets -a",
+      "kubectl auth can-i get secrets -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Secret not found or wrong namespace",
+    "collapsed_titles": [
+      "Secret not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-060"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-6bce4bcd",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get secret <x> -n <x> -o yaml",
+      "kubectl describe secret <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Secret status changed unexpectedly",
+    "collapsed_titles": [
+      "Secret status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-061"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-6043e900",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get secret <x> -n <x> --show-labels",
+      "kubectl get secret <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Secret labels or selectors look wrong",
+    "collapsed_titles": [
+      "Secret labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-062"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-3d686d50",
+    "technology": "Kubernetes",
+    "category": "RBAC",
+    "commands": [
+      "kubectl get serviceaccounts -n <x>",
+      "kubectl get serviceaccounts -a",
+      "kubectl auth can-i get serviceaccounts -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ServiceAccount not found or wrong namespace",
+    "collapsed_titles": [
+      "ServiceAccount not found or wrong namespace"
+    ],
+    "collapsed_ids": [
+      "run-063"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-b1fa8305",
+    "technology": "Kubernetes",
+    "category": "RBAC",
+    "commands": [
+      "kubectl get serviceaccount <x> -n <x> -o yaml",
+      "kubectl describe serviceaccount <x> -n <x>",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ServiceAccount status changed unexpectedly",
+    "collapsed_titles": [
+      "ServiceAccount status changed unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-064"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-c372fa07",
+    "technology": "Kubernetes",
+    "category": "RBAC",
+    "commands": [
+      "kubectl get serviceaccount <x> -n <x> --show-labels",
+      "kubectl get serviceaccount <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ServiceAccount labels or selectors look wrong",
+    "collapsed_titles": [
+      "ServiceAccount labels or selectors look wrong"
+    ],
+    "collapsed_ids": [
+      "run-065"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-8bb8b99e",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get deployment <x> -n <x>",
+      "kubectl describe deployment <x> -n <x>",
+      "kubectl get pods -n <x> -o wide"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Deployment has fewer ready replicas than desired",
+    "collapsed_titles": [
+      "Deployment has fewer ready replicas than desired"
+    ],
+    "collapsed_ids": [
+      "run-066"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-c8784f76",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get statefulset <x> -n <x>",
+      "kubectl describe statefulset <x> -n <x>",
+      "kubectl get pods -n <x> -o wide"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "StatefulSet rollout is stuck",
+    "collapsed_titles": [
+      "StatefulSet rollout is stuck"
+    ],
+    "collapsed_ids": [
+      "run-067"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-47950fc9",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get daemonset <x> -n <x>",
+      "kubectl describe daemonset <x> -n <x>",
+      "kubectl get nodes --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "DaemonSet missing pods on some nodes",
+    "collapsed_titles": [
+      "DaemonSet missing pods on some nodes"
+    ],
+    "collapsed_ids": [
+      "run-068"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-f599b365",
+    "technology": "Kubernetes",
+    "category": "Storage",
+    "commands": [
+      "kubectl describe pvc <x> -n <x>",
+      "kubectl get storageclass -o yaml",
+      "kubectl get pods -n <x> -o wide"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PVC expansion not taking effect",
+    "collapsed_titles": [
+      "PVC expansion not taking effect"
+    ],
+    "collapsed_ids": [
+      "run-070"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-70ed74f4",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get service <x> -n <x>",
+      "kubectl describe service <x> -n <x>",
+      "kubectl get service <x> -n <x> -o yaml"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "LoadBalancer Service has no external address",
+    "collapsed_titles": [
+      "LoadBalancer Service has no external address"
+    ],
+    "collapsed_ids": [
+      "run-071"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-765257aa",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x> -o yaml",
+      "kubectl get pods -n <x> --show-labels",
+      "kubectl get pods -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "One pod receives traffic while another does not",
+    "collapsed_titles": [
+      "One pod receives traffic while another does not"
+    ],
+    "collapsed_ids": [
+      "run-073"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-c2a7c990",
+    "technology": "Kubernetes",
+    "category": "Nodes",
+    "commands": [
+      "kubectl describe node <x>",
+      "kubectl get pods -a --field-selector spec.nodename=<x> -o wide",
+      "kubectl top node <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Node DiskPressure",
+    "collapsed_titles": [
+      "Node DiskPressure"
+    ],
+    "collapsed_ids": [
+      "run-079"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-27267448",
+    "technology": "Kubernetes",
+    "category": "Nodes",
+    "commands": [
+      "kubectl describe node <x>",
+      "kubectl top node <x>",
+      "kubectl get pods -a --field-selector spec.nodename=<x> -o wide"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Node MemoryPressure",
+    "collapsed_titles": [
+      "Node MemoryPressure"
+    ],
+    "collapsed_ids": [
+      "run-080"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-78b640bf",
+    "technology": "Kubernetes",
+    "category": "Availability",
+    "commands": [
+      "kubectl get pdb -n <x>",
+      "kubectl describe pdb <x> -n <x>",
+      "kubectl get pods -n <x> --show-labels"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "PDB blocks node drain",
+    "collapsed_titles": [
+      "PDB blocks node drain"
+    ],
+    "collapsed_ids": [
+      "run-085"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-fd2d9945",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl describe resourcequota -n <x>",
+      "kubectl get pods -n <x>",
+      "kubectl get pods -n <x> -o yaml"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ResourceQuota exceeded",
+    "collapsed_titles": [
+      "ResourceQuota exceeded"
+    ],
+    "collapsed_ids": [
+      "run-086"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-9cf24991",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get limitrange -n <x>",
+      "kubectl describe limitrange -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.containers[*].resources}'"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Default requests or limits appear unexpectedly",
+    "collapsed_titles": [
+      "Default requests or limits appear unexpectedly"
+    ],
+    "collapsed_ids": [
+      "run-087"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-0c037e64",
+    "technology": "Kubernetes",
+    "category": "RBAC",
+    "commands": [
+      "kubectl get serviceaccounts -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.serviceaccountname}'",
+      "kubectl get namespace <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "ServiceAccount not found",
+    "collapsed_titles": [
+      "ServiceAccount not found"
+    ],
+    "collapsed_ids": [
+      "run-088"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-d63144f2",
+    "technology": "Kubernetes",
+    "category": "RBAC",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o jsonpath='{.spec.serviceaccountname}'",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.metadata.ownerreferences}'",
+      "kubectl get deployment <x> -n <x> -o yaml"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod uses unexpected ServiceAccount",
+    "collapsed_titles": [
+      "Pod uses unexpected ServiceAccount"
+    ],
+    "collapsed_ids": [
+      "run-089"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-b841effd",
+    "technology": "Kubernetes",
+    "category": "RBAC",
+    "commands": [
+      "kubectl describe rolebinding <x> -n <x>",
+      "kubectl get rolebinding <x> -n <x> -o yaml",
+      "kubectl auth can-i <x> <x> -n <x> --as=<x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "RoleBinding points to wrong subject",
+    "collapsed_titles": [
+      "RoleBinding points to wrong subject"
+    ],
+    "collapsed_ids": [
+      "run-090"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-c350b893",
+    "technology": "Kubernetes",
+    "category": "Namespaces",
+    "commands": [
+      "kubectl get namespace <x> -o yaml",
+      "kubectl api-resources --verbs=list --namespaced -o name",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Namespace stuck Terminating",
+    "collapsed_titles": [
+      "Namespace stuck Terminating"
+    ],
+    "collapsed_ids": [
+      "run-093"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-98dc4026",
+    "technology": "Kubernetes",
+    "category": "Context & API",
+    "commands": [
+      "kubectl api-resources",
+      "kubectl api-versions",
+      "kubectl explain <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "kubectl command says resource type not found",
+    "collapsed_titles": [
+      "kubectl command says resource type not found"
+    ],
+    "collapsed_ids": [
+      "run-094"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-2a64d951",
+    "technology": "Kubernetes",
+    "category": "Context & API",
+    "commands": [
+      "kubectl config current-context",
+      "kubectl config view --minify",
+      "kubectl cluster-info"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "kubectl cannot connect to API server",
+    "collapsed_titles": [
+      "kubectl cannot connect to API server"
+    ],
+    "collapsed_ids": [
+      "run-095"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-11e7e049",
+    "technology": "Kubernetes",
+    "category": "Autoscaling",
+    "commands": [
+      "kubectl top nodes",
+      "kubectl top pods -n <x>",
+      "kubectl api-versions"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Metrics unavailable for kubectl top",
+    "collapsed_titles": [
+      "Metrics unavailable for kubectl top"
+    ],
+    "collapsed_ids": [
+      "run-096"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-535a6b2b",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get deployment <x> -n <x> -o jsonpath='{.spec.template.spec.containers[*].image}'",
+      "kubectl rollout status deployment/<x> -n <x> --timeout=2m",
+      "kubectl get pods -n <x> -o custom-columns=pod:.metadata.name,images:.spec.containers[*].image"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Deployment image update did not roll out",
+    "collapsed_titles": [
+      "Deployment image update did not roll out"
+    ],
+    "collapsed_ids": [
+      "run-097"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-2083b5ca",
+    "technology": "Kubernetes",
+    "category": "Batch",
+    "commands": [
+      "kubectl get job <x> -n <x>",
+      "kubectl describe job <x> -n <x>",
+      "kubectl get pods -n <x> -l job-name=<x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Job pod succeeded but Job not complete",
+    "collapsed_titles": [
+      "Job pod succeeded but Job not complete"
+    ],
+    "collapsed_ids": [
+      "run-100"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-d3df9943",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get ingress <x> -n <x>",
+      "kubectl describe ingress <x> -n <x>",
+      "kubectl get ingressclass"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Ingress has no address",
+    "collapsed_titles": [
+      "Ingress has no address"
+    ],
+    "collapsed_ids": [
+      "run-101"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-8d7dd78a",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get ingress <x> -n <x> -o yaml",
+      "kubectl describe ingress <x> -n <x>",
+      "kubectl get service -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Ingress host does not match request",
+    "collapsed_titles": [
+      "Ingress host does not match request"
+    ],
+    "collapsed_ids": [
+      "run-102"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-7aeab218",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get service <x> -n <x> -o yaml",
+      "kubectl get pods -n <x> -o yaml",
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Service targetPort mismatch",
+    "collapsed_titles": [
+      "Service targetPort mismatch"
+    ],
+    "collapsed_ids": [
+      "run-103"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-9cc15827",
+    "technology": "Kubernetes",
+    "category": "Operations",
+    "commands": [
+      "kubectl get pods,deployments,statefulsets,daemonsets -n <x>",
+      "kubectl get services,ingresses -n <x>",
+      "kubectl get events -n <x> --field-selector type=warning"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Need a safe first look at a namespace",
+    "collapsed_titles": [
+      "Need a safe first look at a namespace"
+    ],
+    "collapsed_ids": [
+      "run-105"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-ec4e026b",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get pods -n <x> --sort-by=.metadata.creationtimestamp",
+      "kubectl get pods -n <x> -o custom-columns=pod:.metadata.name,images:.spec.containers[*].image",
+      "kubectl get pods -n <x>"
+    ],
+    "step_count": 3,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Need to identify newest pods after rollout",
+    "collapsed_titles": [
+      "Need to identify newest pods after rollout"
+    ],
+    "collapsed_ids": [
+      "run-107"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-aa1918ff",
+    "technology": "Kubernetes",
+    "category": "Pods",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o jsonpath='{range .status.initcontainerstatuses[*]}{.name}{\" state=\"}{.state}{\" last=\"}{.laststate}{\"\\n\"}{end}'",
+      "kubectl logs <x> -n <x> -c <x> --tail=<n>",
+      "kubectl logs <x> -n <x> -c <x> --previous --tail=<n>",
+      "kubectl describe pod <x> -n <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Init container is failing",
+    "collapsed_titles": [
+      "Init container is failing"
+    ],
+    "collapsed_ids": [
+      "run-110"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-4297edd5",
+    "technology": "Kubernetes",
+    "category": "Storage",
+    "commands": [
+      "kubectl describe pod <x> -n <x>",
+      "kubectl describe pvc <x> -n <x>",
+      "kubectl get pvc <x> -n <x> -o jsonpath='{.spec.volumename}{\"\\n\"}'",
+      "kubectl get pv -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 3,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Pod cannot mount a volume",
+    "collapsed_titles": [
+      "Pod cannot mount a volume"
+    ],
+    "collapsed_ids": [
+      "run-111"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-2c156447",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl describe service <x> -n <x>",
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x>",
+      "kubectl get pods -n <x> --show-labels",
+      "kubectl get pods -n <x> -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Service has no ready backends / no endpoints",
+    "collapsed_titles": [
+      "Service has no ready backends / no endpoints"
+    ],
+    "collapsed_ids": [
+      "run-002"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-ca208016",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get pods -n kube-system -l k8s-app=kube-dns",
+      "kubectl exec -n <x> <x> -- cat /etc/resolv.conf",
+      "kubectl exec -n <x> <x> -- nslookup <x>",
+      "kubectl logs -n kube-system -l k8s-app=kube-dns --tail=<n>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Kubernetes DNS resolution fails",
+    "collapsed_titles": [
+      "Kubernetes DNS resolution fails"
+    ],
+    "collapsed_ids": [
+      "run-008"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-6845faa2",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl rollout status deployment/<x> -n <x> --timeout=2m",
+      "kubectl describe deployment <x> -n <x>",
+      "kubectl get rs -n <x>",
+      "kubectl get pods -n <x> -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Deployment rollout stuck",
+    "collapsed_titles": [
+      "Deployment rollout stuck"
+    ],
+    "collapsed_ids": [
+      "run-009"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-89c38603",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl describe ingress <x> -n <x>",
+      "kubectl describe service <x> -n <x>",
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x>",
+      "kubectl get pods -n <x> -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Ingress returns 404 / 502 / 503",
+    "collapsed_titles": [
+      "Ingress returns 404 / 502 / 503"
+    ],
+    "collapsed_ids": [
+      "run-010"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-efd3841d",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o yaml",
+      "kubectl get configmap -n <x>",
+      "kubectl get secret -n <x>",
+      "kubectl get pod <x> -n <x> -o jsonpath='{.metadata.ownerreferences}'"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Secret or ConfigMap change not reflected",
+    "collapsed_titles": [
+      "Secret or ConfigMap change not reflected"
+    ],
+    "collapsed_ids": [
+      "run-018"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-20d1d77a",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl describe service <x> -n <x>",
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x>",
+      "kubectl get networkpolicy -n <x>",
+      "kubectl get pods -n <x> -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Service resolves in DNS but connection fails",
+    "collapsed_titles": [
+      "Service resolves in DNS but connection fails"
+    ],
+    "collapsed_ids": [
+      "run-072"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-1b9f74bd",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get pod <x> -n <x> -o wide --show-labels",
+      "kubectl get networkpolicy -n <x>",
+      "kubectl describe networkpolicy -n <x>",
+      "kubectl get networkpolicy -n <x> -o yaml"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "NetworkPolicy may be blocking traffic",
+    "collapsed_titles": [
+      "NetworkPolicy may be blocking traffic"
+    ],
+    "collapsed_ids": [
+      "run-112"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-230f8e5c",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "commands": [
+      "kubectl get deployment <x> -n <x> -o jsonpath='{range .status.conditions[*]}{.type}{\"=\"}{.status}{\" reason=\"}{.reason}{\" message=\"}{.message}{\"\\n\"}{end}'",
+      "kubectl describe deployment <x> -n <x>",
+      "kubectl get rs -n <x> -o wide",
+      "kubectl get pods -n <x> -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Deployment exceeded progress deadline",
+    "collapsed_titles": [
+      "Deployment exceeded progress deadline"
+    ],
+    "collapsed_ids": [
+      "run-113"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-5cdaf288",
+    "technology": "Kubernetes",
+    "category": "Nodes",
+    "commands": [
+      "kubectl describe node <x>",
+      "kubectl top node <x>",
+      "kubectl get pods -a --field-selector spec.nodename=<x> -o wide",
+      "kubectl get node <x> -o jsonpath='{.status.allocatable.ephemeral-storage}{\"\\n\"}'"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Node has DiskPressure",
+    "collapsed_titles": [
+      "Node has DiskPressure"
+    ],
+    "collapsed_ids": [
+      "run-114"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-d7fca6b2",
+    "technology": "Kubernetes",
+    "category": "Security",
+    "commands": [
+      "kubectl auth whoami",
+      "kubectl auth can-i <x> <x> -n <x>",
+      "kubectl auth can-i <x> <x> -n <x> --as=<x>",
+      "kubectl get rolebindings -n <x> -o wide"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "RBAC works for one user but not another",
+    "collapsed_titles": [
+      "RBAC works for one user but not another"
+    ],
+    "collapsed_ids": [
+      "run-116"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-28bc6b51",
+    "technology": "Kubernetes",
+    "category": "Networking",
+    "commands": [
+      "kubectl get service <x> -n <x> -o yaml",
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x> -o wide",
+      "kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x> -o jsonpath='{range .items[*].endpoints[*]}{.addresses}{\" ready=\"}{.conditions.ready}{\"\\n\"}{end}'",
+      "kubectl get pods -n <x> -o wide --show-labels"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Service exists but connection is refused",
+    "collapsed_titles": [
+      "Service exists but connection is refused"
+    ],
+    "collapsed_ids": [
+      "run-117"
+    ],
+    "generic_only": false
+  },
+  {
+    "proc_id": "p-bb57a40c",
+    "technology": "Kubernetes",
+    "category": "Helm-Deployed Workloads",
+    "commands": [
+      "kubectl get pods -n <x> -o wide",
+      "kubectl get events -n <x> --sort-by=.metadata.creationtimestamp",
+      "helm status <x> -n <x>",
+      "helm get manifest <x> -n <x>"
+    ],
+    "step_count": 4,
+    "specific_step_count": 4,
+    "collapsed_count": 1,
+    "max_risk": 0,
+    "representative_title": "Helm release deployed but Pods fail",
+    "collapsed_titles": [
+      "Helm release deployed but Pods fail"
+    ],
+    "collapsed_ids": [
+      "k8s-v3-100"
+    ],
+    "generic_only": false
+  }
+]

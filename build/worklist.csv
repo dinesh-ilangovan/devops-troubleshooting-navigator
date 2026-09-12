@@ -1,0 +1,155 @@
+rank,proc_id,technology,category,symptoms_collapsed,steps,specific_steps,generic_only,action,representative_title,first_command
+1,p-6c409f89,Kubernetes,Pods & Containers,115,4,2,False,SPLIT - one sequence is covering too many symptoms,Pod stuck in ContainerCreating,kubectl get pod <x> -n <x> -o wide
+2,p-7b0764d0,Kubernetes,"Ingress, Gateway & TLS",40,4,4,False,SPLIT - one sequence is covering too many symptoms,Ingress returns 404,kubectl get ingress -n <x> -o wide
+3,p-737408ba,Kubernetes,Scheduling,35,4,3,False,SPLIT - one sequence is covering too many symptoms,Pod Pending due to insufficient CPU,kubectl describe pod <x> -n <x>
+4,p-0d1b6918,Kubernetes,DNS & CoreDNS,34,4,4,False,SPLIT - one sequence is covering too many symptoms,CoreDNS pods are CrashLooping,kubectl get pods -n kube-system -l k8s-app=kube-dns -o wide
+5,p-03c10af2,Kubernetes,Services & EndpointSlices,34,4,4,False,SPLIT - one sequence is covering too many symptoms,Service has no EndpointSlices,kubectl get svc <x> -n <x> -o yaml
+6,p-23dae24f,Kubernetes,Network & NetworkPolicy,24,4,3,False,SPLIT - one sequence is covering too many symptoms,Pod-to-pod traffic fails same namespace,kubectl get pod <x> -n <x> -o wide
+7,p-0844d55c,Docker,"Registry, Auth & TLS",21,4,4,False,SPLIT - one sequence is covering too many symptoms,"Registry login — Registry, Auth & TLS: fails completely",docker pull <x>
+8,p-1027bd72,Docker,Build Context & .dockerignore,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Build context size — Build Context & .dockerignore: fails completely,docker buildx build --progress=plain -f <x> <x>
+9,p-76e47f16,Docker,BuildKit & Cache,21,4,4,False,SPLIT - one sequence is covering too many symptoms,BuildKit cache reuse — BuildKit & Cache: fails completely,docker buildx inspect --bootstrap
+10,p-4b22e5c0,Docker,Buildx & Multi-platform,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Selected builder — Buildx & Multi-platform: fails completely,docker buildx ls
+11,p-33e29505,Docker,"DNS, Proxy & Egress",21,4,4,False,SPLIT - one sequence is covering too many symptoms,"Container DNS — DNS, Proxy & Egress: fails completely",docker inspect <x> --format 'dns={{json .hostconfig.dns}} search={{json .hostconfig.dnssearch}} extrahosts={{json .hostconfig.extrahosts}}'
+12,p-c451aab4,Docker,"Security, Users & Capabilities",21,4,4,False,SPLIT - one sequence is covering too many symptoms,"Container user/UID — Security, Users & Capabilities: fails completely",docker inspect <x> --format 'user={{.config.user}} privileged={{.hostconfig.privileged}} readonlyrootfs={{.hostconfig.readonlyrootfs}} capadd={{json .hostconfig.capadd}} capdrop={{json .hostconfig.capdrop}} securityopt={{json .hostconfig.securityopt}}'
+13,p-db74e7d9,Docker,Engine & Daemon,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Daemon startup — Engine & Daemon: fails completely,docker version
+14,p-f28e764b,Docker,Container Lifecycle,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Container startup — Container Lifecycle: fails completely,docker inspect <x> --format '{{json .state}}'
+15,p-82cfff14,Docker,"Entrypoint, PID 1 & Signals",21,4,4,False,SPLIT - one sequence is covering too many symptoms,"ENTRYPOINT executable — Entrypoint, PID 1 & Signals: fails completely",docker image inspect <x> --format 'entrypoint={{json .config.entrypoint}} cmd={{json .config.cmd}} stopsignal={{.config.stopsignal}} user={{.config.user}} workingdir={{.config.workingdir}}'
+16,p-79c51095,Docker,Health & Restart Policies,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Healthcheck command — Health & Restart Policies: fails completely,docker inspect <x> --format '{{json .state.health}}'
+17,p-dd3ccf16,Docker,"Logs, Exec & Debugging",21,4,4,False,SPLIT - one sequence is covering too many symptoms,"Docker logs output — Logs, Exec & Debugging: fails completely",docker inspect <x> --format '{{.hostconfig.logconfig.type}} {{json .hostconfig.logconfig.config}}'
+18,p-0cc8ebd6,Docker,"CPU, Memory & Cgroups",21,4,4,False,SPLIT - one sequence is covering too many symptoms,"Memory limit — CPU, Memory & Cgroups: fails completely",docker stats --no-stream <x>
+19,p-fd997bea,Docker,Networking & Port Publishing,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Published TCP port — Networking & Port Publishing: fails completely,docker port <x>
+20,p-12f3e8e5,Docker,Volumes & Bind Mounts,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Named volume — Volumes & Bind Mounts: fails completely,docker inspect <x> --format '{{json .mounts}}'
+21,p-b368184d,Docker,Storage Driver & Disk,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Docker data-root capacity — Storage Driver & Disk: fails completely,docker system df -v
+22,p-8e7aa277,Docker,Images & Local Image Store,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Image tag — Images & Local Image Store: fails completely,docker image inspect <x>
+23,p-caf86c7c,Docker,Dockerfile Semantics,21,4,4,False,SPLIT - one sequence is covering too many symptoms,CMD/ENTRYPOINT interaction — Dockerfile Semantics: fails completely,docker image inspect <x> --format 'entrypoint={{json .config.entrypoint}} cmd={{json .config.cmd}} user={{.config.user}} workingdir={{.config.workingdir}}'
+24,p-ce3b88b3,Docker,Compose Configuration,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Compose interpolation — Compose Configuration: fails completely,docker compose config
+25,p-f3697f20,Docker,Compose Runtime & Dependencies,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Compose service startup — Compose Runtime & Dependencies: fails completely,docker compose ps -a
+26,p-a52a0051,Docker,Rootless Docker,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Rootless daemon — Rootless Docker: fails completely,docker context show
+27,p-2737ac0c,Docker,Host Integration & Performance,21,4,4,False,SPLIT - one sequence is covering too many symptoms,Host firewall/VPN — Host Integration & Performance: fails completely,docker info
+28,p-ef8df8eb,Kubernetes,Workloads & Rollouts,18,4,4,False,SPLIT - one sequence is covering too many symptoms,Deployment rollout exceeds progress deadline,kubectl get deployment <x> -n <x> -o wide
+29,p-76e79ec7,Kubernetes,Control Plane & Cluster Health,16,4,4,False,SPLIT - one sequence is covering too many symptoms,API server unreachable from kubectl,kubectl get --raw='/readyz?verbose'
+30,p-ec6a9d1d,Kubernetes,Advanced Debugging,15,4,3,False,SPLIT - one sequence is covering too many symptoms,Distroless container has no shell,kubectl get pod <x> -n <x> -o yaml
+31,p-f7185c19,Kubernetes,Image & Registry,15,4,2,False,SPLIT - one sequence is covering too many symptoms,ImagePullBackOff registry authentication,kubectl describe pod <x> -n <x>
+32,p-0d1d7d28,Kubernetes,Certificates & Authentication,14,4,4,False,SPLIT - one sequence is covering too many symptoms,kubectl x509 certificate expired,kubectl config current-context
+33,p-55267951,Kubernetes,Upgrades & API Compatibility,12,4,4,False,SPLIT - one sequence is covering too many symptoms,Manifest uses removed Kubernetes API version,kubectl version
+34,p-79cb6a81,Kubernetes,Resource Ownership & Apply,10,4,4,False,SPLIT - one sequence is covering too many symptoms,kubectl apply field manager conflict,kubectl get <x> <x> -n <x> -o yaml
+35,p-be88bb37,Kubernetes,Namespaces & Lifecycle,9,4,4,False,MERGE or differentiate,Namespace deletion blocked by API discovery,kubectl get namespace <x> -o yaml
+36,p-fcc1c5eb,Kubernetes,Multi-Cluster & Context Safety,8,4,4,False,MERGE or differentiate,kubectl pointed at wrong cluster,kubectl config current-context
+37,p-3d6b10ab,Kubernetes,Scheduling,3,4,2,False,MERGE or differentiate,Pod stuck Pending,kubectl get pod <x> -n <x> -o wide
+38,p-3b372551,Kubernetes,Scheduling,2,4,3,False,MERGE or differentiate,Pod is evicted,"kubectl get pod <x> -n <x> -o jsonpath='{.status.reason}{"" | ""}{.status.message}{""\n""}'"
+39,p-85860c7c,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,Compare manifest before applying,kubectl apply -f <x> --dry-run=server
+40,p-274c0fcb,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,CronJob is suspended,kubectl get cronjob <x> -n <x> -o jsonpath='{.spec.suspend}'
+41,p-65350610,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Need to test Service DNS from a disposable pod,kubectl get service <x> -n <x>
+42,p-bd0b46dd,Kubernetes,Workloads,1,4,4,False,VERIFY on cluster,Deployment rollback decision,kubectl rollout history deployment/<x> -n <x>
+43,p-8a1e7b31,Kubernetes,Nodes,1,5,5,False,VERIFY on cluster,Prepare node for maintenance,kubectl describe node <x>
+44,p-be721771,Kubernetes,Scheduling,1,3,1,False,VERIFY on cluster,Pod evicted,kubectl describe pod <x> -n <x>
+45,p-2b0d1f83,Kubernetes,Pods,1,4,2,False,VERIFY on cluster,CrashLoopBackOff / pod keeps restarting,kubectl get pod <x> -n <x> -o wide
+46,p-e7a636f2,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,ImagePullBackOff / ErrImagePull,kubectl describe pod <x> -n <x>
+47,p-2a9488b8,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Pod OOMKilled,kubectl describe pod <x> -n <x>
+48,p-cb14654d,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Pod Running but not Ready,kubectl get pod <x> -n <x>
+49,p-c6f683e5,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Pod stuck Terminating,kubectl get pod <x> -n <x> -o yaml
+50,p-18b3e987,Kubernetes,Storage,1,3,2,False,VERIFY on cluster,Pod cannot mount volume,kubectl describe pod <x> -n <x>
+51,p-c17c60c5,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Readiness probe failing,kubectl describe pod <x> -n <x>
+52,p-6ae1f4a0,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Liveness probe restarting container,kubectl describe pod <x> -n <x>
+53,p-35bdf60d,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Startup probe never succeeds,kubectl describe pod <x> -n <x>
+54,p-5b14db42,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Init container failed,kubectl describe pod <x> -n <x>
+55,p-0736626c,Kubernetes,Scheduling,1,3,2,False,VERIFY on cluster,Pod cannot schedule because of taint,kubectl describe pod <x> -n <x>
+56,p-5e13b105,Kubernetes,Scheduling,1,3,2,False,VERIFY on cluster,Pod cannot schedule because of node selector,kubectl describe pod <x> -n <x>
+57,p-c9a14ce8,Kubernetes,Scheduling,1,3,2,False,VERIFY on cluster,Pod cannot schedule because of insufficient CPU,kubectl describe pod <x> -n <x>
+58,p-bcf03405,Kubernetes,Scheduling,1,3,2,False,VERIFY on cluster,Pod cannot schedule because of insufficient memory,kubectl describe pod <x> -n <x>
+59,p-9adbea74,Kubernetes,Configuration,1,3,2,False,VERIFY on cluster,ConfigMap missing key,kubectl get configmap <x> -n <x> -o yaml
+60,p-fe6f84f0,Kubernetes,Configuration,1,3,2,False,VERIFY on cluster,Secret missing key,kubectl describe secret <x> -n <x>
+61,p-4eedbd78,Kubernetes,Networking,1,3,2,False,VERIFY on cluster,EndpointSlice shows not-ready endpoints,kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x> -o yaml
+62,p-1d3ba6c6,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Need to find which workload owns a pod,kubectl get pod <x> -n <x> -o jsonpath='{.metadata.ownerreferences}'
+63,p-3a0249ca,Kubernetes,Pods,1,3,2,False,VERIFY on cluster,Need to check application logs across all containers,kubectl get pod <x> -n <x> -o jsonpath='{.spec.containers[*].name}'
+64,p-5482cbcc,Kubernetes,Storage,1,3,3,False,VERIFY on cluster,PVC remains Pending,kubectl describe pvc <x> -n <x>
+65,p-398df1c8,Kubernetes,Nodes,1,3,3,False,VERIFY on cluster,Node NotReady,kubectl get node <x> -o wide
+66,p-9323d6eb,Kubernetes,RBAC,1,3,3,False,VERIFY on cluster,Forbidden / RBAC denied,kubectl auth can-i <x> <x> -n <x>
+67,p-b4bc9c8c,Kubernetes,Autoscaling,1,3,3,False,VERIFY on cluster,HPA is not scaling,kubectl get hpa <x> -n <x>
+68,p-3f4048de,Kubernetes,Batch,1,4,3,False,VERIFY on cluster,Job failed,kubectl describe job <x> -n <x>
+69,p-5e6cc0fe,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,CronJob did not run,kubectl describe cronjob <x> -n <x>
+70,p-ca7374e0,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,NetworkPolicy may block traffic,kubectl get networkpolicy -n <x>
+71,p-debb1429,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,Deployment not found or wrong namespace,kubectl get deployments -n <x>
+72,p-598319bd,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,Deployment status changed unexpectedly,kubectl get deployment <x> -n <x> -o yaml
+73,p-f224a7eb,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,Deployment labels or selectors look wrong,kubectl get deployment <x> -n <x> --show-labels
+74,p-a3182e11,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,StatefulSet not found or wrong namespace,kubectl get statefulsets -n <x>
+75,p-eb8fc744,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,StatefulSet status changed unexpectedly,kubectl get statefulset <x> -n <x> -o yaml
+76,p-29d4b560,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,StatefulSet labels or selectors look wrong,kubectl get statefulset <x> -n <x> --show-labels
+77,p-e778185f,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,DaemonSet not found or wrong namespace,kubectl get daemonsets -n <x>
+78,p-25677c62,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,DaemonSet status changed unexpectedly,kubectl get daemonset <x> -n <x> -o yaml
+79,p-522855f5,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,DaemonSet labels or selectors look wrong,kubectl get daemonset <x> -n <x> --show-labels
+80,p-e2c120f3,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,ReplicaSet not found or wrong namespace,kubectl get replicasets -n <x>
+81,p-5bbd393a,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,ReplicaSet status changed unexpectedly,kubectl get replicaset <x> -n <x> -o yaml
+82,p-5effbc60,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,ReplicaSet labels or selectors look wrong,kubectl get replicaset <x> -n <x> --show-labels
+83,p-cef84707,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Service not found or wrong namespace,kubectl get services -n <x>
+84,p-8797b894,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Service status changed unexpectedly,kubectl get service <x> -n <x> -o yaml
+85,p-b0d31031,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Service labels or selectors look wrong,kubectl get service <x> -n <x> --show-labels
+86,p-ecf2321a,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Ingress not found or wrong namespace,kubectl get ingresses -n <x>
+87,p-4583dd5a,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Ingress status changed unexpectedly,kubectl get ingress <x> -n <x> -o yaml
+88,p-72efcff8,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Ingress labels or selectors look wrong,kubectl get ingress <x> -n <x> --show-labels
+89,p-26f74d16,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,NetworkPolicy not found or wrong namespace,kubectl get networkpolicies -n <x>
+90,p-99409d3f,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,NetworkPolicy status changed unexpectedly,kubectl get networkpolicy <x> -n <x> -o yaml
+91,p-a1ec0f9c,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,NetworkPolicy labels or selectors look wrong,kubectl get networkpolicy <x> -n <x> --show-labels
+92,p-77b8e845,Kubernetes,Storage,1,3,3,False,VERIFY on cluster,PersistentVolumeClaim not found or wrong namespace,kubectl get persistentvolumeclaims -n <x>
+93,p-62a4a022,Kubernetes,Storage,1,3,3,False,VERIFY on cluster,PersistentVolumeClaim status changed unexpectedly,kubectl get pvc <x> -n <x> -o yaml
+94,p-01769783,Kubernetes,Storage,1,3,3,False,VERIFY on cluster,PersistentVolumeClaim labels or selectors look wrong,kubectl get pvc <x> -n <x> --show-labels
+95,p-84f64ff4,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,Job not found or wrong namespace,kubectl get jobs -n <x>
+96,p-550e9343,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,Job status changed unexpectedly,kubectl get job <x> -n <x> -o yaml
+97,p-1e1361ba,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,Job labels or selectors look wrong,kubectl get job <x> -n <x> --show-labels
+98,p-a1efe6fd,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,CronJob not found or wrong namespace,kubectl get cronjobs -n <x>
+99,p-b0771c9b,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,CronJob status changed unexpectedly,kubectl get cronjob <x> -n <x> -o yaml
+100,p-fbd96a8d,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,CronJob labels or selectors look wrong,kubectl get cronjob <x> -n <x> --show-labels
+101,p-a1d5fcf1,Kubernetes,Autoscaling,1,3,3,False,VERIFY on cluster,HorizontalPodAutoscaler not found or wrong namespace,kubectl get horizontalpodautoscalers -n <x>
+102,p-30661e4f,Kubernetes,Autoscaling,1,3,3,False,VERIFY on cluster,HorizontalPodAutoscaler status changed unexpectedly,kubectl get hpa <x> -n <x> -o yaml
+103,p-a94f9a08,Kubernetes,Autoscaling,1,3,3,False,VERIFY on cluster,HorizontalPodAutoscaler labels or selectors look wrong,kubectl get hpa <x> -n <x> --show-labels
+104,p-3b4f1c36,Kubernetes,Availability,1,3,3,False,VERIFY on cluster,PodDisruptionBudget not found or wrong namespace,kubectl get poddisruptionbudgets -n <x>
+105,p-8ee02452,Kubernetes,Availability,1,3,3,False,VERIFY on cluster,PodDisruptionBudget status changed unexpectedly,kubectl get pdb <x> -n <x> -o yaml
+106,p-ec301e06,Kubernetes,Availability,1,3,3,False,VERIFY on cluster,PodDisruptionBudget labels or selectors look wrong,kubectl get pdb <x> -n <x> --show-labels
+107,p-423f2817,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,ConfigMap not found or wrong namespace,kubectl get configmaps -n <x>
+108,p-f1433ec9,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,ConfigMap status changed unexpectedly,kubectl get configmap <x> -n <x> -o yaml
+109,p-48bd167e,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,ConfigMap labels or selectors look wrong,kubectl get configmap <x> -n <x> --show-labels
+110,p-b2f920c0,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,Secret not found or wrong namespace,kubectl get secrets -n <x>
+111,p-6bce4bcd,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,Secret status changed unexpectedly,kubectl get secret <x> -n <x> -o yaml
+112,p-6043e900,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,Secret labels or selectors look wrong,kubectl get secret <x> -n <x> --show-labels
+113,p-3d686d50,Kubernetes,RBAC,1,3,3,False,VERIFY on cluster,ServiceAccount not found or wrong namespace,kubectl get serviceaccounts -n <x>
+114,p-b1fa8305,Kubernetes,RBAC,1,3,3,False,VERIFY on cluster,ServiceAccount status changed unexpectedly,kubectl get serviceaccount <x> -n <x> -o yaml
+115,p-c372fa07,Kubernetes,RBAC,1,3,3,False,VERIFY on cluster,ServiceAccount labels or selectors look wrong,kubectl get serviceaccount <x> -n <x> --show-labels
+116,p-8bb8b99e,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,Deployment has fewer ready replicas than desired,kubectl get deployment <x> -n <x>
+117,p-c8784f76,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,StatefulSet rollout is stuck,kubectl get statefulset <x> -n <x>
+118,p-47950fc9,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,DaemonSet missing pods on some nodes,kubectl get daemonset <x> -n <x>
+119,p-f599b365,Kubernetes,Storage,1,3,3,False,VERIFY on cluster,PVC expansion not taking effect,kubectl describe pvc <x> -n <x>
+120,p-70ed74f4,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,LoadBalancer Service has no external address,kubectl get service <x> -n <x>
+121,p-765257aa,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,One pod receives traffic while another does not,kubectl get endpointslices -n <x> -l kubernetes.io/service-name=<x> -o yaml
+122,p-c2a7c990,Kubernetes,Nodes,1,3,3,False,VERIFY on cluster,Node DiskPressure,kubectl describe node <x>
+123,p-27267448,Kubernetes,Nodes,1,3,3,False,VERIFY on cluster,Node MemoryPressure,kubectl describe node <x>
+124,p-78b640bf,Kubernetes,Availability,1,3,3,False,VERIFY on cluster,PDB blocks node drain,kubectl get pdb -n <x>
+125,p-fd2d9945,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,ResourceQuota exceeded,kubectl describe resourcequota -n <x>
+126,p-9cf24991,Kubernetes,Configuration,1,3,3,False,VERIFY on cluster,Default requests or limits appear unexpectedly,kubectl get limitrange -n <x>
+127,p-0c037e64,Kubernetes,RBAC,1,3,3,False,VERIFY on cluster,ServiceAccount not found,kubectl get serviceaccounts -n <x>
+128,p-d63144f2,Kubernetes,RBAC,1,3,3,False,VERIFY on cluster,Pod uses unexpected ServiceAccount,kubectl get pod <x> -n <x> -o jsonpath='{.spec.serviceaccountname}'
+129,p-b841effd,Kubernetes,RBAC,1,3,3,False,VERIFY on cluster,RoleBinding points to wrong subject,kubectl describe rolebinding <x> -n <x>
+130,p-c350b893,Kubernetes,Namespaces,1,3,3,False,VERIFY on cluster,Namespace stuck Terminating,kubectl get namespace <x> -o yaml
+131,p-98dc4026,Kubernetes,Context & API,1,3,3,False,VERIFY on cluster,kubectl command says resource type not found,kubectl api-resources
+132,p-2a64d951,Kubernetes,Context & API,1,3,3,False,VERIFY on cluster,kubectl cannot connect to API server,kubectl config current-context
+133,p-11e7e049,Kubernetes,Autoscaling,1,3,3,False,VERIFY on cluster,Metrics unavailable for kubectl top,kubectl top nodes
+134,p-535a6b2b,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,Deployment image update did not roll out,kubectl get deployment <x> -n <x> -o jsonpath='{.spec.template.spec.containers[*].image}'
+135,p-2083b5ca,Kubernetes,Batch,1,3,3,False,VERIFY on cluster,Job pod succeeded but Job not complete,kubectl get job <x> -n <x>
+136,p-d3df9943,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Ingress has no address,kubectl get ingress <x> -n <x>
+137,p-8d7dd78a,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Ingress host does not match request,kubectl get ingress <x> -n <x> -o yaml
+138,p-7aeab218,Kubernetes,Networking,1,3,3,False,VERIFY on cluster,Service targetPort mismatch,kubectl get service <x> -n <x> -o yaml
+139,p-9cc15827,Kubernetes,Operations,1,3,3,False,VERIFY on cluster,Need a safe first look at a namespace,"kubectl get pods,deployments,statefulsets,daemonsets -n <x>"
+140,p-ec4e026b,Kubernetes,Workloads,1,3,3,False,VERIFY on cluster,Need to identify newest pods after rollout,kubectl get pods -n <x> --sort-by=.metadata.creationtimestamp
+141,p-aa1918ff,Kubernetes,Pods,1,4,3,False,VERIFY on cluster,Init container is failing,"kubectl get pod <x> -n <x> -o jsonpath='{range .status.initcontainerstatuses[*]}{.name}{"" state=""}{.state}{"" last=""}{.laststate}{""\n""}{end}'"
+142,p-4297edd5,Kubernetes,Storage,1,4,3,False,VERIFY on cluster,Pod cannot mount a volume,kubectl describe pod <x> -n <x>
+143,p-2c156447,Kubernetes,Networking,1,4,4,False,VERIFY on cluster,Service has no ready backends / no endpoints,kubectl describe service <x> -n <x>
+144,p-ca208016,Kubernetes,Networking,1,4,4,False,VERIFY on cluster,Kubernetes DNS resolution fails,kubectl get pods -n kube-system -l k8s-app=kube-dns
+145,p-6845faa2,Kubernetes,Workloads,1,4,4,False,VERIFY on cluster,Deployment rollout stuck,kubectl rollout status deployment/<x> -n <x> --timeout=2m
+146,p-89c38603,Kubernetes,Networking,1,4,4,False,VERIFY on cluster,Ingress returns 404 / 502 / 503,kubectl describe ingress <x> -n <x>
+147,p-efd3841d,Kubernetes,Configuration,1,4,4,False,VERIFY on cluster,Secret or ConfigMap change not reflected,kubectl get pod <x> -n <x> -o yaml
+148,p-20d1d77a,Kubernetes,Networking,1,4,4,False,VERIFY on cluster,Service resolves in DNS but connection fails,kubectl describe service <x> -n <x>
+149,p-1b9f74bd,Kubernetes,Networking,1,4,4,False,VERIFY on cluster,NetworkPolicy may be blocking traffic,kubectl get pod <x> -n <x> -o wide --show-labels
+150,p-230f8e5c,Kubernetes,Workloads,1,4,4,False,VERIFY on cluster,Deployment exceeded progress deadline,"kubectl get deployment <x> -n <x> -o jsonpath='{range .status.conditions[*]}{.type}{""=""}{.status}{"" reason=""}{.reason}{"" message=""}{.message}{""\n""}{end}'"
+151,p-5cdaf288,Kubernetes,Nodes,1,4,4,False,VERIFY on cluster,Node has DiskPressure,kubectl describe node <x>
+152,p-d7fca6b2,Kubernetes,Security,1,4,4,False,VERIFY on cluster,RBAC works for one user but not another,kubectl auth whoami
+153,p-28bc6b51,Kubernetes,Networking,1,4,4,False,VERIFY on cluster,Service exists but connection is refused,kubectl get service <x> -n <x> -o yaml
+154,p-bb57a40c,Kubernetes,Helm-Deployed Workloads,1,4,4,False,VERIFY on cluster,Helm release deployed but Pods fail,kubectl get pods -n <x> -o wide

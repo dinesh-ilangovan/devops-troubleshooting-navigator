@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Runbook</title>
+<style>
+:root{
+  --paper:#EEF1F4; --surface:#fff; --ink:#141C24; --muted:#5A6976;
+  --rule:#D5DCE3; --rule-soft:#E4E9ED;
+  --safe:#0F7B54; --state:#A15C00; --destructive:#BC2C24;
+  --focus:#1F5FA8;
+  --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --mono:"Cascadia Mono",ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.5;font-feature-settings:"tnum" 1}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.wrap{max-width:940px;margin:0 auto;padding:0 20px}
+
+/* ---- context strip ---- */
+.ctx{background:var(--ink);color:#DCE3EA;position:sticky;top:0;z-index:20}
+.ctx .wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding-top:9px;padding-bottom:9px}
+.ctx .brand{font-weight:650;letter-spacing:-.01em;color:#fff;margin-right:auto;font-size:15px}
+.ctx label{display:flex;align-items:baseline;gap:6px;font-size:12.5px;color:#9FB0BF}
+.ctx input{background:transparent;border:0;border-bottom:1px solid #3C4A57;color:#fff;
+  font-family:var(--mono);font-size:13px;padding:1px 2px;width:15ch;min-width:0}
+.ctx input:focus{border-bottom-color:#7FA8D4;outline:none}
+.ctx input::placeholder{color:#5A6976}
+
+/* ---- search ---- */
+.search{padding:44px 0 26px}
+h1{font-size:28px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:640}
+.lede{color:var(--muted);margin:0 0 22px;max-width:62ch}
+#q{width:100%;padding:14px 16px;border:1px solid var(--rule);border-radius:6px;
+  background:var(--surface);font-size:17px}
+#q:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px rgba(31,95,168,.12)}
+.hint{margin-top:8px;font-size:12.5px;color:var(--muted)}
+kbd{font-family:var(--mono);font-size:11.5px;border:1px solid var(--rule);border-bottom-width:2px;
+  border-radius:3px;padding:1px 5px;background:var(--surface)}
+
+/* ---- results ---- */
+.results{list-style:none;margin:0;padding:0 0 56px}
+.results li{border-top:1px solid var(--rule-soft)}
+.results li:last-child{border-bottom:1px solid var(--rule-soft)}
+.hit{display:block;width:100%;text-align:left;background:none;border:0;padding:15px 14px;cursor:pointer}
+.hit:hover,.hit.cur{background:var(--surface)}
+.hit h3{margin:0;font-size:16.5px;font-weight:600;letter-spacing:-.005em}
+.hit p{margin:3px 0 0;color:var(--muted);font-size:14px}
+.meta{margin-top:7px;font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.empty{padding:40px 14px;color:var(--muted);border-top:1px solid var(--rule-soft)}
+
+/* ---- trust badge ---- */
+.trust{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600}
+.trust::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.t-verified{color:var(--safe)} .t-documented{color:var(--state)} .t-reference{color:var(--muted)}
+
+/* ---- runbook ---- */
+.rb{padding:26px 0 90px;display:none}
+.back{background:none;border:0;padding:0;color:var(--muted);font-size:13.5px;cursor:pointer;margin-bottom:18px}
+.back:hover{color:var(--ink)}
+.rb h2{font-size:25px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:640}
+.rb .sum{color:var(--muted);margin:0 0 14px;max-width:64ch}
+.prov{font-size:12.5px;color:var(--muted);border-left:2px solid var(--rule);padding:2px 0 2px 11px;margin-bottom:26px}
+.prov code{font-family:var(--mono);font-size:12px}
+.prov a{color:var(--focus)}
+
+/* ---- the rail ---- */
+ol.steps{list-style:none;margin:0;padding:0}
+.step{position:relative;padding:0 0 26px 40px}
+.step::before{content:"";position:absolute;left:11px;top:24px;bottom:0;width:1px;background:var(--rule)}
+.step:last-child::before{display:none}
+.step.danger::before{background:var(--destructive);opacity:.35}
+.mark{position:absolute;left:0;top:2px;width:23px;height:23px;border:1px solid var(--rule);
+  background:var(--surface);border-radius:3px;cursor:pointer;padding:0;
+  font-family:var(--mono);font-size:12px;color:var(--muted);line-height:21px;text-align:center}
+.mark:hover{border-color:var(--ink)}
+.step.done .mark{background:var(--ink);border-color:var(--ink);color:#fff}
+.step.done .stitle{color:var(--muted)}
+.step.danger .mark{border-color:var(--destructive);color:var(--destructive)}
+
+.shead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:9px}
+.stitle{font-weight:600;font-size:16px;letter-spacing:-.005em}
+.chip{font-size:11px;font-weight:650;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.c-safe{color:var(--safe);background:rgba(15,123,84,.09)}
+.c-state{color:var(--state);background:rgba(161,92,0,.10)}
+.c-destructive{color:#fff;background:var(--destructive)}
+
+.cmd{position:relative;background:var(--ink);border-radius:5px;margin:0 0 10px}
+.cmd pre{margin:0;padding:13px 84px 13px 14px;overflow-x:auto;font-family:var(--mono);
+  font-size:13.5px;line-height:1.55;color:#E8EEF3;white-space:pre-wrap;word-break:break-word}
+.cmd .fill{color:#8FD0A8;font-weight:600}
+.cmd .unfilled{color:#E0A86A;border-bottom:1px dashed #8A6A48}
+.copy{position:absolute;top:8px;right:8px;background:#2A3640;border:0;color:#C6D3DD;
+  font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+.copy:hover{background:#3A4854;color:#fff}
+.veil{padding:13px 14px;color:#E0A86A;font-family:var(--mono);font-size:13px;cursor:pointer;
+  display:flex;align-items:center;gap:9px}
+.veil:hover{color:#fff}
+
+.look{font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:66ch}
+.look b{color:var(--ink);font-weight:600}
+.note{font-size:14px;border-left:2px solid var(--destructive);padding:6px 0 6px 11px;
+  margin:0 0 10px;max-width:64ch;color:var(--ink)}
+.note-state{border-left-color:var(--state)}
+
+/* ---- output matcher ---- */
+.match{margin-top:10px}
+.match summary{font-size:13.5px;color:var(--focus);cursor:pointer;list-style:none}
+.match summary::-webkit-details-marker{display:none}
+.match summary::before{content:"+ ";font-family:var(--mono)}
+.match[open] summary::before{content:"- "}
+.match textarea{width:100%;margin-top:9px;min-height:78px;padding:10px 12px;border:1px solid var(--rule);
+  border-radius:5px;font-family:var(--mono);font-size:12.5px;background:var(--surface);resize:vertical}
+.verdict{margin-top:9px;padding:11px 13px;border-radius:5px;font-size:14.5px;background:var(--surface);
+  border:1px solid var(--rule)}
+.verdict.hit{border-color:var(--safe);border-left:3px solid var(--safe)}
+.verdict.miss{color:var(--muted)}
+.verdict b{display:block;margin-bottom:3px}
+.jump{background:none;border:0;color:var(--focus);padding:0;margin-top:6px;cursor:pointer;font-size:13.5px}
+
+/* ---- causes ---- */
+.sec{margin-top:34px;padding-top:20px;border-top:1px solid var(--rule)}
+.sec h3{font-size:13px;font-weight:650;margin:0 0 14px;color:var(--muted);letter-spacing:.01em}
+.cause{padding:13px 15px;background:var(--surface);border:1px solid var(--rule-soft);border-radius:5px;margin-bottom:9px}
+.cause.lit{border-color:var(--safe);border-left:3px solid var(--safe)}
+.cause .rank{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-right:7px}
+.cause .what{font-weight:600;font-size:15px}
+.cause .fix{color:var(--muted);font-size:14.5px;margin-top:4px;max-width:66ch}
+.cause .fix b{color:var(--ink);font-weight:600}
+ul.plain{margin:0;padding-left:19px;color:var(--muted);font-size:14.5px;max-width:66ch}
+ul.plain li{margin-bottom:5px}
+
+/* ---- action bar ---- */
+.bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--rule);
+  padding:11px 0;display:none;z-index:15}
+.bar .wrap{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.bar .prog{font-size:13px;color:var(--muted);margin-right:auto;font-variant-numeric:tabular-nums}
+.act{background:var(--surface);border:1px solid var(--rule);border-radius:5px;padding:7px 13px;
+  font-size:13.5px;cursor:pointer}
+.act:hover{border-color:var(--ink)}
+.act.key{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+  padding:9px 17px;border-radius:5px;font-size:13.5px;z-index:30;display:none}
+
+footer{color:var(--muted);font-size:12.5px;padding:0 0 30px;max-width:70ch}
+
+@media(max-width:640px){
+  .wrap{padding:0 15px}
+  .search{padding:26px 0 18px} h1{font-size:23px} .rb h2{font-size:21px}
+  .ctx .wrap{gap:11px} .ctx input{width:11ch}
+  .step{padding-left:33px} .mark{width:21px;height:21px;line-height:19px}
+  .step::before{left:10px}
+  .cmd pre{padding-right:14px;padding-top:38px}
+  .copy{top:6px;right:auto;left:8px}
+}
+</style>
+</head>
+<body>
+
+<div class="ctx"><div class="wrap">
+  <span class="brand">Runbook</span>
+  <span id="ctxfields"></span>
+</div></div>
+
+<main class="wrap">
+
+<section class="search" id="searchview">
+  <h1>What is broken?</h1>
+  <p class="lede">Type the symptom, the error string, or what you were doing when it failed.</p>
+  <input id="q" placeholder="CrashLoopBackOff, pod pending, committed to main, force push..." autocomplete="off" autofocus>
+  <p class="hint"><kbd>/</kbd> search &nbsp; <kbd>↑</kbd><kbd>↓</kbd> move &nbsp; <kbd>Enter</kbd> open &nbsp; <kbd>Esc</kbd> back</p>
+</section>
+
+<ul class="results" id="results"></ul>
+
+<section class="rb" id="rbview"></section>
+
+<footer id="foot"></footer>
+</main>
+
+<div class="bar" id="bar"><div class="wrap">
+  <span class="prog" id="prog"></span>
+  <button class="act" id="a-safe">Copy read-only steps</button>
+  <button class="act" id="a-esc">Copy handoff notes</button>
+  <button class="act key" id="a-log">Copy incident log</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script id="data" type="application/json">[{"id":"docker-exits-immediately","tier":"documented","technology":"Docker","category":"Container Lifecycle","title":"Container exits straight after docker run","summary":"The container starts and dies within a second. The exit code tells you which of five very different problems you have.","aliases":["container exits immediately","exits right away","wont stay running","container stops","exited (1)","exited (126)","exited (127)","exited (137)","docker run does nothing"],"source":"https://docs.docker.com/engine/reference/run/#exit-status","inputs":[{"key":"container","label":"Container","example":"checkout-api"},{"key":"image","label":"Image","example":"registry.local/checkout-api:1.4.2"}],"steps":[{"title":"Read the exit code","cmd":"docker ps -a --filter name={container} --format '{{.Names}}\\t{{.Status}}'","risk":"safe","look":"The number in Exited (N). This single number splits the problem five ways, and every branch below has a different fix. Do not skip to the logs before you have it.","signals":[{"match":"Exited \\(125\\)","means":"Docker itself refused to start the container. The error is in your run flags, not the image.","goto":"cause:bad-run-flags"},{"match":"Exited \\(126\\)","means":"The entrypoint was found but could not be executed. Missing execute bit, or a CRLF line ending in a shell script.","goto":"cause:not-executable"},{"match":"Exited \\(127\\)","means":"The entrypoint was not found at all. Wrong path, or no shell in a distroless or scratch base.","goto":"cause:not-found"},{"match":"Exited \\(137\\)","means":"SIGKILL. Either the memory limit was hit or something sent a kill.","goto":"cause:oom"},{"match":"Exited \\(0\\)","means":"It ran and finished normally. There was no long-running process to keep it alive.","goto":"cause:no-foreground-process"},{"match":"Exited \\(1\\)","means":"The application itself chose to exit. The reason is in the logs.","goto":"step:2"}]},{"title":"Read the logs it managed to write","cmd":"docker logs {container} --tail=100","risk":"safe","look":"The first error, not the last. If this is empty, the process died before it could log anything, which points back at the entrypoint rather than the app.","signals":[{"match":"(?i)permission denied","means":"The process cannot read a path or bind a port as its user.","goto":"cause:not-executable"},{"match":"(?i)no such file or directory","means":"A path in the entrypoint or a required file is absent from the image.","goto":"cause:not-found"},{"match":"^\\s*$","means":"Empty. The container died before logging, so the fault is in the entrypoint or the run flags.","goto":"step:3"}]},{"title":"Check what the image says it should run","cmd":"docker image inspect {image} --format 'entrypoint={{json .Config.Entrypoint}} cmd={{json .Config.Cmd}} user={{.Config.User}}'","risk":"safe","look":"Compare this against what actually exists in the image. A null Cmd with a shell-form Entrypoint is a common source of exit 127."},{"title":"Open a shell in the image to see what is really there","cmd":"docker run --rm -it --entrypoint sh {image}","risk":"state","note":"Creates a new container. It is removed on exit because of --rm, but it does consume a container slot and will pull the image if absent. If this fails with 'exec sh not found', the base image has no shell at all, which is itself the answer.","look":"Whether the entrypoint file exists, whether it is executable, and whether the interpreter on its first line is present."}],"causes":[{"id":"no-foreground-process","cause":"Exit 0. The image's command finished. A container lives exactly as long as PID 1.","fix":"Run the real server process in the foreground, not backgrounded or daemonised. A CMD that ends is a container that ends.","confirm":"docker image inspect {image} --format '{{json .Config.Cmd}}'"},{"id":"not-found","cause":"Exit 127. The entrypoint path does not exist inside the image.","fix":"Check the path in the Dockerfile against the built layers. On distroless or scratch there is no /bin/sh, so shell-form CMD will always fail.","confirm":"docker run --rm --entrypoint ls {image} -la /"},{"id":"not-executable","cause":"Exit 126. The file exists but cannot be run. Usually a missing execute bit, or a script saved with Windows CRLF line endings.","fix":"Add RUN chmod +x in the Dockerfile. If you edited the script on Windows, convert it to LF — CRLF makes the shebang unresolvable.","confirm":"docker run --rm --entrypoint ls {image} -l /entrypoint.sh"},{"id":"oom","cause":"Exit 137. SIGKILL, almost always the memory limit.","fix":"Raise --memory, or fix the allocation. Check OOMKilled in inspect to confirm it was memory rather than an external kill.","confirm":"docker inspect {container} --format '{{.State.OOMKilled}}'"},{"id":"bad-run-flags","cause":"Exit 125. The Docker daemon rejected the run request before the image was involved.","fix":"Re-read the docker run line. A bad mount path, an unknown flag, or a port already bound will all produce this.","confirm":"docker inspect {container} --format '{{.State.Error}}'"}],"verify":["docker ps shows the container in Up state, not Restarting.","The status stays Up across at least a minute.","docker logs shows the application's normal startup output."],"escalate":["The exact Exited (N) status","First 50 lines of docker logs, or a note that it was empty","Entrypoint, Cmd and User from image inspect, plus the full docker run line"]},{"id":"docker-pull-denied","tier":"documented","technology":"Docker","category":"Registry & Auth","title":"docker pull fails with denied or unauthorized","summary":"The registry refused you. Whether that is authentication, authorisation, or a typo in the tag depends on the exact wording.","aliases":["pull access denied","unauthorized","denied requested access","authentication required","cannot pull image","imagepullbackoff local","no basic auth credentials"],"source":"https://docs.docker.com/reference/cli/docker/login/","inputs":[{"key":"image","label":"Image reference","example":"registry.local/checkout-api:1.4.2"},{"key":"registry","label":"Registry host","example":"registry.local"}],"steps":[{"title":"Read the exact refusal","cmd":"docker pull {image}","risk":"safe","look":"The precise wording. 'denied' and 'unauthorized' and 'manifest unknown' are three different problems that look identical at a glance.","signals":[{"match":"(?i)manifest unknown|manifest for .* not found","means":"You are authenticated fine. That tag does not exist in that repository.","goto":"cause:bad-tag"},{"match":"(?i)no basic auth credentials|authentication required","means":"You are not logged in to this registry at all.","goto":"cause:not-logged-in"},{"match":"(?i)denied: requested access to the resource is denied","means":"You are logged in, but this account cannot read this repository.","goto":"cause:no-permission"},{"match":"(?i)x509|certificate signed by unknown authority","means":"TLS trust failure, not an auth failure. The registry's CA is not trusted by your Docker daemon.","goto":"cause:tls"},{"match":"(?i)i/o timeout|no such host","means":"You never reached the registry. This is DNS or egress, not credentials.","goto":"cause:unreachable"}]},{"title":"Check which registries you are actually logged in to","cmd":"docker info --format '{{.RegistryConfig.IndexConfigs}}' && type %USERPROFILE%\\.docker\\config.json","risk":"safe","look":"Whether {registry} appears in the auths block. A credential helper means the token lives in Windows Credential Manager rather than the file, so an empty auths block is not proof you are logged out."},{"title":"Confirm the tag exists before blaming credentials","cmd":"docker manifest inspect {image}","risk":"safe","look":"A manifest means the tag is real and readable. An error here with a valid login means the tag is wrong or was garbage-collected."}],"causes":[{"id":"not-logged-in","cause":"No credentials cached for this registry.","fix":"docker login {registry}. If a credential helper is configured, log in through that rather than storing a token in plain config.json.","confirm":"docker login {registry}"},{"id":"no-permission","cause":"Authenticated, but the account lacks pull rights on that repository.","fix":"Ask the registry owner for read access on that path. A token scoped to another project produces exactly this message.","confirm":"docker manifest inspect {image}"},{"id":"bad-tag","cause":"The tag does not exist. Very often a typo, or a tag that was cleaned up by a retention policy.","fix":"List the available tags and pick a real one. Prefer pinning by digest for anything that matters.","confirm":"docker manifest inspect {image}"},{"id":"tls","cause":"The registry's certificate is not trusted by the Docker daemon.","fix":"Install the CA into the daemon's trust store. Do not add the host to insecure-registries to make this go away.","confirm":"docker info --format '{{.RegistryConfig.InsecureRegistryCIDRs}}'"},{"id":"unreachable","cause":"The registry host did not resolve or did not answer.","fix":"Check DNS and any corporate proxy. Docker reads proxy settings from its own config, not from your shell environment.","confirm":"nslookup {registry}"}],"verify":["docker pull completes and reports a digest.","docker images lists the image locally.","A fresh shell can repeat the pull without logging in again."],"escalate":["The verbatim error line from docker pull","Which registry and repository path, with the tag","Whether docker manifest inspect succeeds or fails"]},{"id":"docker-no-space-left","tier":"documented","technology":"Docker","category":"Storage & Disk","title":"no space left on device","summary":"Builds or containers fail on disk. Find out what is consuming it before you reclaim anything, because the fast fix deletes real data.","aliases":["no space left","disk full","cannot write","build fails disk","out of disk","docker full","reclaim space"],"source":"https://docs.docker.com/reference/cli/docker/system/prune/","inputs":[],"steps":[{"title":"Find out what is actually using the space","cmd":"docker system df -v","risk":"safe","look":"The RECLAIMABLE column per category. Build cache is usually the largest and the safest to drop. Volumes are usually the smallest and the most dangerous.","signals":[{"match":"(?i)Build Cache","means":"Read the build cache line specifically. On a CI-style machine it is often most of the total and costs nothing but rebuild time.","goto":"cause:build-cache"},{"match":"(?i)Local Volumes","means":"Volumes hold real data. Nothing in this runbook should delete them without you knowing what is inside.","goto":"cause:volumes"}]},{"title":"Check whether the host disk is full rather than Docker","cmd":"docker run --rm -v /:/host alpine df -h /host","risk":"state","note":"Starts a throwaway container and mounts the host root read-write into it. It only runs df, but anything with this mount could write to the host filesystem. On Docker Desktop for Windows this inspects the Linux VM's disk, not your C: drive.","look":"Whether the filesystem holding /var/lib/docker is full, or whether something else on the host filled the disk and Docker is just the victim."},{"title":"Reclaim the build cache only","cmd":"docker builder prune --filter until=168h","risk":"destructive","note":"Permanently deletes build cache older than seven days. Nothing running is affected and no image or volume is touched, but your next build of an affected image will be slow because it has to rebuild those layers. This cannot be undone.","look":"The reclaimed total at the end. Re-run docker system df to confirm the space actually came back."},{"title":"Remove stopped containers and dangling images","cmd":"docker container prune && docker image prune","risk":"destructive","note":"Deletes every stopped container and every untagged image. A stopped container that someone intended to restart or inspect is gone, along with its writable layer and anything written outside a volume. Run docker ps -a first and read the list. Never use docker system prune -a --volumes here — that also removes named volumes and is how people lose databases.","look":"The list of deleted IDs. If you see something you recognise, stop and check what it was before continuing."}],"causes":[{"id":"build-cache","cause":"BuildKit cache has accumulated across many builds.","fix":"Prune with a time filter rather than wholesale, and set a cache ceiling in the daemon config so it bounds itself.","confirm":"docker system df"},{"id":"stopped-containers","cause":"Exited containers are retained along with their writable layers.","fix":"Prune them, and add --rm to throwaway docker run commands so they clean up on exit.","confirm":"docker ps -a --filter status=exited"},{"id":"dangling-images","cause":"Rebuilt tags leave the previous image untagged but still on disk.","fix":"docker image prune. Schedule it rather than doing it in a panic mid-incident.","confirm":"docker images -f dangling=true"},{"id":"volumes","cause":"Anonymous volumes from removed containers persist and are never cleaned automatically.","fix":"Inspect each one before deleting anything. Use named volumes so ownership is obvious from the name.","confirm":"docker volume ls -f dangling=true"},{"id":"log-growth","cause":"Container JSON log files grew unbounded because no rotation was configured.","fix":"Set max-size and max-file in the daemon's log-opts. This is the fix that stops it recurring.","confirm":"docker inspect --format '{{.HostConfig.LogConfig}}' $(docker ps -q)"}],"verify":["docker system df shows meaningful free space.","The build or container that was failing now succeeds.","Log rotation is configured, so the same disk does not fill again next week."],"escalate":["Full docker system df -v output","Which category held the space","Whether anything was pruned, and exactly which command was run"]},{"id":"docker-container-no-network","tier":"documented","technology":"Docker","category":"Networking & DNS","title":"Container cannot reach another container or the internet","summary":"Connection refused or name not resolving from inside a container. Work outward: name, then network membership, then egress.","aliases":["container cannot connect","dns not resolving container","connection refused between containers","cannot reach service","compose networking","name or service not known"],"source":"https://docs.docker.com/engine/network/","inputs":[{"key":"container","label":"Container","example":"checkout-api"},{"key":"target","label":"What it is trying to reach","example":"postgres"}],"steps":[{"title":"Check whether the name resolves from inside the container","cmd":"docker exec {container} getent hosts {target}","risk":"safe","look":"An IP means DNS is fine and the problem is the port or the listener. No output means Docker's embedded DNS does not know that name.","signals":[{"match":"^\\s*$","means":"The name did not resolve. Either the containers are not on the same user-defined network, or the name is wrong.","goto":"cause:not-same-network"},{"match":"\\d+\\.\\d+\\.\\d+\\.\\d+","means":"DNS is working. Move to the port and the listener.","goto":"step:3"}]},{"title":"Compare which networks each container is attached to","cmd":"docker inspect {container} --format '{{json .NetworkSettings.Networks}}' && docker inspect {target} --format '{{json .NetworkSettings.Networks}}'","risk":"safe","look":"The same user-defined network name in both. The default bridge gives no DNS between containers at all, which is the single most common cause of this symptom.","signals":[{"match":"\"bridge\"","means":"On the default bridge, container name resolution does not work. You need a user-defined network.","goto":"cause:default-bridge"}]},{"title":"Check that the target is listening where you think","cmd":"docker exec {target} sh -c \"netstat -tlnp 2>/dev/null || ss -tlnp\"","risk":"safe","look":"Whether it is bound to 0.0.0.0 or to 127.0.0.1. A process bound to localhost inside a container is unreachable from every other container, no matter how correct the network is.","signals":[{"match":"127\\.0\\.0\\.1:","means":"It is only listening on loopback inside its own namespace. Nothing outside that container can reach it.","goto":"cause:bound-localhost"}]},{"title":"Test egress to the outside world","cmd":"docker exec {container} sh -c \"getent hosts registry-1.docker.io || echo DNS_FAIL\"","risk":"safe","look":"DNS_FAIL means the container has no working resolver, which usually points at a host DNS or corporate proxy setting that Docker did not inherit."}],"causes":[{"id":"not-same-network","cause":"The containers are not attached to a common user-defined network.","fix":"Put both on the same named network. In Compose this is automatic within a project, so this usually means they are in two different projects.","confirm":"docker network inspect $(docker inspect {container} --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')"},{"id":"default-bridge","cause":"Both are on the default bridge network, which has no embedded DNS for container names.","fix":"Create a user-defined network and attach both. Only user-defined networks give name-based service discovery.","confirm":"docker network ls"},{"id":"bound-localhost","cause":"The target process listens on 127.0.0.1 inside its own network namespace.","fix":"Bind it to 0.0.0.0 in the application's own configuration. No Docker flag can work around this.","confirm":"docker exec {target} sh -c \"ss -tlnp\""},{"id":"wrong-port","cause":"The client is dialling the published host port rather than the container port.","fix":"Between containers, use the container's internal port. Published ports are for traffic arriving from the host.","confirm":"docker port {target}"},{"id":"host-dns","cause":"Corporate DNS or proxy settings were not inherited by the daemon.","fix":"Set dns in the daemon config, or pass --dns. Docker does not read your shell's proxy variables.","confirm":"docker exec {container} cat /etc/resolv.conf"}],"verify":["getent hosts resolves the target name from inside the container.","A connection to the target's internal port succeeds.","The same works after both containers are restarted."],"escalate":["Networks block from inspect for both containers","Listening sockets inside the target","Contents of /etc/resolv.conf inside the client"]},{"id":"git-committed-to-main","tier":"verified","technology":"Git","category":"History & Undo","title":"I committed to main by mistake","summary":"The commit is on the wrong branch. What you do next depends entirely on whether it has been pushed.","aliases":["committed to main","wrong branch","committed accidentally","undo commit","committed by mistake","move commit to branch","oops committed"],"verified_on":"2026-09-11","verified_against":"git 2.45","verified_by":"dinesh","source":"https://git-scm.com/docs/git-reset","inputs":[{"key":"branch","label":"Branch you meant to use","example":"feature/checkout-retry"},{"key":"remote","label":"Remote","example":"origin"}],"steps":[{"title":"Find out whether the commit has left your machine","cmd":"git status -sb && git log --oneline -3","risk":"safe","look":"The first line. 'ahead 1' means it is still local and you have easy options. If it is not ahead, it is already on the remote and rewriting is now other people's problem too.","signals":[{"match":"ahead \\d+","means":"Still local. You can move it cleanly.","goto":"cause:local-only"},{"match":"\\[origin/main\\]\\s*$","means":"Already pushed. Do not rewrite shared history.","goto":"cause:already-pushed"}]},{"title":"Move the commit onto the branch it belonged on","cmd":"git branch {branch} && git reset --hard HEAD~1 && git switch {branch}","risk":"destructive","note":"reset --hard discards every uncommitted change in your working tree. Run git stash first if you have any. This is only safe because git branch {branch} was created on the line before, so the commit itself survives on that branch.","look":"After this, main is back where it was and your commit sits on {branch}.","signals":[{"match":"(?i)error: .*already exists","means":"That branch already exists. Pick another name or switch to it and cherry-pick instead.","goto":"cause:branch-exists"}]},{"title":"Confirm nothing was lost","cmd":"git log --oneline -3 {branch} && git log --oneline -3 main","risk":"safe","look":"Your commit on {branch}, and main matching the remote. If anything looks wrong, git reflog still has every prior position for about 90 days."}],"causes":[{"id":"local-only","cause":"The commit exists only in your clone.","fix":"Create the branch at the current commit, then reset main back one. Nobody else is affected.","confirm":"git status -sb"},{"id":"already-pushed","cause":"The commit is on the remote and others may have pulled it.","fix":"Do not reset and force-push. Use git revert to add a new commit that undoes it, then apply the original work on a proper branch.","confirm":"git log --oneline {remote}/main -3"},{"id":"branch-exists","cause":"A branch with that name is already present.","fix":"Switch to it and cherry-pick the commit across, then reset main.","confirm":"git branch --list {branch}"}],"verify":["git log on main matches the remote's main.","Your commit appears in git log on {branch}.","git status reports a clean working tree, or exactly the changes you stashed."],"escalate":["Output of git status -sb","git log --oneline -5 for both branches","Whether the commit was pushed, and whether anyone has pulled since"]},{"id":"git-force-push-safely","tier":"verified","technology":"Git","category":"Remotes","title":"I need to force-push a rebased branch","summary":"Rewriting a shared branch can silently destroy a colleague's commits. There is a safe form of this command.","aliases":["force push","push -f","rebase then push","force-with-lease","non-fast-forward","rejected push"],"verified_on":"2026-09-11","verified_against":"git 2.45","verified_by":"dinesh","source":"https://git-scm.com/docs/git-push","inputs":[{"key":"branch","label":"Branch","example":"feature/checkout-retry"},{"key":"remote","label":"Remote","example":"origin"}],"steps":[{"title":"Check whether anyone else has pushed to this branch","cmd":"git fetch {remote} && git log --oneline {remote}/{branch} -5","risk":"safe","look":"Commits you do not recognise. If someone else's work is on this branch, a force-push will delete it and they will not get a warning.","signals":[{"match":"(?i)commit","means":"Read the author of each. Anything not yours means stop and talk to them first.","goto":"cause:shared-branch"}]},{"title":"Force-push, but only if the remote is where you last saw it","cmd":"git push --force-with-lease={branch} {remote} {branch}","risk":"destructive","note":"This rewrites remote history. --force-with-lease aborts if someone pushed since your last fetch, which plain --force does not. Never use plain --force on a shared branch. If this is a protected branch, it should be rejected by policy, not by your judgement.","look":"A forced update line. If it is rejected with 'stale info', someone pushed after your fetch and the lease did its job.","signals":[{"match":"(?i)stale info|rejected","means":"The lease saved you. Someone pushed after your last fetch. Fetch again and re-examine before retrying.","goto":"cause:raced"},{"match":"(?i)protected branch|pre-receive hook declined","means":"Branch protection blocked it. That is working as intended; open a PR instead.","goto":"cause:protected"}]}],"causes":[{"id":"shared-branch","cause":"Other people have commits on this branch.","fix":"Do not force-push. Merge their work in, or coordinate a window with them first.","confirm":"git log --format='%an %s' {remote}/{branch} -10"},{"id":"raced","cause":"Someone pushed between your fetch and your push.","fix":"Fetch, inspect what arrived, rebase onto it, then retry with --force-with-lease.","confirm":"git fetch {remote} && git log --oneline {remote}/{branch} -5"},{"id":"protected","cause":"Branch protection rules forbid force-push.","fix":"Open a pull request. If the rewrite is genuinely required, it needs a repo admin, not a workaround.","confirm":"git ls-remote {remote} {branch}"}],"verify":["{remote}/{branch} points at your intended commit.","No commits by other authors disappeared from the log.","CI on the branch is green after the rewrite."],"escalate":["git log --oneline of local and remote branch","The exact push output including any rejection reason","Whether the branch is protected and who owns it"]},{"id":"k8s-crashloopbackoff","tier":"verified","technology":"Kubernetes","category":"Pods & Containers","title":"Pod is in CrashLoopBackOff","summary":"The container starts, exits, and Kubernetes keeps restarting it with growing delay.","aliases":["crashloop","crashloopbackoff","pod keeps restarting","restarts increasing","back-off restarting failed container","pod wont stay up"],"verified_on":"2026-09-11","verified_against":"kind v0.23 / Kubernetes 1.31","verified_by":"dinesh","source":"https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/","inputs":[{"key":"pod","label":"Pod name","example":"checkout-api-7d9f6b8c5-x4k2m"},{"key":"namespace","label":"Namespace","example":"production"},{"key":"container","label":"Container","example":"checkout-api"}],"steps":[{"title":"Confirm it is actually looping","cmd":"kubectl get pod {pod} -n {namespace} -o wide","risk":"safe","look":"RESTARTS climbing over successive checks. A high but static count is an old incident, not a live one.","signals":[{"match":"Completed","means":"This is a Job or a one-shot container that finished. restartPolicy is wrong, not the app.","goto":"cause:wrong-restart-policy"}]},{"title":"Read the previous container's logs","cmd":"kubectl logs {pod} -n {namespace} -c {container} --previous --tail=200","risk":"safe","look":"The FIRST fatal line, not the last. Startup errors scroll off the top and the tail is usually just the shutdown noise.","signals":[{"match":"(?i)connection refused|no route to host|timeout.*dial","means":"It died waiting on a dependency that was not reachable.","goto":"cause:dependency-unreachable"},{"match":"(?i)(not set|missing|undefined).*(env|variable|config)|panic.*nil","means":"Required configuration was absent at startup.","goto":"cause:missing-config"},{"match":"(?i)permission denied|operation not permitted","means":"The process cannot read a path or bind a port as its runAsUser.","goto":"cause:permissions"}]},{"title":"Read the termination state","cmd":"kubectl get pod {pod} -n {namespace} -o jsonpath='{.status.containerStatuses[*].lastState.terminated}'","risk":"safe","look":"exitCode and reason. This is the single most decisive field in the whole runbook.","signals":[{"match":"OOMKilled|\"exitCode\":137","means":"The kernel killed it for memory. No amount of restarting will fix this.","goto":"cause:oom"},{"match":"\"exitCode\":126","means":"The entrypoint was found but is not executable. Check the file mode in the image.","goto":"cause:entrypoint-not-executable"},{"match":"\"exitCode\":127","means":"The entrypoint was not found at all. Wrong path, or missing shell in a distroless base.","goto":"cause:entrypoint-missing"},{"match":"\"exitCode\":1\\b","means":"The application chose to exit. The reason is in the logs, not here.","goto":"step:2"}]},{"title":"Check whether a probe is doing the killing","cmd":"kubectl describe pod {pod} -n {namespace}","risk":"safe","look":"Events for 'Liveness probe failed'. If present, the app may be healthy but slow to start, and the probe is executing it.","signals":[{"match":"Liveness probe failed","means":"The liveness probe is killing a container that may only need more startup time.","goto":"cause:liveness-too-aggressive"}]}],"causes":[{"id":"missing-config","cause":"A required env var, Secret key or ConfigMap key is absent, so the process exits during startup.","fix":"Fix the owning Deployment/Secret/ConfigMap in source control and reconcile. Do not patch the live Pod.","confirm":"kubectl get deploy -n {namespace} -o yaml | grep -A5 'envFrom\\|valueFrom'"},{"id":"oom","cause":"The container's memory limit is below its real working set.","fix":"Raise limits.memory in the owning Deployment, or fix the leak. Restarting will reproduce it every time.","confirm":"kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].resources}'"},{"id":"dependency-unreachable","cause":"A database, cache or upstream service was not reachable at startup.","fix":"Confirm the dependency's Service has endpoints, then decide whether the app should retry instead of exiting.","confirm":"kubectl get endpointslices -n {namespace}"},{"id":"liveness-too-aggressive","cause":"initialDelaySeconds is shorter than the app's real startup time, so liveness kills it mid-boot.","fix":"Move the slow-start allowance to a startupProbe rather than inflating the liveness delay.","confirm":"kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].livenessProbe}'"},{"id":"entrypoint-missing","cause":"Exit 127. The command in the image manifest does not exist at that path.","fix":"Check the Dockerfile ENTRYPOINT/CMD against the built image. A distroless base has no /bin/sh.","confirm":"kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].command}'"},{"id":"entrypoint-not-executable","cause":"Exit 126. The file exists but lacks the execute bit, or its interpreter line is wrong.","fix":"Add chmod +x in the Dockerfile, or fix the shebang. Rebuild the image.","confirm":"kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].image}'"},{"id":"permissions","cause":"runAsUser cannot read a mounted path or bind a privileged port.","fix":"Correct fsGroup on the volume, or move the app to a port above 1024.","confirm":"kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.securityContext}'"},{"id":"wrong-restart-policy","cause":"A one-shot workload is running under restartPolicy Always.","fix":"Run it as a Job with restartPolicy OnFailure or Never.","confirm":"kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.restartPolicy}'"}],"verify":["RESTARTS holds steady across at least three checks spanning the app's normal startup window.","The container reports Ready, and readiness has not flapped in recent events.","The original failing request or job path completes successfully."],"escalate":["Output of --previous logs, first 50 lines","The lastState.terminated block, verbatim","Image tag and digest, plus resources and probe definitions"]},{"id":"k8s-pod-pending","tier":"verified","technology":"Kubernetes","category":"Scheduling","title":"Pod stays Pending and is never scheduled","summary":"The Pod object exists but no node has accepted it.","aliases":["pod pending","not scheduled","failedscheduling","no nodes available","pod stuck pending","0/3 nodes are available"],"verified_on":"2026-09-11","verified_against":"kind v0.23 / Kubernetes 1.31","verified_by":"dinesh","source":"https://kubernetes.io/docs/concepts/scheduling-eviction/","inputs":[{"key":"pod","label":"Pod name","example":"checkout-api-7d9f6b8c5-x4k2m"},{"key":"namespace","label":"Namespace","example":"production"}],"steps":[{"title":"Read the scheduler's own reason","cmd":"kubectl get event -n {namespace} --field-selector involvedObject.name={pod},reason=FailedScheduling -o jsonpath='{.items[-1:].message}'","risk":"safe","look":"The scheduler states exactly why each node was rejected, in the form '0/N nodes are available: ...'. Read that string before anything else.","signals":[{"match":"(?i)insufficient (cpu|memory|ephemeral-storage)","means":"No node has enough free allocatable resource for the requests.","goto":"cause:insufficient-resources"},{"match":"(?i)didn't match.*(node selector|affinity)","means":"The nodeSelector or affinity rule matches no node's labels.","goto":"cause:selector-mismatch"},{"match":"(?i)had (untolerated )?taint","means":"Every candidate node carries a taint this Pod does not tolerate.","goto":"cause:taint"},{"match":"(?i)pod has unbound immediate PersistentVolumeClaims","means":"This is a storage problem wearing a scheduling costume.","goto":"cause:unbound-pvc"},{"match":"(?i)node\\(s\\) didn't find available persistent volumes|volume node affinity conflict","means":"The PV is pinned to a zone the scheduler cannot place the Pod in.","goto":"cause:zone-conflict"}]},{"title":"Compare the request against real allocatable capacity","cmd":"kubectl describe nodes | grep -A6 'Allocated resources'","risk":"safe","look":"Requests, not usage. A node at 12% CPU usage can still be 100% requested and therefore unschedulable."},{"title":"Read what this Pod is actually asking for","cmd":"kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].resources.requests}{\"\\n\"}{.spec.nodeSelector}{\"\\n\"}{.spec.tolerations}'","risk":"safe","look":"Compare these three against the previous step. The mismatch is usually obvious once both are on screen."}],"causes":[{"id":"insufficient-resources","cause":"The sum of requests exceeds allocatable on every node.","fix":"Lower the request to the workload's real profile, or add capacity. Raising the limit does not help; the scheduler reads requests.","confirm":"kubectl top nodes"},{"id":"selector-mismatch","cause":"nodeSelector or nodeAffinity references labels no node carries, often after a node pool was replaced.","fix":"Correct the selector, or label the intended nodes. Check for typos in the label key first.","confirm":"kubectl get nodes --show-labels"},{"id":"taint","cause":"Nodes are tainted (NoSchedule) and the Pod has no matching toleration.","fix":"Add the toleration if the Pod belongs on those nodes, otherwise target a different pool.","confirm":"kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.spec.taints}{\"\\n\"}{end}'"},{"id":"unbound-pvc","cause":"A referenced PVC has not bound, so the Pod cannot be placed.","fix":"Follow the PVC Pending runbook. Nothing about the Pod spec will fix this.","confirm":"kubectl get pvc -n {namespace}"},{"id":"zone-conflict","cause":"An existing PV lives in one zone and the Pod cannot be scheduled there.","fix":"Use a topology-aware StorageClass with volumeBindingMode WaitForFirstConsumer.","confirm":"kubectl get pv -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.spec.nodeAffinity}{\"\\n\"}{end}'"}],"verify":["The Pod reports a nodeName and moves past Pending.","No new FailedScheduling events appear for this Pod.","The change was made in the owning manifest, not by editing the live Pod."],"escalate":["The full FailedScheduling message","Allocated resources block from describe nodes","The Pod's requests, nodeSelector and tolerations"]},{"id":"k8s-service-no-endpoints","tier":"verified","technology":"Kubernetes","category":"Services & Networking","title":"Service exists but returns connection refused","summary":"DNS resolves the Service, but nothing answers. Usually the Service has no endpoints.","aliases":["no endpoints","connection refused service","service not working","empty endpointslice","selector not matching","503 from service"],"verified_on":"2026-09-11","verified_against":"kind v0.23 / Kubernetes 1.31","verified_by":"dinesh","source":"https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/","inputs":[{"key":"service","label":"Service name","example":"checkout-api"},{"key":"namespace","label":"Namespace","example":"production"}],"steps":[{"title":"Check whether the Service has any endpoints at all","cmd":"kubectl get endpointslices -n {namespace} -l kubernetes.io/service-name={service}","risk":"safe","look":"ENDPOINTS column. If it is empty or <none>, the Service is pointing at nothing and the problem is the selector or pod readiness, not the network.","signals":[{"match":"(?i)<none>|No resources found","means":"No pods are backing this Service.","goto":"step:2"}]},{"title":"Compare the Service selector against real pod labels","cmd":"kubectl get svc {service} -n {namespace} -o jsonpath='{.spec.selector}{\"\\n\"}' && kubectl get pods -n {namespace} --show-labels","risk":"safe","look":"An exact match on every key. One extra or renamed label is enough to produce an empty Service, and this is the most common cause by a wide margin.","signals":[{"match":"(?i)app=","means":"Compare character by character. 'app' and 'app.kubernetes.io/name' are different keys.","goto":"cause:selector-mismatch"}]},{"title":"Check whether the backing pods are Ready","cmd":"kubectl get pods -n {namespace} -o wide","risk":"safe","look":"A pod that is Running but 0/1 Ready is excluded from endpoints. Readiness, not liveness, controls Service membership.","signals":[{"match":"0/1\\s+Running","means":"The pod is up but failing readiness, so it is deliberately kept out of the Service.","goto":"cause:not-ready"}]},{"title":"Confirm the target port matches the container port","cmd":"kubectl get svc {service} -n {namespace} -o jsonpath='{.spec.ports}'","risk":"safe","look":"targetPort must match the container's real listening port, or a named port the container declares. port is what clients dial; targetPort is where it lands."}],"causes":[{"id":"selector-mismatch","cause":"The Service selector does not match the pod labels.","fix":"Align them in the manifests. Changing the Deployment's pod labels forces a rollout, so prefer correcting the Service.","confirm":"kubectl get endpointslices -n {namespace} -l kubernetes.io/service-name={service}"},{"id":"not-ready","cause":"Pods are running but failing their readiness probe, so kube-proxy excludes them.","fix":"Fix the readiness endpoint or its threshold. The Service will populate on its own once pods report Ready.","confirm":"kubectl get pods -n {namespace} -o wide"},{"id":"wrong-target-port","cause":"targetPort points at a port nothing is listening on.","fix":"Set targetPort to the container's real port, or use a named port so the two cannot drift.","confirm":"kubectl get svc {service} -n {namespace} -o jsonpath='{.spec.ports}'"}],"verify":["EndpointSlice lists the expected pod IPs.","A request from inside the cluster to the Service name succeeds.","The count of endpoints matches the number of Ready replicas."],"escalate":["Service spec, selector and ports","Pod labels and readiness state","EndpointSlice contents"]}]</script>
+<script>
+"use strict";
+const BANK = JSON.parse(document.getElementById("data").textContent);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- session state (in memory only; nothing is persisted) ---------- */
+const CTX = {};                 // placeholder key -> value
+let CUR = null;                 // open runbook
+let LOG = [];                   // [{t, step, cmd, note}]
+let CURSOR = -1;                // keyboard cursor in results
+
+/* ---------- search ---------- */
+const flat = s => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+function score(r, q) {
+  if (!q.trim()) return 1;
+  const qq = flat(q), qt = qq.split(" ").filter(t => t.length > 1);
+  const title = flat(r.title), al = (r.aliases || []).map(flat);
+  let s = 0;
+  if (title.includes(qq)) s += 100;
+  if (al.some(a => a.includes(qq) || qq.includes(a))) s += 80;
+  const hay = [title, flat(r.summary), al.join(" "), flat(r.category)].join(" ");
+  for (const t of qt) {
+    if (title.includes(t)) s += 18;
+    else if (al.some(a => a.includes(t))) s += 14;
+    else if (hay.includes(t)) s += 4;
+  }
+  return s;
+}
+
+function renderResults() {
+  const q = $("#q").value;
+  const arr = BANK.map(r => ({ r, s: score(r, q) })).filter(x => x.s > 0)
+                  .sort((a, b) => b.s - a.s).slice(0, 25);
+  CURSOR = arr.length ? 0 : -1;
+  $("#results").innerHTML = arr.length ? arr.map((x, i) => {
+    const r = x.r, v = r.tier === "verified";
+    return `<li><button class="hit${i === 0 ? " cur" : ""}" data-id="${esc(r.id)}">
+      <h3>${esc(r.title)}</h3><p>${esc(r.summary)}</p>
+      <span class="meta">
+        <span class="trust t-${esc(r.tier)}">${v ? "Verified " + esc(r.verified_on) : esc(r.tier)}</span>
+        <span>${esc(r.technology)}</span>
+        <span>${(r.steps || []).length} steps</span>
+      </span></button></li>`;
+  }).join("") : `<li class="empty">Nothing matched. Try the exact error string from your terminal,
+    or a plainer phrase like "pod won't start".</li>`;
+  document.querySelectorAll(".hit").forEach(b => b.onclick = () => open(b.dataset.id));
+}
+
+/* ---------- placeholder substitution ---------- */
+function fill(cmd, asHtml) {
+  return cmd.replace(/\{([a-z0-9_]+)\}/g, (m, k) => {
+    const v = CTX[k];
+    if (!asHtml) return v || m;
+    return v ? `<span class="fill">${esc(v)}</span>`
+             : `<span class="unfilled">${esc(m)}</span>`;
+  });
+}
+
+function ctxBar() {
+  const keys = (CUR && CUR.inputs) || [];
+  $("#ctxfields").innerHTML = keys.map(i =>
+    `<label>${esc(i.label)}<input data-k="${esc(i.key)}" placeholder="${esc(i.example || "")}"
+      value="${esc(CTX[i.key] || "")}" size="${Math.max(8, (i.example || "").length)}"></label>`).join("");
+  document.querySelectorAll("#ctxfields input").forEach(inp => {
+    inp.oninput = () => { CTX[inp.dataset.k] = inp.value.trim(); repaintCmds(); };
+  });
+}
+
+function repaintCmds() {
+  document.querySelectorAll("[data-cmd]").forEach(el => {
+    el.innerHTML = fill(el.dataset.cmd, true);
+  });
+}
+
+/* ---------- runbook view ---------- */
+function open(id) {
+  CUR = BANK.find(r => r.id === id);
+  if (!CUR) return;
+  LOG = [];
+  (CUR.inputs || []).forEach(i => { if (!(i.key in CTX)) CTX[i.key] = ""; });
+  ctxBar();
+
+  const RISK = { safe: ["Read only", "c-safe"], state: ["Changes state", "c-state"],
+                 destructive: ["Destructive", "c-destructive"] };
+
+  const steps = (CUR.steps || []).map((s, i) => {
+    const [label, cls] = RISK[s.risk] || RISK.safe;
+    const danger = s.risk === "destructive";
+    const body = danger
+      ? `<div class="veil" data-reveal="${i}">Command hidden. Read the warning, then tap to reveal.</div>`
+      : `<pre data-cmd="${esc(s.cmd)}"></pre><button class="copy" data-copy="${i}">Copy</button>`;
+    const note = s.note ? `<p class="note${s.risk === "state" ? " note-state" : ""}">${esc(s.note)}</p>` : "";
+    const sig = (s.signals || []).length
+      ? `<details class="match"><summary>Paste your actual output to read it</summary>
+           <textarea data-sig="${i}" placeholder="Paste the output you got, then release the key."></textarea>
+           <div class="verdict miss" data-verdict="${i}">Nothing matched yet. Paste output above.</div>
+         </details>` : "";
+    return `<li class="step${danger ? " danger" : ""}" data-step="${i}">
+      <button class="mark" data-done="${i}" aria-label="Mark step ${i + 1} done">${i + 1}</button>
+      <div class="shead"><span class="stitle">${esc(s.title)}</span>
+        <span class="chip ${cls}">${label}</span></div>
+      ${note}
+      <div class="cmd">${body}</div>
+      <p class="look">${esc(s.look)}</p>
+      ${sig}</li>`;
+  }).join("");
+
+  const causes = (CUR.causes || []).map((c, i) =>
+    `<div class="cause" data-cause="${esc(c.id)}">
+       <div><span class="rank">${i + 1}</span><span class="what">${esc(c.cause)}</span></div>
+       <div class="fix"><b>Fix.</b> ${esc(c.fix)}</div></div>`).join("");
+
+  const prov = CUR.tier === "verified"
+    ? `Verified <b>${esc(CUR.verified_on)}</b> against <code>${esc(CUR.verified_against)}</code>
+       by ${esc(CUR.verified_by)}.${CUR.source ? ` <a href="${esc(CUR.source)}" target="_blank" rel="noopener">Official docs</a>` : ""}`
+    : `Written from documentation, not yet run against a live system. Treat every command as unconfirmed.`;
+
+  $("#rbview").innerHTML = `
+    <button class="back" id="back">&larr; All runbooks</button>
+    <h2>${esc(CUR.title)}</h2>
+    <p class="sum">${esc(CUR.summary)}</p>
+    <p class="prov">${prov}</p>
+    <ol class="steps">${steps}</ol>
+    ${causes ? `<div class="sec"><h3>Likely causes, most common first</h3>${causes}</div>` : ""}
+    ${(CUR.verify || []).length ? `<div class="sec"><h3>You are done when</h3>
+       <ul class="plain">${CUR.verify.map(v => `<li>${esc(fill(v, false))}</li>`).join("")}</ul></div>` : ""}`;
+
+  $("#searchview").style.display = "none";
+  $("#results").style.display = "none";
+  $("#rbview").style.display = "block";
+  $("#bar").style.display = "block";
+  $("#foot").textContent = "";
+  window.scrollTo(0, 0);
+  repaintCmds(); wire(); progress();
+}
+
+function wire() {
+  $("#back").onclick = home;
+
+  document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
+    const s = CUR.steps[+b.dataset.copy];
+    copy(fill(s.cmd, false), "Command copied");
+  });
+
+  document.querySelectorAll("[data-reveal]").forEach(v => v.onclick = () => {
+    const i = +v.dataset.reveal, s = CUR.steps[i];
+    v.outerHTML = `<pre data-cmd="${esc(s.cmd)}"></pre><button class="copy" data-copy="${i}">Copy</button>`;
+    repaintCmds(); wire();
+  });
+
+  document.querySelectorAll("[data-done]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.done, li = b.closest(".step"), s = CUR.steps[i];
+    li.classList.toggle("done");
+    if (li.classList.contains("done")) {
+      LOG.push({ t: new Date().toISOString().slice(11, 19), step: s.title, cmd: fill(s.cmd, false) });
+    } else {
+      LOG = LOG.filter(e => e.step !== s.title);
+    }
+    progress();
+  });
+
+  document.querySelectorAll("[data-sig]").forEach(ta => ta.oninput = () => {
+    const i = +ta.dataset.sig, s = CUR.steps[i], text = ta.value;
+    const out = $(`[data-verdict="${i}"]`);
+    document.querySelectorAll(".cause").forEach(c => c.classList.remove("lit"));
+    if (!text.trim()) {
+      out.className = "verdict miss";
+      out.textContent = "Nothing matched yet. Paste output above.";
+      return;
+    }
+    const m = (s.signals || []).find(g => { try { return new RegExp(g.match, "i").test(text); } catch { return false; } });
+    if (!m) {
+      out.className = "verdict miss";
+      out.textContent = "No known signature in that output. It may still be fine — read the note above, "
+        + "or add this output as a new signal so the next person gets a hit.";
+      return;
+    }
+    out.className = "verdict hit";
+    const target = m.goto || "";
+    out.innerHTML = `<b>That output means:</b>${esc(m.means)}`;
+    if (target.startsWith("cause:")) {
+      const c = (CUR.causes || []).find(x => x.id === target.slice(6));
+      const el = $(`[data-cause="${CSS.escape(target.slice(6))}"]`);
+      if (el) el.classList.add("lit");
+      if (c) out.innerHTML += `<button class="jump">Go to the fix: ${esc(c.cause)}</button>`;
+      out.querySelector(".jump") && (out.querySelector(".jump").onclick =
+        () => el && el.scrollIntoView({ behavior: "smooth", block: "center" }));
+    } else if (target.startsWith("step:")) {
+      const n = +target.slice(5);
+      out.innerHTML += `<button class="jump">Go to step ${n}</button>`;
+      out.querySelector(".jump").onclick = () =>
+        document.querySelector(`[data-step="${n - 1}"]`).scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    LOG.push({ t: new Date().toISOString().slice(11, 19), step: s.title,
+               cmd: fill(s.cmd, false), note: m.means });
+  });
+}
+
+function progress() {
+  const total = (CUR.steps || []).length;
+  const done = document.querySelectorAll(".step.done").length;
+  $("#prog").textContent = `${done} of ${total} checks done`;
+}
+
+/* ---------- exports ---------- */
+function copy(t, msg) {
+  navigator.clipboard.writeText(t).then(() => {
+    const el = $("#toast"); el.textContent = msg; el.style.display = "block";
+    setTimeout(() => el.style.display = "none", 1600);
+  }, () => prompt("Copy manually:", t));
+}
+
+$("#a-safe").onclick = () => {
+  const c = (CUR.steps || []).filter(s => s.risk === "safe").map(s => `# ${s.title}\n${fill(s.cmd, false)}`);
+  copy(c.join("\n\n"), `${c.length} read-only commands copied`);
+};
+
+$("#a-esc").onclick = () => {
+  const L = [`## ${CUR.title}`, "", "**What I checked**"];
+  LOG.forEach(e => { L.push(`- ${e.step} — \`${e.cmd}\``); if (e.note) L.push(`  - saw: ${e.note}`); });
+  if (!LOG.length) L.push("- (nothing recorded yet)");
+  L.push("", "**Still needed**");
+  (CUR.escalate || []).forEach(x => L.push(`- ${fill(x, false)}`));
+  copy(L.join("\n"), "Handoff notes copied");
+};
+
+$("#a-log").onclick = () => {
+  const L = [`# Incident: ${CUR.title}`, `Runbook: ${CUR.id} (verified ${CUR.verified_on || "n/a"})`, ""];
+  Object.entries(CTX).filter(([, v]) => v).forEach(([k, v]) => L.push(`- ${k}: \`${v}\``));
+  L.push("", "| time | check | command | observed |", "|---|---|---|---|");
+  LOG.forEach(e => L.push(`| ${e.t} | ${e.step} | \`${e.cmd}\` | ${e.note || ""} |`));
+  if (!LOG.length) L.push("| | no checks recorded | | |");
+  copy(L.join("\n"), "Incident log copied as markdown");
+};
+
+/* ---------- navigation ---------- */
+function home() {
+  CUR = null; LOG = [];
+  $("#searchview").style.display = "block";
+  $("#results").style.display = "block";
+  $("#rbview").style.display = "none";
+  $("#bar").style.display = "none";
+  $("#ctxfields").innerHTML = "";
+  $("#foot").textContent = FOOT;
+  $("#q").focus(); $("#q").select();
+}
+
+$("#q").oninput = renderResults;
+
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement !== $("#q")) { e.preventDefault(); $("#q").focus(); $("#q").select(); return; }
+  if (e.key === "Escape" && CUR) { home(); return; }
+  if (CUR || !["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) return;
+  const hits = [...document.querySelectorAll(".hit")];
+  if (!hits.length) return;
+  if (e.key === "Enter") { e.preventDefault(); hits[Math.max(0, CURSOR)].click(); return; }
+  e.preventDefault();
+  hits[CURSOR]?.classList.remove("cur");
+  CURSOR = (CURSOR + (e.key === "ArrowDown" ? 1 : -1) + hits.length) % hits.length;
+  hits[CURSOR].classList.add("cur");
+  hits[CURSOR].scrollIntoView({ block: "nearest" });
+});
+
+const v = BANK.filter(r => r.tier === "verified").length;
+const techs = [...new Set(BANK.map(r => r.technology))].sort();
+const FOOT = `${v} verified runbook${v === 1 ? "" : "s"} across ${techs.join(", ")}. `
+  + `Runs entirely in this file — nothing is sent anywhere, nothing is executed for you, `
+  + `and nothing is saved when you close the tab. Every command is yours to run.`;
+$("#foot").textContent = FOOT;
+renderResults();
+</script>
+</body>
+</html>
