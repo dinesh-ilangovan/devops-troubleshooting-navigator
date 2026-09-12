@@ -1,7 +1,7 @@
 from pathlib import Path
 import json,sys
-ROOT=Path(__file__).resolve().parent
-files=[ROOT/'data/kubernetes.json',ROOT/'data/docker.json']
+ROOT=Path(__file__).resolve().parent.parent
+files=[ROOT/'src/kubernetes.json',ROOT/'src/docker.json']
 R=[]
 for f in files:
     x=json.loads(f.read_text(encoding='utf-8')); R+=x
