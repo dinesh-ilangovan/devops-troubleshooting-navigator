@@ -1,0 +1,540 @@
+[
+  {
+    "id": "tf-state-lock",
+    "tier": "documented",
+    "technology": "Terraform",
+    "category": "State",
+    "title": "Error acquiring the state lock",
+    "summary": "Terraform will not run because another operation holds the lock, or a crashed run left it behind.",
+    "aliases": [
+      "state lock",
+      "error acquiring the state lock",
+      "lock id",
+      "conditionalcheckfailedexception",
+      "terraform locked",
+      "force-unlock"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/state/locking",
+    "inputs": [
+      {
+        "key": "lockid",
+        "label": "Lock ID from the error",
+        "example": "a1b2c3d4-0000-0000-0000-000000000000"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the lock's own metadata",
+        "cmd": "terraform plan",
+        "risk": "safe",
+        "look": "The error block names Who, Created and Operation. Who and Created together tell you whether this is a live run or an abandoned lock.",
+        "signals": [
+          {
+            "match": "(?i)Who:.*@",
+            "means": "A named person or CI runner holds it. Check with them before doing anything.",
+            "goto": "cause:someone-running"
+          },
+          {
+            "match": "(?i)Operation:\\s*OperationTypeApply",
+            "means": "An apply held this lock. If it crashed, state may be partially written.",
+            "goto": "cause:crashed-apply"
+          }
+        ]
+      },
+      {
+        "title": "Check whether a CI job is actually running",
+        "cmd": "echo 'Check your CI pipeline for a running plan or apply on this workspace'",
+        "risk": "safe",
+        "look": "Do this before force-unlocking. Breaking a live apply's lock is how state gets corrupted."
+      },
+      {
+        "title": "Confirm the timestamp is genuinely stale",
+        "cmd": "terraform plan 2>&1 | findstr Created",
+        "risk": "safe",
+        "look": "A lock minutes old is probably live. Hours old with no running job is abandoned."
+      },
+      {
+        "title": "Force-unlock the stale lock",
+        "cmd": "terraform force-unlock {lockid}",
+        "risk": "destructive",
+        "look": "Terraform confirms the lock was released. Run terraform plan immediately afterwards to check state consistency.",
+        "note": "Removes the lock without the holder's knowledge. If another apply is genuinely running, both processes will then write state concurrently and can corrupt it, which is far worse than waiting. Only run this once you have confirmed no job is active."
+      }
+    ],
+    "causes": [
+      {
+        "id": "someone-running",
+        "cause": "Another engineer or CI job holds the lock legitimately.",
+        "fix": "Wait. Do not force-unlock a live operation.",
+        "confirm": ""
+      },
+      {
+        "id": "crashed-apply",
+        "cause": "A previous apply died and left the lock.",
+        "fix": "Force-unlock, then plan carefully. Resources may have been created without being recorded.",
+        "confirm": ""
+      },
+      {
+        "id": "network-interrupt",
+        "cause": "A local run lost connectivity mid-operation.",
+        "fix": "Force-unlock, then plan to reconcile.",
+        "confirm": ""
+      },
+      {
+        "id": "permissions",
+        "cause": "The backend cannot write the lock at all.",
+        "fix": "Check IAM on the lock table or blob. This looks like a lock problem but is an access problem.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "terraform plan runs without a lock error.",
+      "The plan shows no unexpected drift from a partial apply.",
+      "No concurrent operation was interrupted."
+    ],
+    "escalate": [
+      "The full lock error including Who and Created",
+      "Whether any CI job was running",
+      "The plan output after unlocking"
+    ]
+  },
+  {
+    "id": "tf-already-exists",
+    "tier": "documented",
+    "technology": "Terraform",
+    "category": "State",
+    "title": "Resource already exists in the provider",
+    "summary": "Apply fails because the real resource exists but Terraform's state does not know about it.",
+    "aliases": [
+      "already exists",
+      "entityalreadyexists",
+      "resource exists",
+      "import resource",
+      "alreadyexists",
+      "duplicate resource"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/cli/import",
+    "inputs": [
+      {
+        "key": "address",
+        "label": "Terraform address",
+        "example": "aws_s3_bucket.logs"
+      },
+      {
+        "key": "realid",
+        "label": "Real resource ID",
+        "example": "my-logs-bucket"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm Terraform does not have it in state",
+        "cmd": "terraform state list | findstr {address}",
+        "risk": "safe",
+        "look": "No output means it is genuinely absent from state, and import is the right move. Output means state has it and the problem is different.",
+        "signals": [
+          {
+            "match": "\\w",
+            "means": "It is in state already. This is a naming collision or a second resource, not a missing import.",
+            "goto": "cause:name-collision"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "Absent from state. Import is appropriate.",
+            "goto": "cause:not-in-state"
+          }
+        ]
+      },
+      {
+        "title": "Check you are in the workspace you think",
+        "cmd": "terraform workspace show && terraform state list | measure-object -line",
+        "risk": "safe",
+        "look": "Applying against the wrong workspace produces exactly this error and is a common cause, especially in CI."
+      },
+      {
+        "title": "Import the existing resource into state",
+        "cmd": "terraform import {address} {realid}",
+        "risk": "state",
+        "look": "Terraform confirms the import. Nothing in the real infrastructure has changed yet.",
+        "note": "Writes the real resource into state but does not generate configuration for you. If your .tf block does not match reality, the very next plan will propose changes to the live resource. Always plan immediately afterwards and read it carefully before applying."
+      },
+      {
+        "title": "Check what Terraform now wants to change",
+        "cmd": "terraform plan",
+        "risk": "safe",
+        "look": "An empty plan means your configuration matches reality. Any proposed change is a real difference you must reconcile in the .tf file, not apply blindly.",
+        "signals": [
+          {
+            "match": "(?i)0 to add, 0 to change, 0 to destroy",
+            "means": "Configuration matches reality. The import is complete.",
+            "goto": ""
+          },
+          {
+            "match": "(?i)to destroy",
+            "means": "Stop. Your configuration would destroy something. Fix the .tf before applying.",
+            "goto": "cause:config-mismatch"
+          }
+        ]
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-in-state",
+        "cause": "The resource was created outside Terraform, or state was lost.",
+        "fix": "Import it, then reconcile the configuration until plan is empty.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-workspace",
+        "cause": "Applying against the wrong workspace or state file.",
+        "fix": "Check terraform workspace show. Confirm the backend key too.",
+        "confirm": ""
+      },
+      {
+        "id": "name-collision",
+        "cause": "A different resource already uses that name in the provider.",
+        "fix": "Rename one of them. Names are globally unique for some resource types.",
+        "confirm": ""
+      },
+      {
+        "id": "config-mismatch",
+        "cause": "Imported, but the configuration does not match reality.",
+        "fix": "Adjust the .tf until plan is empty. Never apply a plan that proposes destroying something you just imported.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "terraform plan reports no changes.",
+      "The resource appears in terraform state list.",
+      "The configuration reflects the real resource accurately."
+    ],
+    "escalate": [
+      "The exact already-exists error",
+      "Output of terraform workspace show",
+      "The plan output after import"
+    ]
+  },
+  {
+    "id": "tf-unexpected-drift",
+    "tier": "documented",
+    "technology": "Terraform",
+    "category": "Plan",
+    "title": "Plan shows changes nobody made",
+    "summary": "A plan proposes changes to resources you did not touch. Distinguish real drift from provider noise.",
+    "aliases": [
+      "unexpected changes",
+      "drift",
+      "plan shows changes",
+      "forces replacement",
+      "perpetual diff",
+      "always shows changes"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+    "inputs": [
+      {
+        "key": "address",
+        "label": "Resource address",
+        "example": "aws_ecs_service.api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Refresh state and see what actually drifted",
+        "cmd": "terraform plan -refresh-only",
+        "risk": "safe",
+        "look": "Differences between state and reality only. This separates genuine outside changes from configuration differences, which the normal plan blends together.",
+        "signals": [
+          {
+            "match": "(?i)No changes",
+            "means": "State matches reality. The diff comes from your configuration, not from drift.",
+            "goto": "cause:config-diff"
+          },
+          {
+            "match": "(?i)has changed outside of Terraform",
+            "means": "Something modified the resource outside Terraform.",
+            "goto": "cause:manual-change"
+          }
+        ]
+      },
+      {
+        "title": "Read what specifically would change",
+        "cmd": "terraform plan -target={address}",
+        "risk": "safe",
+        "look": "The attribute-level diff. Watch for 'forces replacement' — that means destroy and recreate, not an in-place update."
+      },
+      {
+        "title": "Check whether it is the same diff every time",
+        "cmd": "terraform plan -detailed-exitcode",
+        "risk": "safe",
+        "look": "Exit code 2 means changes are pending. The same diff reappearing after a successful apply is a perpetual diff, which is a provider or configuration issue rather than drift.",
+        "signals": [
+          {
+            "match": "(?i)forces replacement",
+            "means": "This would destroy and recreate the resource. Understand the downtime before proceeding.",
+            "goto": "cause:replacement"
+          }
+        ]
+      },
+      {
+        "title": "Inspect the stored state for the attribute",
+        "cmd": "terraform state show {address}",
+        "risk": "safe",
+        "look": "What Terraform believes. Comparing this against the provider console usually makes the source of the difference obvious."
+      }
+    ],
+    "causes": [
+      {
+        "id": "manual-change",
+        "cause": "Someone changed the resource in the console.",
+        "fix": "Either import the change into configuration, or apply to restore. Decide which is the intended source of truth.",
+        "confirm": ""
+      },
+      {
+        "id": "config-diff",
+        "cause": "The configuration differs from reality and always has.",
+        "fix": "A variable or default changed. Compare against the last applied configuration.",
+        "confirm": ""
+      },
+      {
+        "id": "perpetual-diff",
+        "cause": "The same diff returns after every apply.",
+        "fix": "Usually a provider normalising a value differently from how it is written. Match the provider's format, or use ignore_changes deliberately.",
+        "confirm": ""
+      },
+      {
+        "id": "provider-upgrade",
+        "cause": "A provider version change altered defaults.",
+        "fix": "Read the provider changelog. Pin the version so this does not happen unannounced.",
+        "confirm": ""
+      },
+      {
+        "id": "replacement",
+        "cause": "The change forces destroy and recreate.",
+        "fix": "Check which attribute is immutable. For stateful resources this may mean data loss, so plan the change properly.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "A plan immediately after apply reports no changes.",
+      "Any drift was resolved deliberately, not by blind apply.",
+      "No resource was replaced without that being intended."
+    ],
+    "escalate": [
+      "Output of terraform plan -refresh-only",
+      "The attribute-level diff",
+      "Provider version and whether it recently changed"
+    ]
+  },
+  {
+    "id": "tf-provider-auth",
+    "tier": "documented",
+    "technology": "Terraform",
+    "category": "Providers",
+    "title": "Provider authentication fails",
+    "summary": "Terraform cannot authenticate to the cloud. The credential chain is layered and the error rarely says which layer.",
+    "aliases": [
+      "no valid credential",
+      "provider auth",
+      "invalidclienttokenid",
+      "unable to locate credentials",
+      "expiredtoken",
+      "terraform credentials"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/providers/configuration",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Read which provider and which stage failed",
+        "cmd": "terraform plan",
+        "risk": "safe",
+        "look": "The provider name and the specific credential error. Expired and missing are completely different problems.",
+        "signals": [
+          {
+            "match": "(?i)ExpiredToken|expired",
+            "means": "The session token expired. Re-authenticate.",
+            "goto": "cause:expired"
+          },
+          {
+            "match": "(?i)unable to locate credentials|no valid credential",
+            "means": "No credentials found anywhere in the chain.",
+            "goto": "cause:none-found"
+          },
+          {
+            "match": "(?i)InvalidClientTokenId|SignatureDoesNotMatch",
+            "means": "Credentials exist but are wrong or from another account.",
+            "goto": "cause:wrong-creds"
+          },
+          {
+            "match": "(?i)AccessDenied|not authorized",
+            "means": "Authenticated successfully, but lacking permission for the action.",
+            "goto": "cause:no-permission"
+          }
+        ]
+      },
+      {
+        "title": "See which identity is actually in use",
+        "cmd": "aws sts get-caller-identity",
+        "risk": "safe",
+        "look": "The account and ARN Terraform will use. Confirm it is the account you intend before anything else."
+      },
+      {
+        "title": "Check what the environment is providing",
+        "cmd": "echo $env:AWS_PROFILE $env:AWS_REGION && terraform version",
+        "risk": "safe",
+        "look": "Environment variables override the shared config file. A leftover AWS_PROFILE in the shell is a very common cause."
+      },
+      {
+        "title": "Check whether the provider block pins an assumed role",
+        "cmd": "findstr /S /C:\"assume_role\" *.tf",
+        "risk": "safe",
+        "look": "An assume_role block means your base credentials must be permitted to assume that role. The failure may be at the assume step rather than the base credentials."
+      }
+    ],
+    "causes": [
+      {
+        "id": "expired",
+        "cause": "The session token has expired.",
+        "fix": "Re-authenticate. SSO sessions are typically short-lived by design.",
+        "confirm": ""
+      },
+      {
+        "id": "none-found",
+        "cause": "No credentials in environment, shared config or instance metadata.",
+        "fix": "Set the profile or environment variables. Confirm with sts get-caller-identity before running Terraform.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-creds",
+        "cause": "Credentials belong to a different account.",
+        "fix": "Check AWS_PROFILE. A stale exported variable overrides the config file silently.",
+        "confirm": ""
+      },
+      {
+        "id": "no-permission",
+        "cause": "Authenticated but not authorized for the action.",
+        "fix": "Read the denied action in the error. It names the exact permission needed.",
+        "confirm": ""
+      },
+      {
+        "id": "assume-role-fail",
+        "cause": "The assume_role step failed.",
+        "fix": "Check the trust policy on the target role and whether your base identity is allowed to assume it.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "terraform plan runs without a credential error.",
+      "sts get-caller-identity shows the intended account.",
+      "The credential source is explicit rather than accidental."
+    ],
+    "escalate": [
+      "The provider error verbatim",
+      "Output of aws sts get-caller-identity",
+      "Which environment variables are set"
+    ]
+  },
+  {
+    "id": "tf-destroy-blocked",
+    "tier": "documented",
+    "technology": "Terraform",
+    "category": "Plan",
+    "title": "Destroy fails on a dependency",
+    "summary": "Terraform cannot remove a resource because something still references it, or the provider refuses.",
+    "aliases": [
+      "destroy failed",
+      "dependency violation",
+      "resource in use",
+      "cannot delete",
+      "deleteconflict",
+      "has dependent objects"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/cli/commands/destroy",
+    "inputs": [
+      {
+        "key": "address",
+        "label": "Resource that will not destroy",
+        "example": "aws_security_group.api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read which dependency is blocking",
+        "cmd": "terraform destroy",
+        "risk": "safe",
+        "look": "The provider names the dependent object. That object often lives outside this Terraform configuration entirely, which is why Terraform cannot see it.",
+        "signals": [
+          {
+            "match": "(?i)DependencyViolation|has dependent objects",
+            "means": "Something still references this resource.",
+            "goto": "cause:external-dependency"
+          },
+          {
+            "match": "(?i)deletion protection|DeletionProtection",
+            "means": "Deletion protection is enabled on the resource.",
+            "goto": "cause:deletion-protection"
+          },
+          {
+            "match": "(?i)timeout|context deadline",
+            "means": "The provider timed out rather than refused.",
+            "goto": "cause:timeout"
+          }
+        ]
+      },
+      {
+        "title": "See what Terraform itself knows depends on it",
+        "cmd": "terraform graph | findstr {address}",
+        "risk": "safe",
+        "look": "In-configuration dependencies only. If this shows nothing, the blocker is outside Terraform's knowledge."
+      },
+      {
+        "title": "Inspect the resource's current state",
+        "cmd": "terraform state show {address}",
+        "risk": "safe",
+        "look": "Attributes that may indicate protection flags or attachments recorded at the last refresh."
+      },
+      {
+        "title": "Remove it from state without destroying it",
+        "cmd": "terraform state rm {address}",
+        "risk": "destructive",
+        "look": "The address disappears from terraform state list. The real resource is untouched.",
+        "note": "Terraform forgets the resource but the real infrastructure keeps running and keeps costing money. It becomes unmanaged, and a future apply may try to create a duplicate. Only do this when you have deliberately decided to hand ownership elsewhere, and record where it went."
+      }
+    ],
+    "causes": [
+      {
+        "id": "external-dependency",
+        "cause": "Something outside this configuration references the resource.",
+        "fix": "Find and remove the dependent object first. Security group rules referencing each other are a classic case.",
+        "confirm": ""
+      },
+      {
+        "id": "deletion-protection",
+        "cause": "The provider has deletion protection enabled.",
+        "fix": "Disable it and apply that change, then destroy. Two steps, deliberately.",
+        "confirm": ""
+      },
+      {
+        "id": "timeout",
+        "cause": "The provider timed out during deletion.",
+        "fix": "Some resources take a long time to delete. Raise the timeout and retry before assuming failure.",
+        "confirm": ""
+      },
+      {
+        "id": "orphaned-state",
+        "cause": "The real resource is already gone but state still lists it.",
+        "fix": "terraform state rm to reconcile.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "terraform destroy completes.",
+      "The provider console confirms the resource is gone.",
+      "Nothing was orphaned into an unmanaged state by accident."
+    ],
+    "escalate": [
+      "The destroy error including the dependent object",
+      "terraform state show for the resource",
+      "Whether the dependency is inside or outside this configuration"
+    ]
+  }
+]

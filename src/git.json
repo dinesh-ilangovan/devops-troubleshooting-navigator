@@ -197,5 +197,354 @@
       "The exact push output including any rejection reason",
       "Whether the branch is protected and who owns it"
     ]
+  },
+  {
+    "id": "git-merge-conflict",
+    "tier": "documented",
+    "technology": "Git",
+    "category": "Merging",
+    "title": "Merge or rebase stopped with conflicts",
+    "summary": "Git cannot combine two changes automatically and is waiting for you to decide.",
+    "aliases": [
+      "merge conflict",
+      "conflict",
+      "both modified",
+      "fix conflicts and run commit",
+      "rebase conflict",
+      "unmerged paths"
+    ],
+    "source": "https://git-scm.com/docs/git-merge",
+    "inputs": [
+      {
+        "key": "branch",
+        "label": "Branch being merged",
+        "example": "main"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See exactly which files are unmerged",
+        "cmd": "git status --short",
+        "risk": "safe",
+        "look": "Lines starting UU are both-modified. AA is both-added, DU and UD are delete-versus-modify, which need a decision rather than an edit.",
+        "signals": [
+          {
+            "match": "^UU ",
+            "means": "Both sides changed the same file. Edit it and resolve.",
+            "goto": "cause:both-modified"
+          },
+          {
+            "match": "^(DU|UD) ",
+            "means": "One side deleted what the other changed. Neither version is automatically right.",
+            "goto": "cause:delete-modify"
+          }
+        ]
+      },
+      {
+        "title": "Understand which operation you are inside",
+        "cmd": "git status | head -3",
+        "risk": "safe",
+        "look": "Rebase and merge resolve identically but finish differently. Finishing the wrong way is where people lose work."
+      },
+      {
+        "title": "See both sides of a conflicting file",
+        "cmd": "git diff --diff-filter=U",
+        "risk": "safe",
+        "look": "The conflict markers with both versions. The section above ======= is your current branch, below it is what you are bringing in."
+      },
+      {
+        "title": "Abort and return to where you started",
+        "cmd": "git merge --abort",
+        "risk": "destructive",
+        "look": "A clean working tree back at the pre-merge commit. This is always safe for committed history, and is the right move when a merge has gone badly.",
+        "note": "Discards the entire in-progress merge and any conflict resolution you have done so far. Committed work is untouched, but unsaved resolution effort is lost. Inside a rebase, the equivalent is git rebase --abort."
+      }
+    ],
+    "causes": [
+      {
+        "id": "both-modified",
+        "cause": "Both branches changed the same lines.",
+        "fix": "Edit the file to the intended final state, remove the markers, git add it, then continue.",
+        "confirm": ""
+      },
+      {
+        "id": "delete-modify",
+        "cause": "One branch deleted a file the other modified.",
+        "fix": "Decide deliberately: git rm to accept the deletion, or git add to keep the modified version.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-finish",
+        "cause": "Finished a rebase with git commit instead of git rebase --continue.",
+        "fix": "Inside a rebase always use git rebase --continue. Inside a merge, git commit is correct.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "git status reports a clean tree with no unmerged paths.",
+      "The build and tests pass on the merged result.",
+      "Neither side's intent was silently dropped."
+    ],
+    "escalate": [
+      "git status --short output",
+      "Whether it is a merge or a rebase",
+      "Which files conflicted and how each was resolved"
+    ]
+  },
+  {
+    "id": "git-detached-head",
+    "tier": "documented",
+    "technology": "Git",
+    "category": "Branches",
+    "title": "You are in detached HEAD state",
+    "summary": "Commits made here belong to no branch and become unreachable when you switch away.",
+    "aliases": [
+      "detached head",
+      "not on any branch",
+      "head detached at",
+      "lost my commits",
+      "commits disappeared after checkout"
+    ],
+    "source": "https://git-scm.com/docs/git-checkout",
+    "inputs": [
+      {
+        "key": "branch",
+        "label": "Branch to keep the work on",
+        "example": "feature/fix-checkout"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the state and whether you have made commits",
+        "cmd": "git status -sb && git log --oneline -5",
+        "risk": "safe",
+        "look": "'HEAD detached at' confirms it. If the log shows commits you made here, they exist but nothing points at them yet.",
+        "signals": [
+          {
+            "match": "(?i)HEAD detached",
+            "means": "Detached. Any commits here need a branch before you move.",
+            "goto": "cause:detached"
+          }
+        ]
+      },
+      {
+        "title": "Create a branch at your current position",
+        "cmd": "git switch -c {branch}",
+        "risk": "safe",
+        "look": "Your commits are now on a real branch and safe. Do this before anything else, and before switching away."
+      },
+      {
+        "title": "If you already switched away and lost them, find them in reflog",
+        "cmd": "git reflog -20",
+        "risk": "safe",
+        "look": "Every position HEAD has held, with its SHA. Detached commits remain here for about ninety days, so almost nothing is truly lost."
+      },
+      {
+        "title": "Recover a specific lost commit",
+        "cmd": "git branch recovered <sha-from-reflog>",
+        "risk": "state",
+        "look": "A branch named recovered holding the work. Verify with git log before relying on it.",
+        "note": "Creates a new branch pointing at that commit. Nothing existing is modified and no history is rewritten, but pick the SHA carefully or you will branch from the wrong point."
+      }
+    ],
+    "causes": [
+      {
+        "id": "detached",
+        "cause": "HEAD points at a commit rather than a branch.",
+        "fix": "Create a branch here with git switch -c. Do it before switching away.",
+        "confirm": ""
+      },
+      {
+        "id": "already-switched",
+        "cause": "You left detached HEAD and the commits seem gone.",
+        "fix": "They are in the reflog. Find the SHA and branch from it.",
+        "confirm": ""
+      },
+      {
+        "id": "intentional",
+        "cause": "You checked out a tag or old commit deliberately.",
+        "fix": "Fine as long as you make no commits. If you do, branch first.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "git status shows you on a named branch.",
+      "git log on that branch contains your commits.",
+      "The branch is pushed, or you know it is local only."
+    ],
+    "escalate": [
+      "git status -sb output",
+      "git reflog around the time the work was done",
+      "Which commits are missing"
+    ]
+  },
+  {
+    "id": "git-large-file-rejected",
+    "tier": "documented",
+    "technology": "Git",
+    "category": "Remotes",
+    "title": "Push rejected for file size",
+    "summary": "The remote refuses a file over its limit. Deleting it in a new commit does not help; it is still in history.",
+    "aliases": [
+      "file too large",
+      "push rejected size",
+      "large file",
+      "gh001",
+      "exceeds file size limit",
+      "git lfs"
+    ],
+    "source": "https://docs.github.com/en/repositories/working-with-files/managing-large-files",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "The oversized file",
+        "example": "data/dump.sql"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the rejection and identify the file and commit",
+        "cmd": "git push 2>&1 | more",
+        "risk": "safe",
+        "look": "The remote names the file and the commit that introduced it. That commit is what must change, not your latest one.",
+        "signals": [
+          {
+            "match": "(?i)exceeds|too large|GH001",
+            "means": "Size limit. The file is embedded in history and must be removed from it.",
+            "goto": "cause:in-history"
+          }
+        ]
+      },
+      {
+        "title": "Find the largest objects actually in history",
+        "cmd": "git rev-list --objects --all | git cat-file --batch-check=\"%(objecttype) %(objectname) %(objectsize) %(rest)\" | findstr blob",
+        "risk": "safe",
+        "look": "Sizes are in bytes. This shows what is really in the repository, which is often not what you expected."
+      },
+      {
+        "title": "If it is only in your last commit, remove it there",
+        "cmd": "git rm --cached {file} && git commit --amend --no-edit",
+        "risk": "destructive",
+        "look": "git show --stat no longer lists the file. The file remains on disk because only the index entry was removed.",
+        "note": "Rewrites your most recent commit. Safe if that commit has not been pushed. If it has been pushed and others have pulled it, do not amend — the file needs removing from shared history through a coordinated rewrite instead."
+      }
+    ],
+    "causes": [
+      {
+        "id": "in-history",
+        "cause": "The file is in an earlier commit, so deleting it now changes nothing.",
+        "fix": "It must be removed from history. For a single unpushed commit, amend. For anything shared, coordinate a rewrite with the repository owner.",
+        "confirm": ""
+      },
+      {
+        "id": "should-be-lfs",
+        "cause": "The file is a legitimate large asset.",
+        "fix": "Track it with Git LFS and add the pattern to .gitattributes before committing it again.",
+        "confirm": ""
+      },
+      {
+        "id": "should-not-be-committed",
+        "cause": "A build artifact or database dump got committed.",
+        "fix": "Add it to .gitignore. Artifacts belong in a registry, not in Git.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The push is accepted.",
+      "The repository size is reasonable for a fresh clone.",
+      ".gitignore or .gitattributes prevents a recurrence."
+    ],
+    "escalate": [
+      "The verbatim rejection message",
+      "Which commit introduced the file",
+      "Whether that commit has been pushed and pulled by others"
+    ]
+  },
+  {
+    "id": "git-wrong-author",
+    "tier": "documented",
+    "technology": "Git",
+    "category": "History & Undo",
+    "title": "Commits show the wrong author or email",
+    "summary": "Work commits attributed to a personal address, or the reverse. Usually a missing per-repository config.",
+    "aliases": [
+      "wrong author",
+      "wrong email commit",
+      "commits not showing github",
+      "unverified commit",
+      "wrong git config",
+      "author email"
+    ],
+    "source": "https://git-scm.com/docs/git-config",
+    "inputs": [
+      {
+        "key": "email",
+        "label": "Correct email",
+        "example": "dinesh@example.com"
+      },
+      {
+        "key": "name",
+        "label": "Correct name",
+        "example": "Dinesh Ilangovan"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See what identity the recent commits carry",
+        "cmd": "git log --format='%h %an <%ae>' -5",
+        "risk": "safe",
+        "look": "The email is what matters for attribution on the hosting side. The display name is cosmetic."
+      },
+      {
+        "title": "See which config is being used and from where",
+        "cmd": "git config --show-origin user.email && git config --show-origin user.name",
+        "risk": "safe",
+        "look": "The file path in the output tells you whether this is global or repository-local. A missing local value means the global one applies."
+      },
+      {
+        "title": "Set the correct identity for this repository only",
+        "cmd": "git config user.email \"{email}\" && git config user.name \"{name}\"",
+        "risk": "state",
+        "look": "git config --show-origin now points at the repository's own config file.",
+        "note": "Writes to .git/config for this repository only. Existing commits are unaffected — this changes future commits, nothing more. Setting it locally is the right move when you mix work and personal repositories on one machine."
+      },
+      {
+        "title": "Fix the identity on the most recent commit",
+        "cmd": "git commit --amend --reset-author --no-edit",
+        "risk": "destructive",
+        "look": "git log shows the corrected author on the top commit.",
+        "note": "Rewrites the last commit, changing its SHA. Safe while unpushed. If it has been pushed, this creates a divergence that requires a force-push, which rewrites shared history."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-local-config",
+        "cause": "No repository-local identity, so a global one applied.",
+        "fix": "Set user.email locally in each work repository. Consider clearing the global value so it can never apply silently.",
+        "confirm": ""
+      },
+      {
+        "id": "already-pushed",
+        "cause": "The wrong-author commits are already on the remote.",
+        "fix": "Leave them. Rewriting shared history to fix a display name is not a worthwhile trade.",
+        "confirm": ""
+      },
+      {
+        "id": "unverified",
+        "cause": "The email is right but commits show as unverified.",
+        "fix": "That is signing, not authorship. Set up commit signing separately.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "New commits carry the correct author.",
+      "git config --show-origin points at the local config.",
+      "No shared history was rewritten to achieve it."
+    ],
+    "escalate": [
+      "git log with author format",
+      "Output of git config --show-origin for user.email",
+      "Whether the affected commits are pushed"
+    ]
   }
 ]
