@@ -3152,5 +3152,498 @@
       "Configured limits",
       "Process list inside the container"
     ]
+  },
+  {
+    "id": "docker-build-secret-mount",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Build & Cache",
+    "title": "Build needs credentials without baking them in",
+    "summary": "A private dependency needs auth during build but the token must not end up in the image.",
+    "aliases": [
+      "build secret",
+      "private npm build",
+      "pip private index",
+      "ssh key build",
+      "credentials during build",
+      "buildkit secret"
+    ],
+    "source": "https://docs.docker.com/build/building/secrets/",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check whether BuildKit is active",
+        "cmd": "docker buildx version",
+        "risk": "safe",
+        "look": "Secret mounts require BuildKit. Without it the only options leave the credential in a layer."
+      },
+      {
+        "title": "Check how the credential is currently passed",
+        "cmd": "findstr /S /C:\"ARG\" /C:\"COPY .npmrc\" /C:\"ENV\" Dockerfile",
+        "risk": "safe",
+        "look": "ARG and COPY both persist into the image. Anything visible here is recoverable from the built image.",
+        "signals": [
+          {
+            "match": "ARG.*TOKEN|ARG.*PASSWORD",
+            "means": "A build argument carrying a secret. It is stored in image metadata.",
+            "goto": "cause:arg-leak"
+          },
+          {
+            "match": "COPY.*npmrc|COPY.*netrc",
+            "means": "A credentials file copied in. It remains in that layer.",
+            "goto": "cause:copied-file"
+          }
+        ]
+      },
+      {
+        "title": "Use a secret mount instead",
+        "cmd": "docker build --secret id=npm,src=$HOME/.npmrc -t myimage .",
+        "risk": "safe",
+        "look": "The file is available only during that RUN instruction and is never written to a layer. The Dockerfile uses a mount=type=secret flag on the RUN line."
+      },
+      {
+        "title": "Verify nothing leaked",
+        "cmd": "docker history --no-trunc myimage | findstr /I \"token npmrc\"",
+        "risk": "safe",
+        "look": "Empty output means the secret did not persist. Check the filesystem too if the build wrote it anywhere."
+      }
+    ],
+    "causes": [
+      {
+        "id": "arg-leak",
+        "cause": "A secret passed via ARG is in image metadata.",
+        "fix": "Switch to a secret mount. Rotate the token that was exposed.",
+        "confirm": ""
+      },
+      {
+        "id": "copied-file",
+        "cause": "A credentials file was copied into a layer.",
+        "fix": "Use a secret mount. Deleting it later does not remove it.",
+        "confirm": ""
+      },
+      {
+        "id": "no-buildkit",
+        "cause": "BuildKit is disabled.",
+        "fix": "Enable it. Secret mounts are not available otherwise.",
+        "confirm": ""
+      },
+      {
+        "id": "already-pushed",
+        "cause": "The image with the secret was pushed.",
+        "fix": "Rotate the credential. Assume it is public.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The build succeeds without the secret in any layer.",
+      "docker history shows nothing sensitive.",
+      "Exposed credentials were rotated."
+    ],
+    "escalate": [
+      "How the credential is passed",
+      "Whether BuildKit is in use",
+      "Result of the history search"
+    ]
+  },
+  {
+    "id": "docker-registry-push-fails",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Registry & Auth",
+    "title": "docker push fails",
+    "summary": "The image builds but will not upload.",
+    "aliases": [
+      "push denied",
+      "push failed",
+      "cannot push image",
+      "unauthorized push",
+      "blob upload unknown",
+      "push timeout"
+    ],
+    "source": "https://docs.docker.com/reference/cli/docker/image/push/",
+    "inputs": [
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the push failure",
+        "cmd": "docker push {image}",
+        "risk": "safe",
+        "look": "Denied, unauthorized and blob errors are three different problems.",
+        "signals": [
+          {
+            "match": "denied: requested access",
+            "means": "Authenticated but not permitted to write to this repository.",
+            "goto": "cause:no-write-access"
+          },
+          {
+            "match": "unauthorized|authentication required",
+            "means": "Not logged in to this registry.",
+            "goto": "cause:not-logged-in"
+          },
+          {
+            "match": "blob upload unknown|blob upload invalid",
+            "means": "The upload was interrupted or the registry has a storage problem.",
+            "goto": "cause:blob-error"
+          },
+          {
+            "match": "name unknown|repository does not exist",
+            "means": "The repository must be created first on this registry.",
+            "goto": "cause:repo-missing"
+          }
+        ]
+      },
+      {
+        "title": "Check the tag matches the registry",
+        "cmd": "docker image inspect {image} --format '{{.RepoTags}}'",
+        "risk": "safe",
+        "look": "The tag must include the registry host, or Docker pushes to Docker Hub by default. That is the most common surprise."
+      },
+      {
+        "title": "Confirm you can authenticate",
+        "cmd": "docker login <registry>",
+        "risk": "safe",
+        "look": "A successful login proves credentials. Push can still fail on repository-level permission, which is a different grant."
+      },
+      {
+        "title": "Check image size against registry limits",
+        "cmd": "docker image inspect {image} --format '{{.Size}}'",
+        "risk": "safe",
+        "look": "Some registries reject very large layers. A timeout mid-push on a huge image points here rather than at auth."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-logged-in",
+        "cause": "No credentials for this registry.",
+        "fix": "docker login. Tokens expire.",
+        "confirm": ""
+      },
+      {
+        "id": "no-write-access",
+        "cause": "Read access but not write.",
+        "fix": "Ask for push permission on that repository path.",
+        "confirm": ""
+      },
+      {
+        "id": "repo-missing",
+        "cause": "The repository does not exist.",
+        "fix": "Some registries require creating it first rather than on first push.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-tag",
+        "cause": "The tag has no registry prefix.",
+        "fix": "Retag with the full registry host.",
+        "confirm": ""
+      },
+      {
+        "id": "blob-error",
+        "cause": "Upload was interrupted.",
+        "fix": "Retry. Persistent failures point at registry storage.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The push completes and reports a digest.",
+      "The image is pullable from another machine."
+    ],
+    "escalate": [
+      "The push error verbatim",
+      "The full image tag",
+      "Whether login succeeds"
+    ]
+  },
+  {
+    "id": "docker-container-cannot-write-tmp",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Storage & Disk",
+    "title": "Container fails writing to a temporary path",
+    "summary": "The app errors on /tmp or a cache directory it expects to be writable.",
+    "aliases": [
+      "cannot write tmp",
+      "read-only tmp",
+      "no space tmp",
+      "tmpfs full",
+      "cache directory error"
+    ],
+    "source": "https://docs.docker.com/engine/storage/tmpfs/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check whether the rootfs is read-only",
+        "cmd": "docker inspect {container} --format 'ro={{.HostConfig.ReadonlyRootfs}} tmpfs={{json .HostConfig.Tmpfs}}'",
+        "risk": "safe",
+        "look": "A read-only rootfs with no tmpfs means every temp write fails by design.",
+        "signals": [
+          {
+            "match": "ro=true",
+            "means": "The root filesystem is read-only. Temp paths need an explicit mount.",
+            "goto": "cause:readonly-no-tmpfs"
+          }
+        ]
+      },
+      {
+        "title": "Check space inside the container",
+        "cmd": "docker exec {container} df -h /tmp",
+        "risk": "safe",
+        "look": "A tmpfs has a fixed size, often much smaller than the host disk. Filling it produces a no-space error that looks like a host problem."
+      },
+      {
+        "title": "Check ownership of the path",
+        "cmd": "docker exec {container} ls -ld /tmp",
+        "risk": "safe",
+        "look": "A non-root user needs write permission. A tmpfs mounted without the right mode can exclude the app's user."
+      }
+    ],
+    "causes": [
+      {
+        "id": "readonly-no-tmpfs",
+        "cause": "Read-only rootfs with no writable temp.",
+        "fix": "Add --tmpfs /tmp. Keep the rootfs read-only.",
+        "confirm": ""
+      },
+      {
+        "id": "tmpfs-too-small",
+        "cause": "The tmpfs size limit was reached.",
+        "fix": "Raise the size, or write less. tmpfs consumes RAM.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-ownership",
+        "cause": "The user cannot write to the path.",
+        "fix": "Set the mode on the tmpfs mount, or run as a user that owns it.",
+        "confirm": ""
+      },
+      {
+        "id": "app-assumes-disk",
+        "cause": "The app writes large temp files.",
+        "fix": "Mount a real volume rather than a tmpfs for anything large.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The application writes successfully.",
+      "The rootfs stays read-only.",
+      "tmpfs size is sufficient."
+    ],
+    "escalate": [
+      "Read-only and tmpfs settings",
+      "Space and ownership on the path",
+      "What the app writes there"
+    ]
+  },
+  {
+    "id": "docker-zombie-processes",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "title": "Zombie processes accumulate in a container",
+    "summary": "Defunct processes build up because PID 1 does not reap children.",
+    "aliases": [
+      "zombie processes container",
+      "defunct",
+      "pid 1 init",
+      "tini",
+      "process not reaped",
+      "zombies docker"
+    ],
+    "source": "https://docs.docker.com/engine/containers/multi-service_container/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Count the zombies",
+        "cmd": "docker exec {container} sh -c \"ps -eo stat,ppid,cmd | grep -c '^Z'\"",
+        "risk": "safe",
+        "look": "A growing count means PID 1 is not reaping. Each zombie holds a process table entry until it is."
+      },
+      {
+        "title": "See what PID 1 actually is",
+        "cmd": "docker exec {container} ps -p 1 -o comm=",
+        "risk": "safe",
+        "look": "A shell or an application as PID 1 usually does not reap. An init process does.",
+        "signals": [
+          {
+            "match": "sh|bash",
+            "means": "A shell as PID 1 does not reap orphaned children.",
+            "goto": "cause:shell-pid1"
+          },
+          {
+            "match": "tini|dumb-init|docker-init",
+            "means": "A proper init is present. Zombies here point at the application.",
+            "goto": "cause:app-not-reaping"
+          }
+        ]
+      },
+      {
+        "title": "Check whether init is enabled",
+        "cmd": "docker inspect {container} --format '{{.HostConfig.Init}}'",
+        "risk": "safe",
+        "look": "The --init flag inserts a minimal init as PID 1 that reaps orphans automatically."
+      },
+      {
+        "title": "Recreate with an init process",
+        "cmd": "docker run --init ...",
+        "risk": "state",
+        "look": "ps -p 1 shows docker-init and the zombie count stays at zero.",
+        "note": "Requires recreating the container, so it restarts and anything in the writable layer is lost. The change is otherwise harmless: --init only inserts a tiny process reaper as PID 1."
+      }
+    ],
+    "causes": [
+      {
+        "id": "shell-pid1",
+        "cause": "A shell is PID 1 and does not reap.",
+        "fix": "Use --init, or exec the real process so it replaces the shell.",
+        "confirm": ""
+      },
+      {
+        "id": "app-not-reaping",
+        "cause": "The application spawns children and ignores SIGCHLD.",
+        "fix": "Handle it in the app, or run under an init.",
+        "confirm": ""
+      },
+      {
+        "id": "shell-form-cmd",
+        "cause": "CMD in shell form wraps the process in a shell.",
+        "fix": "Use exec form so the application becomes PID 1 directly.",
+        "confirm": ""
+      },
+      {
+        "id": "many-execs",
+        "cause": "Frequent docker exec leaves orphans.",
+        "fix": "--init reaps these too.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Zombie count stays at zero.",
+      "PID 1 is an init or the real application.",
+      "The process table does not grow."
+    ],
+    "escalate": [
+      "Zombie count over time",
+      "What PID 1 is",
+      "Whether --init is enabled"
+    ]
+  },
+  {
+    "id": "docker-image-tag-confusion",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Images",
+    "title": "Running an older image than expected",
+    "summary": "Changes do not appear because a stale image with the same tag is being used.",
+    "aliases": [
+      "old image running",
+      "latest not updating",
+      "stale image",
+      "tag not updated",
+      "changes not showing docker"
+    ],
+    "source": "https://docs.docker.com/engine/manage-resources/pruning/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      },
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Compare the running image digest against the registry",
+        "cmd": "docker inspect {container} --format '{{.Image}}' && docker image inspect {image} --format '{{.Id}} {{.RepoDigests}}'",
+        "risk": "safe",
+        "look": "Different IDs mean the container runs an older build than the local tag points at.",
+        "signals": [
+          {
+            "match": "sha256:\\w+\\s+\\[\\]",
+            "means": "No repo digest, so this image was built locally and never pushed.",
+            "goto": "cause:local-only"
+          }
+        ]
+      },
+      {
+        "title": "Check when the local image was built",
+        "cmd": "docker image inspect {image} --format '{{.Created}}'",
+        "risk": "safe",
+        "look": "An old creation date with a fresh tag means the pull did not happen or brought nothing new."
+      },
+      {
+        "title": "Check the pull policy in use",
+        "cmd": "docker inspect {container} --format '{{.Config.Image}}'",
+        "risk": "safe",
+        "look": "docker run uses a local image if the tag exists, without checking the registry. Only an explicit pull refreshes it."
+      },
+      {
+        "title": "Force a fresh pull",
+        "cmd": "docker pull {image}",
+        "risk": "state",
+        "look": "The digest changes. Recreate the container to actually use it.",
+        "note": "Downloads the current image for that tag and moves the local tag to it. The running container keeps the old image until recreated, and the old image remains on disk until pruned. On a mutable tag this can bring a different build than the one you tested."
+      }
+    ],
+    "causes": [
+      {
+        "id": "mutable-tag",
+        "cause": "A tag like latest was reused for a new build.",
+        "fix": "Pin by digest, or use immutable version tags.",
+        "confirm": ""
+      },
+      {
+        "id": "no-pull",
+        "cause": "Docker used the cached local image.",
+        "fix": "Pull explicitly, or use --pull always on run.",
+        "confirm": ""
+      },
+      {
+        "id": "local-only",
+        "cause": "The image was built locally and never pushed.",
+        "fix": "Push it, or build on the machine that runs it.",
+        "confirm": ""
+      },
+      {
+        "id": "not-recreated",
+        "cause": "The container predates the new image.",
+        "fix": "Recreate it. Pulling alone changes nothing running.",
+        "confirm": ""
+      },
+      {
+        "id": "cache-hit",
+        "cause": "The build reused a cached layer with old source.",
+        "fix": "Check the build context actually included your changes.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The running container uses the intended build.",
+      "Tags are immutable or pinned by digest."
+    ],
+    "escalate": [
+      "Running image ID against the local tag",
+      "Image creation date",
+      "Whether it was pushed"
+    ]
   }
 ]

@@ -45,9 +45,15 @@ nav::-webkit-scrollbar-thumb{background:#2C3B49;border-radius:4px}
 .tbody{display:none}
 .tgroup.open .tbody{display:block}
 .tgroup.open .thead{color:#fff}
-.chead{padding:8px 18px 4px 35px;font-size:10.5px;letter-spacing:.08em;color:#66798B;font-weight:600}
+.chead{display:flex;align-items:center;gap:7px;width:100%;background:none;border:0;text-align:left;
+  cursor:pointer;padding:7px 18px 7px 30px;font-size:11.5px;letter-spacing:.04em;color:#8FA3B5;font-weight:600}
+.chead:hover{background:#18242E;color:#DCE6EF}
+.chead .ct{margin-left:auto;font-size:10.5px;color:#5A6D7E}
+.cbody{display:none}
+.cgroup.open .cbody{display:block}
+.cgroup.open .chead{color:#DCE6EF}
 .item{display:block;width:100%;background:none;border:0;text-align:left;cursor:pointer;
-  padding:6px 18px 6px 35px;color:#A8BBCB;font-size:13.5px;line-height:1.35;border-left:2px solid transparent}
+  padding:6px 18px 6px 46px;color:#A8BBCB;font-size:13.5px;line-height:1.35;border-left:2px solid transparent}
 .item:hover{background:#1A2732;color:#fff}
 .item.sel{background:#1E2D3A;color:#fff;border-left-color:#5B93CE}
 .nohit{padding:18px;color:#6B7F91;font-size:13px}
@@ -213,11 +219,20 @@ function tree(){
     return '<div class="tgroup'+(open?" open":"")+'" data-t="'+esc(t)+'">'+
       '<button class="thead"><span class="car">'+(open?"\u25BE":"\u25B8")+'</span>'+esc(t)+
       '<span class="ct">'+n+'</span></button><div class="tbody">'+
-      Object.keys(byT[t]).sort().map(c=>'<div class="chead">'+esc(c).toUpperCase()+'</div>'+
-        byT[t][c].map(r=>'<button class="item'+(CUR&&CUR.id===r.id?" sel":"")+'" data-id="'+esc(r.id)+'">'+
-          esc(r.title)+'</button>').join("")).join("")+'</div></div>';}).join("");
+      Object.keys(byT[t]).sort().map(c=>{
+        const co=searching||(CUR&&CUR.technology===t&&CUR.category===c);
+        return '<div class="cgroup'+(co?" open":"")+'" data-c="'+esc(c)+'">'+
+          '<button class="chead"><span class="car">'+(co?"\u25BE":"\u25B8")+'</span>'+
+          esc(c)+'<span class="ct">'+byT[t][c].length+'</span></button><div class="cbody">'+
+          byT[t][c].map(r=>'<button class="item'+(CUR&&CUR.id===r.id?" sel":"")+'" data-id="'+
+            esc(r.id)+'">'+esc(r.title)+'</button>').join("")+'</div></div>';}).join("")+
+      '</div></div>';}).join("");
   document.querySelectorAll(".thead").forEach(b=>b.onclick=()=>{
     const g=b.closest(".tgroup"); g.classList.toggle("open");
+    g.querySelector(".car").textContent=g.classList.contains("open")?"\u25BE":"\u25B8";});
+  document.querySelectorAll(".chead").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const g=b.closest(".cgroup"); g.classList.toggle("open");
     g.querySelector(".car").textContent=g.classList.contains("open")?"\u25BE":"\u25B8";});
   document.querySelectorAll(".item").forEach(b=>b.onclick=()=>{
     open(b.dataset.id);document.body.classList.remove("nav");});
@@ -307,10 +322,15 @@ function home(){
     '<p class="src" style="margin-top:30px">Runs entirely in this one file. Nothing is sent anywhere, '+
     'nothing is executed for you, and nothing is saved when you close the tab.</p></div>';
   document.querySelectorAll(".card").forEach(b=>b.onclick=()=>{
-    const g=[...document.querySelectorAll(".tgroup")].find(x=>x.dataset.t===b.dataset.tech);
+    const tech=b.dataset.tech;
+    const g=[...document.querySelectorAll(".tgroup")].find(x=>x.dataset.t===tech);
     if(g){g.classList.add("open");g.querySelector(".car").textContent="\u25BE";
-      g.scrollIntoView({block:"nearest"});}
-    document.body.classList.add("nav");});
+      const c=g.querySelector(".cgroup");
+      if(c){c.classList.add("open");c.querySelector(".car").textContent="\u25BE";}
+      g.scrollIntoView({block:"start",behavior:"smooth"});}
+    document.body.classList.add("nav");
+    const first=BANK.filter(r=>r.technology===tech)[0];
+    if(first)open(first.id);});
   tree();
 }
 

@@ -2318,5 +2318,380 @@
       "Whether they are generated or authored",
       "What the target branch has there"
     ]
+  },
+  {
+    "id": "git-lfs-not-working",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Large Files",
+    "title": "LFS files are pointer text instead of content",
+    "summary": "Files open as a few lines of metadata rather than the real content.",
+    "aliases": [
+      "lfs pointer",
+      "git lfs not working",
+      "file is pointer",
+      "lfs not installed",
+      "binary file text",
+      "smudge filter"
+    ],
+    "source": "https://git-lfs.com/",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "File",
+        "example": "assets/logo.png"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check whether the file is a pointer",
+        "cmd": "git cat-file -p HEAD:{file} | head -3",
+        "risk": "safe",
+        "look": "Three lines starting with version https://git-lfs means LFS content was never fetched.",
+        "signals": [
+          {
+            "match": "version https://git-lfs",
+            "means": "An LFS pointer. The real content was not downloaded.",
+            "goto": "cause:lfs-not-installed"
+          }
+        ]
+      },
+      {
+        "title": "Check LFS is installed and hooked up",
+        "cmd": "git lfs env",
+        "risk": "safe",
+        "look": "The filter configuration. Missing entries mean the smudge filter never runs on checkout."
+      },
+      {
+        "title": "Check which patterns are tracked",
+        "cmd": "git lfs track",
+        "risk": "safe",
+        "look": "The patterns from .gitattributes. A file committed before the pattern existed is stored normally, not in LFS."
+      },
+      {
+        "title": "Fetch the real content",
+        "cmd": "git lfs pull",
+        "risk": "safe",
+        "look": "Downloads content for pointers already checked out. Files become their real size."
+      }
+    ],
+    "causes": [
+      {
+        "id": "lfs-not-installed",
+        "cause": "Git LFS is not installed on this machine.",
+        "fix": "Install it and run git lfs install once per user.",
+        "confirm": ""
+      },
+      {
+        "id": "not-fetched",
+        "cause": "Content was not fetched on clone.",
+        "fix": "git lfs pull. CI often skips LFS by default.",
+        "confirm": ""
+      },
+      {
+        "id": "pattern-added-late",
+        "cause": "The file predates the LFS pattern.",
+        "fix": "It is stored as a normal blob. Migrating requires a history rewrite.",
+        "confirm": ""
+      },
+      {
+        "id": "quota",
+        "cause": "The LFS storage or bandwidth quota is exhausted.",
+        "fix": "Check the provider. Fetches fail silently in some clients.",
+        "confirm": ""
+      },
+      {
+        "id": "ci-no-lfs",
+        "cause": "CI does not fetch LFS objects.",
+        "fix": "Enable LFS in the checkout step.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Files are their real size and open correctly.",
+      "CI also gets real content."
+    ],
+    "escalate": [
+      "First lines of the file",
+      "Output of git lfs env",
+      "Whether the pattern predates the file"
+    ]
+  },
+  {
+    "id": "git-shallow-clone-limits",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Performance",
+    "title": "Operations fail in a shallow clone",
+    "summary": "Commands error because history is truncated, usually in CI.",
+    "aliases": [
+      "shallow clone error",
+      "fatal refusing to merge unrelated",
+      "unshallow",
+      "depth 1 problem",
+      "ci git error",
+      "no merge base"
+    ],
+    "source": "https://git-scm.com/docs/git-fetch",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check whether the clone is shallow",
+        "cmd": "git rev-parse --is-shallow-repository",
+        "risk": "safe",
+        "look": "true means history is truncated. Many operations need ancestry that is simply not present.",
+        "signals": [
+          {
+            "match": "^true",
+            "means": "Shallow. Anything needing a merge base will fail.",
+            "goto": "cause:shallow"
+          }
+        ]
+      },
+      {
+        "title": "See how much history exists",
+        "cmd": "git log --oneline | measure-object -line",
+        "risk": "safe",
+        "look": "One commit means depth 1. Diffing against a base branch needs both branches' history."
+      },
+      {
+        "title": "Fetch the full history",
+        "cmd": "git fetch --unshallow",
+        "risk": "safe",
+        "look": "Converts to a full clone. Slower but makes every operation work."
+      },
+      {
+        "title": "Or fetch just what is needed",
+        "cmd": "git fetch --deepen=50 origin main",
+        "risk": "safe",
+        "look": "Adds fifty more commits rather than everything. Usually enough for a merge base without paying full clone cost."
+      }
+    ],
+    "causes": [
+      {
+        "id": "shallow",
+        "cause": "The clone has truncated history.",
+        "fix": "--unshallow, or deepen enough to find a merge base.",
+        "confirm": ""
+      },
+      {
+        "id": "missing-branch",
+        "cause": "Only one branch was fetched.",
+        "fix": "Fetch the base branch too. CI often fetches only the triggering ref.",
+        "confirm": ""
+      },
+      {
+        "id": "no-tags",
+        "cause": "Tags were not fetched.",
+        "fix": "git fetch --tags. Version derivation from tags fails without them.",
+        "confirm": ""
+      },
+      {
+        "id": "blame-limited",
+        "cause": "blame and log show truncated results.",
+        "fix": "Expected in a shallow clone. Deepen if you need real history.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The operation succeeds.",
+      "CI fetches enough history for what it does.",
+      "Clone time is still reasonable."
+    ],
+    "escalate": [
+      "Whether the repository is shallow",
+      "How many commits exist",
+      "What the failing command needs"
+    ]
+  },
+  {
+    "id": "git-ssh-agent-forwarding",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Remotes",
+    "title": "Git works locally but fails over SSH on a server",
+    "summary": "Cloning on a remote host fails even though your key works from your laptop.",
+    "aliases": [
+      "agent forwarding",
+      "ssh key remote",
+      "git clone fails server",
+      "permission denied server",
+      "forward key",
+      "no agent"
+    ],
+    "source": "https://man.openbsd.org/ssh_config",
+    "inputs": [
+      {
+        "key": "host",
+        "label": "Host",
+        "example": "build01"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check whether an agent is reachable on the remote",
+        "cmd": "ssh {host} \"echo $SSH_AUTH_SOCK; ssh-add -l\"",
+        "risk": "safe",
+        "look": "An empty socket means no agent is forwarded, so the remote host has no key to offer.",
+        "signals": [
+          {
+            "match": "Could not open a connection|^\\s*$",
+            "means": "No agent is forwarded. The remote has no credentials.",
+            "goto": "cause:no-forwarding"
+          },
+          {
+            "match": "The agent has no identities",
+            "means": "An agent is forwarded but holds no keys.",
+            "goto": "cause:no-keys"
+          }
+        ]
+      },
+      {
+        "title": "Check your local agent has the key",
+        "cmd": "ssh-add -l",
+        "risk": "safe",
+        "look": "The key must be loaded locally before forwarding can do anything."
+      },
+      {
+        "title": "Check forwarding is enabled for this host",
+        "cmd": "ssh -G {host} | findstr forwardagent",
+        "risk": "safe",
+        "look": "It is off by default. It must be enabled per host in your client config."
+      },
+      {
+        "title": "Test the git host from the remote",
+        "cmd": "ssh {host} \"ssh -T git@github.com\"",
+        "risk": "safe",
+        "look": "The definitive test. A successful greeting means forwarding works end to end."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-forwarding",
+        "cause": "Agent forwarding is not enabled.",
+        "fix": "Set ForwardAgent yes for that host. Only for hosts you trust; forwarding lets them use your key.",
+        "confirm": ""
+      },
+      {
+        "id": "no-keys",
+        "cause": "The local agent has no identities.",
+        "fix": "ssh-add your key.",
+        "confirm": ""
+      },
+      {
+        "id": "agent-not-running",
+        "cause": "No agent is running locally.",
+        "fix": "Start it. On Windows, enable the OpenSSH Authentication Agent service.",
+        "confirm": ""
+      },
+      {
+        "id": "should-use-deploy-key",
+        "cause": "Forwarding to a shared build host.",
+        "fix": "Use a deploy key on the host instead. Forwarding exposes your personal key to anyone with root there.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Git operations work on the remote host.",
+      "The credential choice is deliberate."
+    ],
+    "escalate": [
+      "Whether an agent is reachable remotely",
+      "Local agent contents",
+      "ForwardAgent setting"
+    ]
+  },
+  {
+    "id": "git-empty-commit-history",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Branches",
+    "title": "Branches share no common history",
+    "summary": "Merging fails because the two branches have unrelated histories.",
+    "aliases": [
+      "unrelated histories",
+      "refusing to merge",
+      "no common ancestor",
+      "allow-unrelated-histories",
+      "two roots"
+    ],
+    "source": "https://git-scm.com/docs/git-merge",
+    "inputs": [
+      {
+        "key": "branch",
+        "label": "Branch",
+        "example": "main"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check for multiple root commits",
+        "cmd": "git rev-list --max-parents=0 HEAD",
+        "risk": "safe",
+        "look": "More than one SHA means the repository has several independent roots, which is how this happens.",
+        "signals": [
+          {
+            "match": "\\w{7,}\\s+\\w{7,}",
+            "means": "Multiple roots. The branches were never related.",
+            "goto": "cause:separate-roots"
+          }
+        ]
+      },
+      {
+        "title": "Check whether a merge base exists",
+        "cmd": "git merge-base HEAD {branch}",
+        "risk": "safe",
+        "look": "No output means no common ancestor. Git refuses rather than guessing how to combine them."
+      },
+      {
+        "title": "Look at both histories",
+        "cmd": "git log --oneline --graph --all -20",
+        "risk": "safe",
+        "look": "Two disconnected lines confirm it visually. Usually one side was created with git init rather than cloned."
+      },
+      {
+        "title": "Merge them deliberately",
+        "cmd": "git merge {branch} --allow-unrelated-histories",
+        "risk": "state",
+        "look": "A merge commit with two unrelated parents. Review the result carefully.",
+        "note": "Joins two independent histories into one. Every file present in both sides will conflict, because Git has no common ancestor to compare against. Expect to resolve a lot, and be certain this is genuinely what you want rather than a sign you cloned the wrong repository."
+      }
+    ],
+    "causes": [
+      {
+        "id": "separate-roots",
+        "cause": "The branches have independent roots.",
+        "fix": "Usually a mistake. Confirm you are in the right repository before merging.",
+        "confirm": ""
+      },
+      {
+        "id": "re-inited",
+        "cause": "Someone ran git init over an existing project.",
+        "fix": "Check whether the original history exists on the remote.",
+        "confirm": ""
+      },
+      {
+        "id": "force-pushed-root",
+        "cause": "History was rewritten entirely.",
+        "fix": "Recover the old root from the reflog or another clone.",
+        "confirm": ""
+      },
+      {
+        "id": "intentional",
+        "cause": "Genuinely combining two projects.",
+        "fix": "--allow-unrelated-histories is correct. Expect widespread conflicts.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The branches share history.",
+      "Nothing was lost in the merge.",
+      "The root cause was understood."
+    ],
+    "escalate": [
+      "Number of root commits",
+      "Whether a merge base exists",
+      "The graph of both histories"
+    ]
   }
 ]

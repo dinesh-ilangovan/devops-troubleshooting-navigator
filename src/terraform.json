@@ -1945,5 +1945,303 @@
       "Which variables are marked sensitive",
       "Whether CI logs retained it"
     ]
+  },
+  {
+    "id": "tf-count-index-shift",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "Language",
+    "title": "Adding an item recreates unrelated resources",
+    "summary": "Inserting one element into a list causes Terraform to destroy and recreate everything after it.",
+    "aliases": [
+      "count index shift",
+      "resources recreated list",
+      "for_each vs count",
+      "index change",
+      "everything recreated"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/meta-arguments/count",
+    "inputs": [
+      {
+        "key": "address",
+        "label": "Resource",
+        "example": "aws_instance.web"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See what the plan proposes",
+        "cmd": "terraform plan",
+        "risk": "safe",
+        "look": "Multiple replacements after a single addition is the signature of count keyed by index.",
+        "signals": [
+          {
+            "match": "must be replaced.*\\[\\d+\\]",
+            "means": "Resources addressed by index are being recreated because their index moved.",
+            "goto": "cause:count-index"
+          }
+        ]
+      },
+      {
+        "title": "Check how the resource is keyed",
+        "cmd": "findstr /S /C:\"count\" /C:\"for_each\" *.tf",
+        "risk": "safe",
+        "look": "count keys by position, so inserting shifts everything after it. for_each keys by a stable string and does not."
+      },
+      {
+        "title": "Look at the addresses in state",
+        "cmd": "terraform state list | findstr {address}",
+        "risk": "safe",
+        "look": "Bracketed numbers mean count. Bracketed quoted strings mean for_each and are stable."
+      },
+      {
+        "title": "Move resources to their new addresses",
+        "cmd": "terraform state mv '{address}[1]' '{address}[2]'",
+        "risk": "state",
+        "look": "A subsequent plan proposes no replacement.",
+        "note": "Rewrites state so Terraform associates an existing resource with a different address. No infrastructure changes, but a mistake here leaves a resource tracked as something it is not, and the next apply will act on that belief. Back up state first with terraform state pull."
+      }
+    ],
+    "causes": [
+      {
+        "id": "count-index",
+        "cause": "count keys resources by position.",
+        "fix": "Switch to for_each keyed by name. This is the permanent fix.",
+        "confirm": ""
+      },
+      {
+        "id": "list-reordered",
+        "cause": "The list order changed.",
+        "fix": "With count, order is identity. Sort it, or move to for_each.",
+        "confirm": ""
+      },
+      {
+        "id": "migration-needed",
+        "cause": "Moving to for_each changes every address.",
+        "fix": "Use moved blocks so Terraform tracks the rename rather than recreating.",
+        "confirm": ""
+      },
+      {
+        "id": "acceptable",
+        "cause": "The resources are genuinely disposable.",
+        "fix": "count is fine for stateless identical resources.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The plan proposes only the intended change.",
+      "Addresses are stable when the list changes."
+    ],
+    "escalate": [
+      "The plan showing replacements",
+      "Whether count or for_each is used",
+      "The addresses in state"
+    ]
+  },
+  {
+    "id": "tf-remote-state-access",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "State",
+    "title": "Cannot read another configuration's remote state",
+    "summary": "A terraform_remote_state data source fails, so downstream values are unavailable.",
+    "aliases": [
+      "remote state error",
+      "cannot read remote state",
+      "terraform_remote_state",
+      "outputs not found remote",
+      "state access denied"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/state/remote-state-data",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Read the data source error",
+        "cmd": "terraform plan",
+        "risk": "safe",
+        "look": "Access denied, not found and no-outputs are three different problems.",
+        "signals": [
+          {
+            "match": "AccessDenied|403",
+            "means": "This configuration's credentials cannot read that state.",
+            "goto": "cause:no-read-access"
+          },
+          {
+            "match": "NoSuchKey|does not exist",
+            "means": "The state file is not at that key.",
+            "goto": "cause:wrong-key"
+          },
+          {
+            "match": "Unsupported attribute",
+            "means": "The state exists but does not export that output.",
+            "goto": "cause:output-missing"
+          }
+        ]
+      },
+      {
+        "title": "Check the key it is pointing at",
+        "cmd": "findstr /S /C:\"terraform_remote_state\" -A6 *.tf",
+        "risk": "safe",
+        "look": "Bucket, key and region must match the producing configuration exactly. A workspace suffix is easy to forget."
+      },
+      {
+        "title": "Verify the state has the output",
+        "cmd": "terraform output -json",
+        "risk": "safe",
+        "look": "Run this in the producing configuration. Remote state only exposes declared outputs, not arbitrary resources."
+      },
+      {
+        "title": "Check read permission on the backend",
+        "cmd": "aws s3 ls s3://<bucket>/<key>",
+        "risk": "safe",
+        "look": "Whether these credentials can read that object. Cross-account access needs an explicit grant."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-read-access",
+        "cause": "Credentials lack read access to the state object.",
+        "fix": "Grant s3:GetObject on that key. Read-only is enough.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-key",
+        "cause": "The key does not match.",
+        "fix": "Compare against the producing configuration's backend block, including any workspace prefix.",
+        "confirm": ""
+      },
+      {
+        "id": "output-missing",
+        "cause": "The value is not declared as an output.",
+        "fix": "Add it in the producing configuration and apply. Only outputs are exposed.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-state",
+        "cause": "The producing configuration has not been applied.",
+        "fix": "Outputs are written at apply time.",
+        "confirm": ""
+      },
+      {
+        "id": "should-use-data-source",
+        "cause": "Reading state to get something the provider can look up.",
+        "fix": "Query the provider directly. It avoids the coupling entirely.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The data source resolves.",
+      "The expected values are available.",
+      "The coupling between configurations is deliberate."
+    ],
+    "escalate": [
+      "The data source error",
+      "The key being read",
+      "Whether the output exists in the producing state"
+    ]
+  },
+  {
+    "id": "tf-provider-plugin-error",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "Providers",
+    "title": "Provider plugin fails to load or crashes",
+    "summary": "init or plan fails on the plugin itself rather than on your configuration.",
+    "aliases": [
+      "plugin crash",
+      "failed to load plugin",
+      "provider crashed",
+      "checksum mismatch",
+      "plugin not executable",
+      "registry error"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/cli/plugins",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Read the plugin error",
+        "cmd": "terraform init",
+        "risk": "safe",
+        "look": "Checksum, download and crash errors point at different causes.",
+        "signals": [
+          {
+            "match": "checksum.*does not match|provider lock",
+            "means": "The lock file does not match the downloaded plugin.",
+            "goto": "cause:checksum"
+          },
+          {
+            "match": "plugin crashed|panic",
+            "means": "The provider itself crashed.",
+            "goto": "cause:plugin-crash"
+          },
+          {
+            "match": "could not query provider registry|connection",
+            "means": "The registry is unreachable.",
+            "goto": "cause:registry-unreachable"
+          }
+        ]
+      },
+      {
+        "title": "Check the plugin cache",
+        "cmd": "dir .terraform\\providers",
+        "risk": "safe",
+        "look": "A partially downloaded plugin causes confusing failures. Removing the directory forces a clean download."
+      },
+      {
+        "title": "Check the lock file covers this platform",
+        "cmd": "type .terraform.lock.hcl | findstr /C:\"hashes\"",
+        "risk": "safe",
+        "look": "Hashes are per platform. A lock generated on Linux may not cover Windows, which fails in CI or vice versa."
+      },
+      {
+        "title": "Clear the cache and reinitialise",
+        "cmd": "rmdir /s /q .terraform && terraform init",
+        "risk": "destructive",
+        "look": "init completes with providers freshly installed.",
+        "note": "Deletes the local plugin cache and backend configuration record, then re-downloads everything. State is not touched, but init will re-resolve the backend, so make sure you know which backend the configuration points at before running it. Requires network access."
+      }
+    ],
+    "causes": [
+      {
+        "id": "checksum",
+        "cause": "The lock file does not match the plugin.",
+        "fix": "terraform providers lock for all platforms your team uses.",
+        "confirm": ""
+      },
+      {
+        "id": "plugin-crash",
+        "cause": "The provider panicked.",
+        "fix": "Check the crash log. Usually a provider bug; upgrading often fixes it.",
+        "confirm": ""
+      },
+      {
+        "id": "registry-unreachable",
+        "cause": "No network path to the registry.",
+        "fix": "Check proxy settings. Terraform uses its own, not your shell's.",
+        "confirm": ""
+      },
+      {
+        "id": "platform-hashes",
+        "cause": "The lock lacks hashes for this OS.",
+        "fix": "terraform providers lock -platform=windows_amd64 -platform=linux_amd64.",
+        "confirm": ""
+      },
+      {
+        "id": "partial-download",
+        "cause": "The cache is corrupt.",
+        "fix": "Remove .terraform and init again.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "init completes.",
+      "The lock file covers every platform in use.",
+      "plan runs without plugin errors."
+    ],
+    "escalate": [
+      "The plugin error verbatim",
+      "Whether the lock covers this platform",
+      "Provider version in use"
+    ]
   }
 ]

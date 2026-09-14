@@ -4155,5 +4155,619 @@
       "All available contexts",
       "What was applied and where"
     ]
+  },
+  {
+    "id": "k8s-hpa-flapping",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Autoscaling",
+    "title": "Replica count oscillates up and down",
+    "summary": "The autoscaler scales up then straight back down, churning pods continuously.",
+    "aliases": [
+      "hpa flapping",
+      "replicas oscillating",
+      "scaling up and down",
+      "thrashing autoscaler",
+      "pods churning"
+    ],
+    "source": "https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/",
+    "inputs": [
+      {
+        "key": "hpa",
+        "label": "HPA",
+        "example": "checkout-api"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Watch the replica count over time",
+        "cmd": "kubectl get hpa {hpa} -n {namespace} -w",
+        "risk": "safe",
+        "look": "How often REPLICAS changes. Several changes a minute is flapping; a change every few minutes is normal response.",
+        "signals": [
+          {
+            "match": "\\d+\\s+\\d+\\s+\\d+",
+            "means": "Read the current, min and max. A target close to the actual utilisation makes small swings trigger scaling.",
+            "goto": "cause:target-too-tight"
+          }
+        ]
+      },
+      {
+        "title": "Read the scaling behaviour policy",
+        "cmd": "kubectl get hpa {hpa} -n {namespace} -o jsonpath='{.spec.behavior}'",
+        "risk": "safe",
+        "look": "Empty means defaults. The default scale-down stabilisation is five minutes, so flapping faster than that means something overrides it."
+      },
+      {
+        "title": "Check whether new pods distort the metric",
+        "cmd": "kubectl top pods -n {namespace}",
+        "risk": "safe",
+        "look": "A pod still warming up reports high CPU, which triggers more scaling, which adds more warming pods. That is the feedback loop."
+      }
+    ],
+    "causes": [
+      {
+        "id": "target-too-tight",
+        "cause": "The target utilisation sits right at normal load.",
+        "fix": "Lower the target so ordinary variation does not cross it.",
+        "confirm": ""
+      },
+      {
+        "id": "no-stabilisation",
+        "cause": "Scale-down stabilisation is too short.",
+        "fix": "Raise behavior.scaleDown.stabilizationWindowSeconds.",
+        "confirm": ""
+      },
+      {
+        "id": "warmup-distortion",
+        "cause": "New pods report high usage while starting.",
+        "fix": "Add a startup allowance, or scale on a metric that excludes warmup.",
+        "confirm": ""
+      },
+      {
+        "id": "spiky-workload",
+        "cause": "The load itself is spiky.",
+        "fix": "Scale on a smoothed metric such as queue depth rather than instantaneous CPU.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Replica count settles and changes only with real load trends.",
+      "Pod churn stops."
+    ],
+    "escalate": [
+      "Replica changes over ten minutes",
+      "The behavior policy",
+      "Whether new pods distort the metric"
+    ]
+  },
+  {
+    "id": "k8s-webhook-blocking",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "title": "Every create fails with a webhook error",
+    "summary": "Admission webhooks reject or time out, so nothing can be applied.",
+    "aliases": [
+      "webhook denied",
+      "admission webhook",
+      "failed calling webhook",
+      "x509 webhook",
+      "context deadline webhook",
+      "cannot create resource"
+    ],
+    "source": "https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/",
+    "inputs": [
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the admission error",
+        "cmd": "kubectl apply -f <manifest>",
+        "risk": "safe",
+        "look": "The webhook name is in the message. That tells you which controller to look at.",
+        "signals": [
+          {
+            "match": "failed calling webhook.*context deadline",
+            "means": "The webhook did not answer in time.",
+            "goto": "cause:webhook-timeout"
+          },
+          {
+            "match": "x509|certificate signed by unknown",
+            "means": "The API server does not trust the webhook's certificate.",
+            "goto": "cause:webhook-cert"
+          },
+          {
+            "match": "denied the request",
+            "means": "The webhook answered and refused. This is policy working.",
+            "goto": "cause:policy-denied"
+          }
+        ]
+      },
+      {
+        "title": "Check the webhook's backing service",
+        "cmd": "kubectl get validatingwebhookconfigurations,mutatingwebhookconfigurations",
+        "risk": "safe",
+        "look": "Which configurations exist and what service each points at. A webhook pointing at a deleted service blocks everything it matches."
+      },
+      {
+        "title": "Check the webhook pods are running",
+        "cmd": "kubectl get pods -A | findstr /I \"webhook admission policy\"",
+        "risk": "safe",
+        "look": "The controller must be running and ready. A crashed policy engine takes the cluster's write path with it."
+      },
+      {
+        "title": "Check the failure policy",
+        "cmd": "kubectl get validatingwebhookconfigurations -o jsonpath='{.items[*].webhooks[*].failurePolicy}'",
+        "risk": "safe",
+        "look": "Fail means an unreachable webhook blocks everything. Ignore means it is skipped. That single setting decides whether an outage is total."
+      }
+    ],
+    "causes": [
+      {
+        "id": "webhook-timeout",
+        "cause": "The webhook is slow or unreachable.",
+        "fix": "Fix the controller. Consider a namespaceSelector so kube-system is exempt.",
+        "confirm": ""
+      },
+      {
+        "id": "webhook-cert",
+        "cause": "The certificate is untrusted or expired.",
+        "fix": "Rotate the caBundle. Cert-manager-issued webhook certs expire like any other.",
+        "confirm": ""
+      },
+      {
+        "id": "policy-denied",
+        "cause": "A policy genuinely rejected the resource.",
+        "fix": "Read the message and fix the manifest. This is the system working.",
+        "confirm": ""
+      },
+      {
+        "id": "service-gone",
+        "cause": "The backing service was deleted.",
+        "fix": "Delete the webhook configuration too, or restore the service.",
+        "confirm": ""
+      },
+      {
+        "id": "fail-closed",
+        "cause": "failurePolicy is Fail with no exemptions.",
+        "fix": "Exempt kube-system so a broken webhook cannot lock you out entirely.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Resources apply successfully.",
+      "The webhook controller is healthy.",
+      "System namespaces are exempt."
+    ],
+    "escalate": [
+      "The webhook error verbatim",
+      "Which configurations exist",
+      "Whether the backing pods are ready"
+    ]
+  },
+  {
+    "id": "k8s-metrics-server-down",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Observability",
+    "title": "kubectl top does not work",
+    "summary": "Resource metrics are unavailable, which also breaks autoscaling.",
+    "aliases": [
+      "metrics not available",
+      "kubectl top error",
+      "metrics-server",
+      "metrics api not available",
+      "no metrics"
+    ],
+    "source": "https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Read the error from top",
+        "cmd": "kubectl top nodes",
+        "risk": "safe",
+        "look": "Whether the API is absent or present but failing. Those are different problems.",
+        "signals": [
+          {
+            "match": "Metrics API not available",
+            "means": "The API service is not registered or not ready.",
+            "goto": "cause:apiservice-down"
+          },
+          {
+            "match": "error: You must be logged in",
+            "means": "An authentication problem rather than a metrics one.",
+            "goto": "cause:auth"
+          }
+        ]
+      },
+      {
+        "title": "Check the API service is available",
+        "cmd": "kubectl get apiservice v1beta1.metrics.k8s.io",
+        "risk": "safe",
+        "look": "AVAILABLE must be True. False carries a reason, usually that the service endpoint is unreachable."
+      },
+      {
+        "title": "Check the metrics-server pod",
+        "cmd": "kubectl get pods -n kube-system -l k8s-app=metrics-server",
+        "risk": "safe",
+        "look": "Running and ready. CrashLooping is usually a TLS problem talking to kubelets."
+      },
+      {
+        "title": "Read its logs",
+        "cmd": "kubectl logs -n kube-system -l k8s-app=metrics-server --tail=40",
+        "risk": "safe",
+        "look": "Certificate errors against the kubelet are the most common failure on self-managed clusters."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-installed",
+        "cause": "metrics-server is not installed.",
+        "fix": "Install it. It is not part of a base cluster.",
+        "confirm": ""
+      },
+      {
+        "id": "apiservice-down",
+        "cause": "The API service cannot reach the pod.",
+        "fix": "Check the service and any NetworkPolicy in kube-system.",
+        "confirm": ""
+      },
+      {
+        "id": "kubelet-tls",
+        "cause": "metrics-server cannot verify kubelet certificates.",
+        "fix": "Configure it properly, or use --kubelet-insecure-tls only in a lab.",
+        "confirm": ""
+      },
+      {
+        "id": "auth",
+        "cause": "Your credentials are the problem, not metrics.",
+        "fix": "Follow the API access runbook.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "kubectl top returns figures.",
+      "The API service reports available.",
+      "HPAs show real targets."
+    ],
+    "escalate": [
+      "The top error",
+      "API service status",
+      "metrics-server pod logs"
+    ]
+  },
+  {
+    "id": "k8s-pod-security-blocked",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Access & RBAC",
+    "title": "Pod rejected by Pod Security admission",
+    "summary": "Creating a pod fails because it violates the namespace's security level.",
+    "aliases": [
+      "pod security",
+      "violates PodSecurity",
+      "privileged denied",
+      "restricted policy",
+      "psa",
+      "security context denied"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/security/pod-security-admission/",
+    "inputs": [
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      },
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the violation message",
+        "cmd": "kubectl apply -f <manifest> -n {namespace}",
+        "risk": "safe",
+        "look": "It lists every field that violates the policy. Each one must be fixed; there is no partial pass.",
+        "signals": [
+          {
+            "match": "allowPrivilegeEscalation",
+            "means": "Must be set to false explicitly.",
+            "goto": "cause:privilege-escalation"
+          },
+          {
+            "match": "runAsNonRoot",
+            "means": "The pod must declare it runs as non-root.",
+            "goto": "cause:runs-as-root"
+          },
+          {
+            "match": "seccompProfile",
+            "means": "A seccomp profile must be specified.",
+            "goto": "cause:no-seccomp"
+          },
+          {
+            "match": "hostPath|hostNetwork|hostPID",
+            "means": "Host access is forbidden at this level.",
+            "goto": "cause:host-access"
+          }
+        ]
+      },
+      {
+        "title": "Check the namespace's enforced level",
+        "cmd": "kubectl get ns {namespace} -o jsonpath='{.metadata.labels}'",
+        "risk": "safe",
+        "look": "The pod-security labels. baseline is permissive; restricted requires a full security context on every container."
+      },
+      {
+        "title": "Check what the pod declares",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.securityContext}{.spec.containers[*].securityContext}'",
+        "risk": "safe",
+        "look": "Compare against the requirements. Under restricted, omitting a field is a violation rather than a default."
+      }
+    ],
+    "causes": [
+      {
+        "id": "privilege-escalation",
+        "cause": "allowPrivilegeEscalation is not false.",
+        "fix": "Set it explicitly. Omitting it fails under restricted.",
+        "confirm": ""
+      },
+      {
+        "id": "runs-as-root",
+        "cause": "The pod does not declare runAsNonRoot.",
+        "fix": "Set runAsNonRoot true and give a numeric runAsUser. The image must support it.",
+        "confirm": ""
+      },
+      {
+        "id": "no-seccomp",
+        "cause": "No seccomp profile.",
+        "fix": "Set seccompProfile type RuntimeDefault.",
+        "confirm": ""
+      },
+      {
+        "id": "host-access",
+        "cause": "The pod requests host namespaces or paths.",
+        "fix": "Not permitted at baseline or above. Redesign, or run it in a dedicated namespace with a lower level.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-level",
+        "cause": "The namespace level is stricter than intended.",
+        "fix": "Adjust the label deliberately, with a reason recorded.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The pod is admitted.",
+      "It runs as non-root with a full security context.",
+      "The namespace level was not weakened casually."
+    ],
+    "escalate": [
+      "The full violation message",
+      "The namespace security labels",
+      "The pod's declared security context"
+    ]
+  },
+  {
+    "id": "k8s-node-disk-pressure",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Nodes",
+    "title": "Node reports DiskPressure",
+    "summary": "The kubelet is evicting pods because the node is low on disk.",
+    "aliases": [
+      "diskpressure",
+      "node disk full",
+      "image garbage collection",
+      "evicted disk",
+      "node out of space",
+      "kubelet disk"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/",
+    "inputs": [
+      {
+        "key": "node",
+        "label": "Node",
+        "example": "ip-10-0-3-14"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the condition",
+        "cmd": "kubectl describe node {node} | findstr /C:\"DiskPressure\" -A3",
+        "risk": "safe",
+        "look": "True with a message naming which resource. nodefs and imagefs are separate thresholds with separate causes.",
+        "signals": [
+          {
+            "match": "imagefs",
+            "means": "Image storage is full. Garbage collection is not keeping up.",
+            "goto": "cause:image-bloat"
+          },
+          {
+            "match": "nodefs",
+            "means": "The node's own filesystem is full, usually logs or ephemeral storage.",
+            "goto": "cause:node-logs"
+          }
+        ]
+      },
+      {
+        "title": "See what pods were evicted",
+        "cmd": "kubectl get pods -A --field-selector status.phase=Failed",
+        "risk": "safe",
+        "look": "Evicted pods with their reason. Best-effort pods go first, which tells you who was not declaring requests."
+      },
+      {
+        "title": "Check image garbage collection thresholds",
+        "cmd": "kubectl get --raw /api/v1/nodes/{node}/proxy/configz",
+        "risk": "safe",
+        "look": "imageGCHighThresholdPercent and low. Defaults of 85 and 80 are too tight on nodes running large images."
+      },
+      {
+        "title": "Cordon the node while you work",
+        "cmd": "kubectl cordon {node}",
+        "risk": "state",
+        "look": "The node shows SchedulingDisabled.",
+        "note": "Marks the node unschedulable so nothing new lands while you clear space. Running pods are unaffected, but capacity elsewhere must absorb new work. Remember to uncordon afterwards or the node stays out of the pool permanently."
+      }
+    ],
+    "causes": [
+      {
+        "id": "image-bloat",
+        "cause": "Too many images cached on the node.",
+        "fix": "Lower the GC thresholds, and shrink your images. Both help.",
+        "confirm": ""
+      },
+      {
+        "id": "node-logs",
+        "cause": "Container logs filled the disk.",
+        "fix": "Set containerLogMaxSize and containerLogMaxFiles in the kubelet config.",
+        "confirm": ""
+      },
+      {
+        "id": "ephemeral-storage",
+        "cause": "A pod wrote large files to its writable layer.",
+        "fix": "Set ephemeral-storage limits so one workload cannot fill the node.",
+        "confirm": ""
+      },
+      {
+        "id": "small-disk",
+        "cause": "The node disk is simply too small.",
+        "fix": "Resize, or use a node type with more storage for image-heavy workloads.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "DiskPressure is false.",
+      "No new evictions.",
+      "GC thresholds and log rotation are configured."
+    ],
+    "escalate": [
+      "The node condition message",
+      "Which pods were evicted",
+      "GC thresholds in the kubelet config"
+    ]
+  },
+  {
+    "id": "k8s-cluster-autoscaler-not-scaling",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Autoscaling",
+    "title": "Cluster does not add nodes for pending pods",
+    "summary": "Pods stay Pending and no new node appears.",
+    "aliases": [
+      "cluster autoscaler not scaling",
+      "no new nodes",
+      "pending forever",
+      "scale up failed",
+      "autoscaler ignored"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/cluster-administration/cluster-autoscaling/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the autoscaler's decision",
+        "cmd": "kubectl logs -n kube-system -l app=cluster-autoscaler --tail=60",
+        "risk": "safe",
+        "look": "It logs why it did or did not scale. That log is the answer; everything else is inference.",
+        "signals": [
+          {
+            "match": "max node group size reached",
+            "means": "The pool is already at its ceiling.",
+            "goto": "cause:at-max"
+          },
+          {
+            "match": "pod didn't trigger scale-up",
+            "means": "The pod would not fit on a new node of any available type.",
+            "goto": "cause:wont-fit"
+          },
+          {
+            "match": "no matching node group",
+            "means": "No pool satisfies the pod's selectors or tolerations.",
+            "goto": "cause:no-matching-pool"
+          }
+        ]
+      },
+      {
+        "title": "Check the pod's requests against node capacity",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].resources.requests}'",
+        "risk": "safe",
+        "look": "A request larger than any node type can provide means no amount of scaling will help."
+      },
+      {
+        "title": "Check the pod's scheduling constraints",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.nodeSelector}{.spec.tolerations}'",
+        "risk": "safe",
+        "look": "The autoscaler only scales pools the pod could actually use. A selector matching no pool is invisible to it."
+      },
+      {
+        "title": "Check pool limits",
+        "cmd": "kubectl get nodes -l node.kubernetes.io/instance-type --show-labels",
+        "risk": "safe",
+        "look": "Which pools exist and how many nodes each has. Compare against the configured maximum."
+      }
+    ],
+    "causes": [
+      {
+        "id": "at-max",
+        "cause": "The node pool is at its maximum size.",
+        "fix": "Raise the maximum. The autoscaler will not exceed it.",
+        "confirm": ""
+      },
+      {
+        "id": "wont-fit",
+        "cause": "The pod is larger than any node type.",
+        "fix": "Reduce the request, or add a larger node type.",
+        "confirm": ""
+      },
+      {
+        "id": "no-matching-pool",
+        "cause": "No pool matches the pod's constraints.",
+        "fix": "Label a pool to match, or relax the selector.",
+        "confirm": ""
+      },
+      {
+        "id": "quota",
+        "cause": "The cloud account is at its instance quota.",
+        "fix": "Raise the quota. The autoscaler reports the provider's refusal.",
+        "confirm": ""
+      },
+      {
+        "id": "local-storage",
+        "cause": "The pod uses local storage, which blocks scale-down but also confuses placement.",
+        "fix": "Check the autoscaler's safe-to-evict annotations.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "A new node appears and the pod schedules.",
+      "The autoscaler log shows a successful scale-up."
+    ],
+    "escalate": [
+      "Autoscaler log lines for this pod",
+      "The pod's requests and constraints",
+      "Pool maximum and current size"
+    ]
   }
 ]

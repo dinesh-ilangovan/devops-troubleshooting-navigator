@@ -2549,5 +2549,410 @@
       "Which link answered the query",
       "Whether resolv.conf is the expected symlink"
     ]
+  },
+  {
+    "id": "linux-ssh-key-ignored",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Access",
+    "title": "SSH ignores the key you specified",
+    "summary": "Even with -i the wrong key is offered, or too many keys are tried.",
+    "aliases": [
+      "too many authentication failures",
+      "wrong key offered",
+      "identitiesonly",
+      "ssh tries wrong key",
+      "key ignored"
+    ],
+    "source": "https://man.openbsd.org/ssh_config",
+    "inputs": [
+      {
+        "key": "host",
+        "label": "Host",
+        "example": "bastion.example.com"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See which keys are offered and in what order",
+        "cmd": "ssh -v {host} 2>&1 | findstr /C:\"Offering\"",
+        "risk": "safe",
+        "look": "Every key the client tries. Servers usually disconnect after six attempts, so a key later in the list is never reached.",
+        "signals": [
+          {
+            "match": "Too many authentication failures",
+            "means": "The server cut the connection before reaching your key.",
+            "goto": "cause:too-many-keys"
+          },
+          {
+            "match": "Offering public key.*id_rsa",
+            "means": "A default key is offered before the one you specified.",
+            "goto": "cause:agent-first"
+          }
+        ]
+      },
+      {
+        "title": "Check the resolved configuration",
+        "cmd": "ssh -G {host} | findstr /C:\"identityfile\" /C:\"identitiesonly\"",
+        "risk": "safe",
+        "look": "Without IdentitiesOnly yes, the agent's keys are offered in addition to -i, and often before it."
+      },
+      {
+        "title": "Check what the agent holds",
+        "cmd": "ssh-add -l",
+        "risk": "safe",
+        "look": "Every loaded key is offered. A crowded agent is the usual cause of too-many-failures."
+      },
+      {
+        "title": "Force only the specified key",
+        "cmd": "ssh -o IdentitiesOnly=yes -i ~/.ssh/mykey {host}",
+        "risk": "safe",
+        "look": "Offers exactly one key. If this works, the fix belongs in your ssh config for that host."
+      }
+    ],
+    "causes": [
+      {
+        "id": "too-many-keys",
+        "cause": "The agent offers more keys than the server allows attempts.",
+        "fix": "Set IdentitiesOnly yes per host in your config.",
+        "confirm": ""
+      },
+      {
+        "id": "agent-first",
+        "cause": "Agent keys take priority over -i.",
+        "fix": "IdentitiesOnly yes makes -i authoritative.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-key-config",
+        "cause": "The host config points at a different key.",
+        "fix": "Check ssh -G output; a wildcard Host block may be matching.",
+        "confirm": ""
+      },
+      {
+        "id": "key-not-authorised",
+        "cause": "The right key is offered and refused.",
+        "fix": "A server-side problem. Follow the SSH denied runbook.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The connection succeeds with the intended key.",
+      "It works without flags after fixing the config."
+    ],
+    "escalate": [
+      "Which keys are offered",
+      "The resolved identityfile",
+      "Agent contents"
+    ]
+  },
+  {
+    "id": "linux-systemd-unit-not-found",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "systemd",
+    "title": "Unit not found after creating it",
+    "summary": "systemctl says the unit does not exist even though the file is there.",
+    "aliases": [
+      "unit not found",
+      "no such unit",
+      "unit file missing",
+      "daemon-reload",
+      "masked unit",
+      "failed to start not found"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/systemctl.1.html",
+    "inputs": [
+      {
+        "key": "unit",
+        "label": "Unit",
+        "example": "checkout-api.service"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Ask systemd where it thinks the unit is",
+        "cmd": "systemctl cat {unit}",
+        "risk": "safe",
+        "look": "The resolved file path. An error means systemd has not seen it, whatever exists on disk.",
+        "signals": [
+          {
+            "match": "No files found",
+            "means": "systemd has no record of it. Usually a missing reload or wrong directory.",
+            "goto": "cause:not-reloaded"
+          },
+          {
+            "match": "masked",
+            "means": "The unit is masked, which makes it unstartable by design.",
+            "goto": "cause:masked"
+          }
+        ]
+      },
+      {
+        "title": "Check the file location and name",
+        "cmd": "dir /etc/systemd/system/",
+        "risk": "safe",
+        "look": "The filename must end in .service exactly, and the directory matters. A stray .txt extension is invisible to systemd."
+      },
+      {
+        "title": "Reload the unit files",
+        "cmd": "sudo systemctl daemon-reload",
+        "risk": "state",
+        "look": "No output means success. systemctl cat should now find the unit.",
+        "note": "Re-reads every unit file on the system. Running services are not restarted and nothing is interrupted. Skipping this after any edit is the single most common systemd mistake."
+      },
+      {
+        "title": "Check for syntax errors",
+        "cmd": "systemd-analyze verify /etc/systemd/system/{unit}",
+        "risk": "safe",
+        "look": "A malformed unit may be partially ignored, which presents as a confusing not-found."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-reloaded",
+        "cause": "daemon-reload was not run after creating the file.",
+        "fix": "Run it. systemd caches unit definitions.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-extension",
+        "cause": "The filename does not end in .service.",
+        "fix": "Rename it. Hidden extensions on Windows-edited files cause this.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-directory",
+        "cause": "The file is in the wrong location.",
+        "fix": "/etc/systemd/system for local units.",
+        "confirm": ""
+      },
+      {
+        "id": "masked",
+        "cause": "The unit is masked.",
+        "fix": "systemctl unmask. Masking links it to /dev/null deliberately.",
+        "confirm": ""
+      },
+      {
+        "id": "bad-permissions",
+        "cause": "The file is not readable by root.",
+        "fix": "chmod 644.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "systemctl cat finds the unit.",
+      "It starts and enables.",
+      "It survives a reboot."
+    ],
+    "escalate": [
+      "Output of systemctl cat",
+      "The file path and exact name",
+      "Whether daemon-reload was run"
+    ]
+  },
+  {
+    "id": "linux-firewall-blocking",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Networking",
+    "title": "Connections refused by the local firewall",
+    "summary": "A service is listening but external connections do not arrive.",
+    "aliases": [
+      "firewall blocking",
+      "ufw",
+      "iptables",
+      "firewalld",
+      "port blocked",
+      "connection refused firewall",
+      "nftables"
+    ],
+    "source": "https://man7.org/linux/man-pages/man8/iptables.8.html",
+    "inputs": [
+      {
+        "key": "port",
+        "label": "Port",
+        "example": "8080"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the service is listening",
+        "cmd": "ss -tlnp 'sport = :{port}'",
+        "risk": "safe",
+        "look": "It must listen on 0.0.0.0 or the external address. Bound to 127.0.0.1 it is unreachable regardless of firewall.",
+        "signals": [
+          {
+            "match": "127\\.0\\.0\\.1:",
+            "means": "Listening on loopback only. The firewall is not the problem.",
+            "goto": "cause:bound-loopback"
+          },
+          {
+            "match": "0\\.0\\.0\\.0:",
+            "means": "Listening on all interfaces. Now check the firewall.",
+            "goto": "step:2"
+          }
+        ]
+      },
+      {
+        "title": "Check which firewall is active",
+        "cmd": "sudo ufw status 2>/dev/null; sudo firewall-cmd --state 2>/dev/null; sudo nft list ruleset 2>/dev/null | head -20",
+        "risk": "safe",
+        "look": "Only one is usually active. Rules added to an inactive one have no effect, which wastes a lot of time."
+      },
+      {
+        "title": "Check whether the port is allowed",
+        "cmd": "sudo iptables -L INPUT -n --line-numbers | findstr {port}",
+        "risk": "safe",
+        "look": "Rule order matters. A DROP before your ACCEPT means the ACCEPT is never reached."
+      },
+      {
+        "title": "Test from another machine",
+        "cmd": "ss -tn state established",
+        "risk": "safe",
+        "look": "Whether connections arrive at all. Nothing arriving means it is blocked before reaching the host, so check the cloud security group too."
+      }
+    ],
+    "causes": [
+      {
+        "id": "bound-loopback",
+        "cause": "The service listens on loopback only.",
+        "fix": "Bind 0.0.0.0. No firewall change will help otherwise.",
+        "confirm": ""
+      },
+      {
+        "id": "not-allowed",
+        "cause": "No rule permits the port.",
+        "fix": "Add one to whichever firewall is actually active.",
+        "confirm": ""
+      },
+      {
+        "id": "rule-order",
+        "cause": "A DROP precedes the ACCEPT.",
+        "fix": "Insert the ACCEPT earlier. Rules are evaluated in order.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-firewall",
+        "cause": "Rules added to an inactive firewall.",
+        "fix": "Check which is running first.",
+        "confirm": ""
+      },
+      {
+        "id": "cloud-sg",
+        "cause": "The cloud security group blocks it before the host.",
+        "fix": "Open it there too. Both layers must permit.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Connections succeed from outside.",
+      "The rule persists across reboot.",
+      "Both host and cloud layers allow it."
+    ],
+    "escalate": [
+      "What the service binds to",
+      "Which firewall is active",
+      "The relevant rules in order"
+    ]
+  },
+  {
+    "id": "linux-inode-exhaustion",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Storage",
+    "title": "No space left but the disk has free space",
+    "summary": "Writes fail with no space even though df shows capacity available.",
+    "aliases": [
+      "no space inodes",
+      "inode exhaustion",
+      "df -i full",
+      "cannot create file space available",
+      "too many files"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/df.1.html",
+    "inputs": [
+      {
+        "key": "path",
+        "label": "Path",
+        "example": "/var"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Compare space against inodes",
+        "cmd": "df -h {path} && df -i {path}",
+        "risk": "safe",
+        "look": "IUse% at 100 with space free is inode exhaustion. The error message is identical to a full disk but the fix is completely different.",
+        "signals": [
+          {
+            "match": "100%",
+            "means": "One of the two is exhausted. Check which column.",
+            "goto": "cause:inodes-full"
+          }
+        ]
+      },
+      {
+        "title": "Find directories with the most entries",
+        "cmd": "find {path} -xdev -type d -exec sh -c 'echo $(ls -A \"$1\" | wc -l) \"$1\"' _ {} \\; 2>/dev/null | sort -rn | head -10",
+        "risk": "safe",
+        "look": "Directories with hundreds of thousands of small files. Session, cache and mail spool directories are the usual culprits."
+      },
+      {
+        "title": "Check for a runaway producer",
+        "cmd": "ls -lt {path} | head -20",
+        "risk": "safe",
+        "look": "Recently created files. If they are still appearing, stop the producer before cleaning up."
+      },
+      {
+        "title": "Remove the accumulated files",
+        "cmd": "find {path}/cache -type f -mtime +7 -delete",
+        "risk": "destructive",
+        "look": "df -i shows IUse% dropping. Then fix whatever created them.",
+        "note": "Permanently deletes every file in that directory older than seven days. Run the same command with -print instead of -delete first and read the list. On a directory with hundreds of thousands of entries this takes a long time and cannot be interrupted cleanly."
+      }
+    ],
+    "causes": [
+      {
+        "id": "inodes-full",
+        "cause": "Inodes are exhausted.",
+        "fix": "Delete small files. Adding disk does not add inodes on most filesystems.",
+        "confirm": ""
+      },
+      {
+        "id": "session-files",
+        "cause": "A web application accumulates session files.",
+        "fix": "Configure expiry, or move sessions to a cache server.",
+        "confirm": ""
+      },
+      {
+        "id": "mail-spool",
+        "cause": "Undelivered mail piled up.",
+        "fix": "Usually cron output with no MTA. Redirect cron output to a file.",
+        "confirm": ""
+      },
+      {
+        "id": "no-rotation",
+        "cause": "Small log files accumulate.",
+        "fix": "Configure rotation with a count limit.",
+        "confirm": ""
+      },
+      {
+        "id": "filesystem-format",
+        "cause": "The filesystem was created with too few inodes.",
+        "fix": "Only fixable by reformatting. Choose a higher inode ratio for file-heavy workloads.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "df -i shows headroom.",
+      "Writes succeed.",
+      "The producer is fixed so it does not recur."
+    ],
+    "escalate": [
+      "df -h and df -i side by side",
+      "The directories with the most entries",
+      "What is creating them"
+    ]
   }
 ]
