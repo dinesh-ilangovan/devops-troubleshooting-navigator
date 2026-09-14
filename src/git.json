@@ -2863,5 +2863,90 @@
       "What ls-remote reports",
       "What prune would remove"
     ]
+  },
+  {
+    "id": "git-case-sensitivity",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Working Tree",
+    "title": "Renaming a file by case does nothing",
+    "summary": "Changing a filename's capitalisation is invisible to Git on Windows.",
+    "aliases": [
+      "case rename",
+      "case sensitivity git",
+      "file renamed case",
+      "ignorecase",
+      "folder case not changing"
+    ],
+    "source": "https://git-scm.com/docs/git-config",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "File",
+        "example": "src/MyComponent.js"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the case setting",
+        "cmd": "git config --show-origin core.ignoreCase",
+        "risk": "safe",
+        "look": "true on Windows means Git treats names case-insensitively, so a case-only rename looks like no change at all."
+      },
+      {
+        "title": "Check what Git has recorded",
+        "cmd": "git ls-files | findstr /I <name>",
+        "risk": "safe",
+        "look": "The exact case in the index. That is what other platforms will check out, and Linux CI is case-sensitive."
+      },
+      {
+        "title": "Rename through the index",
+        "cmd": "git mv --force {file} <newname>",
+        "risk": "state",
+        "look": "git status shows a rename rather than nothing.",
+        "note": "Records the rename in the index in a way Git will honour on case-insensitive filesystems. The working tree file is renamed too. On a team with mixed platforms, coordinate: anyone who pulls this gets a rename that their filesystem may handle differently."
+      },
+      {
+        "title": "Verify with a two-step rename if needed",
+        "cmd": "git mv {file} temp && git mv temp <newname>",
+        "risk": "safe",
+        "look": "Some Git versions need two steps for case-only renames. Commit between them if the single step does not register."
+      }
+    ],
+    "causes": [
+      {
+        "id": "ignorecase",
+        "cause": "Git ignores case on this filesystem.",
+        "fix": "Use git mv --force, or the two-step rename.",
+        "confirm": ""
+      },
+      {
+        "id": "ci-breaks",
+        "cause": "Builds fail on Linux CI but not locally.",
+        "fix": "The import path case must match exactly. Linux is case-sensitive.",
+        "confirm": ""
+      },
+      {
+        "id": "duplicate-entries",
+        "cause": "Both cases exist in the index.",
+        "fix": "git rm --cached the wrong one, then commit.",
+        "confirm": ""
+      },
+      {
+        "id": "folder-case",
+        "cause": "A directory needs a case change.",
+        "fix": "Rename it through the index the same way. Directories are trickier and may need the two-step approach.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The correct case is recorded in the index.",
+      "A fresh clone on Linux builds correctly."
+    ],
+    "escalate": [
+      "The core.ignoreCase value",
+      "What git ls-files records",
+      "Whether CI builds"
+    ]
   }
 ]

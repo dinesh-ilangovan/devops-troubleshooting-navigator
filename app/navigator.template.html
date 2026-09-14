@@ -205,6 +205,7 @@ const plain=p=>String(p||"").replace(/^\(\?[imsx]+\)/,"").replace(/\\[sdwSDW]\+?
   .replace(/\|/g,"  /  ").replace(/\s{2,}/g,"  ").trim();
 
 const CTX={}; let CUR=null, VIEW={k:"home"};
+const OPEN={t:new Set(),c:new Set()};
 const RISK={safe:["READ ONLY","c-safe"],state:["CHANGES STATE","c-state"],destructive:["DESTRUCTIVE","c-destructive"]};
 const TECHS=[...new Set(BANK.map(r=>r.technology))].sort();
 const catsOf=t=>[...new Set(BANK.filter(r=>r.technology===t).map(r=>r.category||"General"))].sort();
@@ -228,21 +229,26 @@ function tree(){
     (byT[r.technology]=byT[r.technology]||{}); (byT[r.technology][c]=byT[r.technology][c]||[]).push(r);});
   $("#nav").innerHTML=Object.keys(byT).sort().map(t=>{
     const n=Object.values(byT[t]).reduce((a,b)=>a+b.length,0);
-    const to=searching||VIEW.t===t;
+    const to=searching||OPEN.t.has(t);
     return '<div class="tgroup'+(to?" open":"")+'" data-t="'+esc(t)+'">'+
       '<button class="thead"><span class="car">'+(to?"\u25BE":"\u25B8")+'</span>'+esc(t)+
       '<span class="ct">'+n+'</span></button><div class="tbody">'+
       Object.keys(byT[t]).sort().map(c=>{
-        const co=searching||(VIEW.t===t&&VIEW.c===c);
+        const co=searching||OPEN.c.has(t+"\u0001"+c);
         return '<div class="cgroup'+(co?" open":"")+'" data-t="'+esc(t)+'" data-c="'+esc(c)+'">'+
           '<button class="chead"><span class="car">'+(co?"\u25BE":"\u25B8")+'</span>'+esc(c)+
           '<span class="ct">'+byT[t][c].length+'</span></button><div class="cbody">'+
           byT[t][c].map(r=>'<button class="item'+(CUR&&CUR.id===r.id?" sel":"")+'" data-id="'+
             esc(r.id)+'">'+esc(r.title)+'</button>').join("")+'</div></div>';}).join("")+
       '</div></div>';}).join("");
-  document.querySelectorAll(".thead").forEach(b=>b.onclick=()=>showTech(b.closest(".tgroup").dataset.t));
+  document.querySelectorAll(".thead").forEach(b=>b.onclick=()=>{
+    const tech=b.closest(".tgroup").dataset.t;
+    if(OPEN.t.has(tech)&&VIEW.k==="tech"&&VIEW.t===tech){OPEN.t.delete(tech);tree();}
+    else{OPEN.t.add(tech);showTech(tech);}});
   document.querySelectorAll(".chead").forEach(b=>b.onclick=e=>{e.stopPropagation();
-    const g=b.closest(".cgroup"); showCat(g.dataset.t,g.dataset.c);});
+    const g=b.closest(".cgroup"), tech=g.dataset.t, cat=g.dataset.c, key=tech+"\u0001"+cat;
+    if(OPEN.c.has(key)&&VIEW.k==="cat"&&VIEW.t===tech&&VIEW.c===cat){OPEN.c.delete(key);tree();}
+    else{OPEN.t.add(tech);OPEN.c.add(key);showCat(tech,cat);}});
   document.querySelectorAll(".item").forEach(b=>b.onclick=()=>openRb(b.dataset.id));
 }
 
@@ -286,7 +292,7 @@ function home(){
 }
 
 function showTech(t){
-  CUR=null; VIEW={k:"tech",t:t}; $("#fields").innerHTML="";
+  CUR=null; VIEW={k:"tech",t:t}; OPEN.t.add(t); $("#fields").innerHTML="";
   crumb([{t:"All technologies",go:"home"},{t:t}]);
   const cs=catsOf(t);
   $("#pane").innerHTML='<div class="hero"><h2>'+esc(t)+'</h2><p>'+
@@ -299,7 +305,7 @@ function showTech(t){
 }
 
 function showCat(t,c){
-  CUR=null; VIEW={k:"cat",t:t,c:c}; $("#fields").innerHTML="";
+  CUR=null; VIEW={k:"cat",t:t,c:c}; OPEN.t.add(t); OPEN.c.add(t+"\u0001"+c); $("#fields").innerHTML="";
   crumb([{t:"All technologies",go:"home"},{t:t,go:"t:"+t},{t:c}]);
   $("#pane").innerHTML='<div class="hero"><h2>'+esc(c)+'</h2><p>'+esc(t)+' \u00B7 '+
     inCat(t,c).length+' runbooks</p></div><div class="list">'+inCat(t,c).map(card).join("")+'</div>';
@@ -325,6 +331,7 @@ function repaint(){document.querySelectorAll("[data-cmd]").forEach(e=>e.innerHTM
 function openRb(id){
   CUR=BANK.find(r=>r.id===id); if(!CUR)return;
   VIEW={k:"rb",t:CUR.technology,c:CUR.category||"General"};
+  OPEN.t.add(VIEW.t); OPEN.c.add(VIEW.t+"\u0001"+VIEW.c);
   (CUR.inputs||[]).forEach(i=>{if(!(i.key in CTX))CTX[i.key]="";});
   $("#fields").innerHTML=(CUR.inputs||[]).map(i=>'<label>'+esc(i.label)+
     '<input data-k="'+esc(i.key)+'" placeholder="'+esc(i.example||"")+'" value="'+esc(CTX[i.key]||"")+'"></label>').join("");

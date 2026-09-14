@@ -3143,5 +3143,206 @@
       "Where the binary actually is",
       "Which startup file sets PATH"
     ]
+  },
+  {
+    "id": "linux-symlink-broken",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Storage",
+    "title": "Symlink points at nothing",
+    "summary": "A symbolic link exists but following it fails.",
+    "aliases": [
+      "broken symlink",
+      "dangling link",
+      "too many levels of symbolic links",
+      "no such file symlink",
+      "relative link broken"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/ln.1.html",
+    "inputs": [
+      {
+        "key": "link",
+        "label": "Link path",
+        "example": "/usr/local/bin/terraform"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See where the link points",
+        "cmd": "ls -l {link} && readlink -f {link}",
+        "risk": "safe",
+        "look": "readlink -f resolves the full chain. Empty output means the target does not exist.",
+        "signals": [
+          {
+            "match": "^\\s*$",
+            "means": "The target does not resolve. The link is dangling.",
+            "goto": "cause:target-gone"
+          },
+          {
+            "match": "Too many levels",
+            "means": "A symlink loop. Two links point at each other.",
+            "goto": "cause:loop"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the target exists",
+        "cmd": "test -e $(readlink {link}) && echo EXISTS || echo MISSING",
+        "risk": "safe",
+        "look": "A relative link is resolved from the link's own directory, not from your current one. That trips people constantly."
+      },
+      {
+        "title": "Check whether it is relative or absolute",
+        "cmd": "readlink {link}",
+        "risk": "safe",
+        "look": "A relative target moves with the link; an absolute one does not. Copying a tree with cp without -a can break either."
+      },
+      {
+        "title": "Recreate the link",
+        "cmd": "sudo ln -sfn <target> {link}",
+        "risk": "state",
+        "look": "readlink -f resolves to the intended file.",
+        "note": "Replaces the existing link. -n prevents it being created inside the directory the old link pointed at, which is a classic mistake that leaves the original link untouched and a new one buried. Verify the target exists before running this."
+      }
+    ],
+    "causes": [
+      {
+        "id": "target-gone",
+        "cause": "The target was deleted or moved.",
+        "fix": "Recreate the link against the new location.",
+        "confirm": ""
+      },
+      {
+        "id": "relative-broken",
+        "cause": "A relative link was moved.",
+        "fix": "Use an absolute target, or move the link and target together.",
+        "confirm": ""
+      },
+      {
+        "id": "loop",
+        "cause": "Two links reference each other.",
+        "fix": "Break the cycle. readlink -f reports too many levels.",
+        "confirm": ""
+      },
+      {
+        "id": "copied-wrong",
+        "cause": "cp followed or flattened the link.",
+        "fix": "Use cp -a or rsync -a to preserve links.",
+        "confirm": ""
+      },
+      {
+        "id": "mount-missing",
+        "cause": "The target is on an unmounted filesystem.",
+        "fix": "Mount it. The link is fine.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "readlink -f resolves correctly.",
+      "The command or file works."
+    ],
+    "escalate": [
+      "Where the link points",
+      "Whether the target exists",
+      "Relative or absolute"
+    ]
+  },
+  {
+    "id": "linux-process-high-memory",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Memory",
+    "title": "One process is consuming all the memory",
+    "summary": "Memory is exhausted and you need to know which process and why.",
+    "aliases": [
+      "high memory process",
+      "memory leak linux",
+      "rss growing",
+      "which process memory",
+      "memory usage"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/ps.1.html",
+    "inputs": [
+      {
+        "key": "process",
+        "label": "Process",
+        "example": "java"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Rank processes by resident memory",
+        "cmd": "ps -eo pid,rss,vsz,comm --sort=-rss | head -10",
+        "risk": "safe",
+        "look": "RSS is actual resident memory; VSZ is address space and is usually much larger and not meaningful on its own."
+      },
+      {
+        "title": "Check whether it is growing",
+        "cmd": "for i in 1 2 3; do ps -o rss= -C {process}; sleep 20; done",
+        "risk": "safe",
+        "look": "Three samples twenty seconds apart. Steadily climbing with steady load points at a leak rather than a burst.",
+        "signals": [
+          {
+            "match": "\\d+",
+            "means": "Compare the three numbers. Monotonic growth under constant load is a leak.",
+            "goto": "cause:leak"
+          }
+        ]
+      },
+      {
+        "title": "Check shared versus private memory",
+        "cmd": "grep -E '^(Rss|Pss|Private)' /proc/$(pgrep -f {process} | head -1)/smaps_rollup",
+        "risk": "safe",
+        "look": "Pss splits shared pages fairly between processes. Summing RSS across many processes double-counts and overstates usage badly."
+      },
+      {
+        "title": "Check for a configured limit",
+        "cmd": "cat /proc/$(pgrep -f {process} | head -1)/limits | grep -i 'max address'",
+        "risk": "safe",
+        "look": "An unlimited process will keep growing until the host or cgroup stops it. A limit turns a slow leak into a clean restart."
+      }
+    ],
+    "causes": [
+      {
+        "id": "leak",
+        "cause": "Memory grows without bound.",
+        "fix": "Profile the process. A limit contains the damage but does not fix it.",
+        "confirm": ""
+      },
+      {
+        "id": "no-limit",
+        "cause": "The process has no memory ceiling.",
+        "fix": "Set MemoryMax on the unit, or a container limit.",
+        "confirm": ""
+      },
+      {
+        "id": "shared-double-counted",
+        "cause": "RSS summed across processes overstates usage.",
+        "fix": "Use Pss for a fair figure.",
+        "confirm": ""
+      },
+      {
+        "id": "cache-not-leak",
+        "cause": "Usage includes page cache the kernel will reclaim.",
+        "fix": "free shows available, not free. High cache is normal.",
+        "confirm": ""
+      },
+      {
+        "id": "runtime-heap",
+        "cause": "A JVM or similar sized its heap against the host.",
+        "fix": "Set an explicit maximum heap.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Memory usage is stable under constant load.",
+      "A limit exists.",
+      "available memory has headroom."
+    ],
+    "escalate": [
+      "Top processes by RSS",
+      "Three samples over a minute",
+      "Pss from smaps_rollup"
+    ]
   }
 ]

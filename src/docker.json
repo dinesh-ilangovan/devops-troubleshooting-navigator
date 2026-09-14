@@ -3835,5 +3835,198 @@
       "What PID 1 is",
       "The configured stop signal"
     ]
+  },
+  {
+    "id": "docker-build-arg-not-available",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Build & Cache",
+    "title": "Build argument is empty inside the Dockerfile",
+    "summary": "An ARG has no value during the build even though it was passed.",
+    "aliases": [
+      "build arg empty",
+      "arg not set",
+      "build-arg not working",
+      "arg scope",
+      "arg after from"
+    ],
+    "source": "https://docs.docker.com/reference/dockerfile/#arg",
+    "inputs": [
+      {
+        "key": "arg",
+        "label": "Argument",
+        "example": "VERSION"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check how the argument is declared",
+        "cmd": "findstr /N /C:\"ARG\" /C:\"FROM\" Dockerfile",
+        "risk": "safe",
+        "look": "An ARG declared before the first FROM is only available before it. After FROM you must declare it again inside the stage.",
+        "signals": [
+          {
+            "match": "ARG.*\\n.*FROM",
+            "means": "Declared before FROM. It is not visible inside the build stage.",
+            "goto": "cause:arg-before-from"
+          }
+        ]
+      },
+      {
+        "title": "Check it was passed on the command line",
+        "cmd": "docker build --build-arg {arg}=1.4.2 --progress=plain . 2>&1 | findstr {arg}",
+        "risk": "safe",
+        "look": "Plain progress shows the resolved value. Empty here means it never arrived."
+      },
+      {
+        "title": "Check for a predefined argument clash",
+        "cmd": "findstr /C:\"HTTP_PROXY\" /C:\"NO_PROXY\" Dockerfile",
+        "risk": "safe",
+        "look": "Docker predefines several proxy arguments. Redeclaring them behaves differently from a normal ARG."
+      },
+      {
+        "title": "Confirm the value reached the image",
+        "cmd": "docker image inspect <image> --format '{{json .Config.Labels}}'",
+        "risk": "safe",
+        "look": "If you labelled the image with the argument, it appears here. That is also how build arguments leak, so never pass secrets this way."
+      }
+    ],
+    "causes": [
+      {
+        "id": "arg-before-from",
+        "cause": "ARG declared before FROM is out of scope after it.",
+        "fix": "Declare it again inside the stage that uses it.",
+        "confirm": ""
+      },
+      {
+        "id": "not-passed",
+        "cause": "No --build-arg was given.",
+        "fix": "Pass it, or give the ARG a default value.",
+        "confirm": ""
+      },
+      {
+        "id": "multistage-scope",
+        "cause": "The argument is declared in one stage only.",
+        "fix": "Each stage needs its own ARG declaration.",
+        "confirm": ""
+      },
+      {
+        "id": "compose-args",
+        "cause": "Compose passes args differently.",
+        "fix": "Use the args key under build in the compose file.",
+        "confirm": ""
+      },
+      {
+        "id": "secret-misuse",
+        "cause": "A secret was passed as an argument.",
+        "fix": "It is recorded in image metadata. Use a secret mount and rotate what leaked.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The value is available where it is used.",
+      "Nothing sensitive is passed as an argument."
+    ],
+    "escalate": [
+      "Where ARG is declared relative to FROM",
+      "Whether the value was passed",
+      "The resolved value in plain progress"
+    ]
+  },
+  {
+    "id": "docker-entrypoint-vs-cmd",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Images",
+    "title": "Container ignores the command you passed",
+    "summary": "Arguments after the image name have no effect, or the wrong thing runs.",
+    "aliases": [
+      "entrypoint cmd",
+      "command ignored",
+      "arguments not working",
+      "override entrypoint",
+      "exec form shell form"
+    ],
+    "source": "https://docs.docker.com/reference/dockerfile/#entrypoint",
+    "inputs": [
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read what the image declares",
+        "cmd": "docker image inspect {image} --format 'entrypoint={{json .Config.Entrypoint}} cmd={{json .Config.Cmd}}'",
+        "risk": "safe",
+        "look": "With an ENTRYPOINT set, anything you pass becomes arguments to it rather than replacing it. That is the whole confusion.",
+        "signals": [
+          {
+            "match": "entrypoint=\\[",
+            "means": "An ENTRYPOINT exists. Your arguments are appended to it, not substituted.",
+            "goto": "cause:entrypoint-set"
+          },
+          {
+            "match": "entrypoint=null",
+            "means": "No ENTRYPOINT. Your arguments replace CMD entirely.",
+            "goto": "cause:cmd-replaced"
+          }
+        ]
+      },
+      {
+        "title": "Check the form used",
+        "cmd": "docker history {image} --no-trunc | findstr /C:\"ENTRYPOINT\" /C:\"CMD\"",
+        "risk": "safe",
+        "look": "Shell form wraps the process in /bin/sh -c, which means it is not PID 1 and signals do not reach it."
+      },
+      {
+        "title": "Override the entrypoint explicitly",
+        "cmd": "docker run --rm --entrypoint sh {image} -c \"echo test\"",
+        "risk": "safe",
+        "look": "--entrypoint replaces it entirely. This is how you get a shell in an image that normally runs a server."
+      },
+      {
+        "title": "Check what actually ran",
+        "cmd": "docker inspect <container> --format '{{json .Path}} {{json .Args}}'",
+        "risk": "safe",
+        "look": "Path is the executable and Args are what it received. Comparing against your intent makes the mismatch obvious."
+      }
+    ],
+    "causes": [
+      {
+        "id": "entrypoint-set",
+        "cause": "An ENTRYPOINT consumes your arguments.",
+        "fix": "Use --entrypoint to replace it, or pass arguments it understands.",
+        "confirm": ""
+      },
+      {
+        "id": "cmd-replaced",
+        "cause": "Your arguments replaced CMD.",
+        "fix": "Expected behaviour without an ENTRYPOINT.",
+        "confirm": ""
+      },
+      {
+        "id": "shell-form",
+        "cause": "Shell form wraps the process.",
+        "fix": "Use exec form so the app is PID 1 and receives signals.",
+        "confirm": ""
+      },
+      {
+        "id": "compose-override",
+        "cause": "Compose command and entrypoint keys map to CMD and ENTRYPOINT.",
+        "fix": "Set the right one for what you want to change.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The intended process runs with the intended arguments.",
+      "It receives signals correctly."
+    ],
+    "escalate": [
+      "The image's entrypoint and cmd",
+      "Which form is used",
+      "Path and Args on the running container"
+    ]
   }
 ]

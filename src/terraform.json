@@ -2340,5 +2340,90 @@
       "Whether the resource exists in the provider",
       "The refresh-only plan"
     ]
+  },
+  {
+    "id": "tf-plan-differs-from-apply",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "Apply",
+    "title": "Apply does something the plan did not show",
+    "summary": "The apply makes changes that were not in the plan you reviewed.",
+    "aliases": [
+      "plan differs apply",
+      "unexpected changes apply",
+      "plan file stale",
+      "saved plan",
+      "apply not matching plan"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/cli/commands/apply",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check whether a saved plan was used",
+        "cmd": "terraform plan -out=tfplan && terraform apply tfplan",
+        "risk": "safe",
+        "look": "Applying a saved plan guarantees exactly what you reviewed runs. Applying without one re-plans at apply time, and reality may have moved."
+      },
+      {
+        "title": "Check for drift between plan and apply",
+        "cmd": "terraform plan -refresh-only",
+        "risk": "safe",
+        "look": "Something changing between the two is the usual cause. A concurrent apply or a manual change is enough."
+      },
+      {
+        "title": "Check whether anyone else applied",
+        "cmd": "terraform state pull | findstr serial",
+        "risk": "safe",
+        "look": "The serial number increments on every state write. A jump between your plan and apply means someone else wrote to it."
+      },
+      {
+        "title": "Check for provider-side computed values",
+        "cmd": "terraform show -json tfplan | findstr after_unknown",
+        "risk": "safe",
+        "look": "Values unknown at plan time are resolved during apply. Those legitimately differ and are not a fault."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-saved-plan",
+        "cause": "Apply re-planned rather than using a saved plan.",
+        "fix": "Always apply a saved plan in CI. That is what makes review meaningful.",
+        "confirm": ""
+      },
+      {
+        "id": "concurrent-apply",
+        "cause": "Someone applied between your plan and apply.",
+        "fix": "Use state locking and a single pipeline.",
+        "confirm": ""
+      },
+      {
+        "id": "drift",
+        "cause": "Infrastructure changed outside Terraform.",
+        "fix": "Follow the drift runbook.",
+        "confirm": ""
+      },
+      {
+        "id": "computed-values",
+        "cause": "Values were unknown at plan time.",
+        "fix": "Expected. They resolve during apply.",
+        "confirm": ""
+      },
+      {
+        "id": "auto-approve",
+        "cause": "Applying with -auto-approve and no saved plan.",
+        "fix": "Never do this outside a pipeline that saved and reviewed the plan.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Apply matches the reviewed plan.",
+      "CI applies saved plans only.",
+      "State locking prevents concurrent writes."
+    ],
+    "escalate": [
+      "Whether a saved plan was used",
+      "The state serial before and after",
+      "Any refresh-only drift"
+    ]
   }
 ]

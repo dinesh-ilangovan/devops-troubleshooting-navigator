@@ -5078,5 +5078,316 @@
       "Object counts",
       "readyz verbose output"
     ]
+  },
+  {
+    "id": "k8s-pod-wrong-node",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "title": "Pods land on the wrong nodes",
+    "summary": "Workloads schedule onto nodes they should not use, such as expensive or spot instances.",
+    "aliases": [
+      "wrong node",
+      "spot instance workload",
+      "pods on wrong pool",
+      "affinity not working",
+      "topology spread",
+      "node placement"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See where the pod actually landed",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o wide",
+        "risk": "safe",
+        "look": "The NODE column, then check that node's labels. Placement is only as good as the constraints you declared."
+      },
+      {
+        "title": "Read the pod's placement constraints",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.nodeSelector}{.spec.affinity}{.spec.topologySpreadConstraints}'",
+        "risk": "safe",
+        "look": "Empty means the scheduler was free to pick anything. Preferred affinity is a hint, not a rule.",
+        "signals": [
+          {
+            "match": "preferredDuringScheduling",
+            "means": "A preference, not a requirement. The scheduler may ignore it entirely.",
+            "goto": "cause:preferred-only"
+          },
+          {
+            "match": "^\\{\\}$|^$",
+            "means": "No constraints at all. Any node is fair game.",
+            "goto": "cause:no-constraints"
+          }
+        ]
+      },
+      {
+        "title": "Check the target nodes are labelled",
+        "cmd": "kubectl get nodes --show-labels | findstr <expected-label>",
+        "risk": "safe",
+        "look": "The label must exist on the nodes you want. A pool replaced by the autoscaler often loses custom labels."
+      },
+      {
+        "title": "Check spread constraints are satisfiable",
+        "cmd": "kubectl get nodes -L topology.kubernetes.io/zone",
+        "risk": "safe",
+        "look": "A spread constraint across zones needs nodes in each. With whenUnsatisfiable DoNotSchedule the pod stays Pending instead."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-constraints",
+        "cause": "The pod declares no placement rules.",
+        "fix": "Add nodeAffinity or a nodeSelector for the intended pool.",
+        "confirm": ""
+      },
+      {
+        "id": "preferred-only",
+        "cause": "Affinity is preferred rather than required.",
+        "fix": "Use requiredDuringSchedulingIgnoredDuringExecution if it genuinely must hold.",
+        "confirm": ""
+      },
+      {
+        "id": "labels-missing",
+        "cause": "Target nodes lack the label.",
+        "fix": "Label them, ideally through the node pool definition so replacements inherit it.",
+        "confirm": ""
+      },
+      {
+        "id": "taint-needed",
+        "cause": "Other workloads also land on the dedicated pool.",
+        "fix": "Taint the pool so only tolerating pods can use it. Affinity alone does not exclude others.",
+        "confirm": ""
+      },
+      {
+        "id": "spread-unsatisfiable",
+        "cause": "Topology spread cannot be satisfied.",
+        "fix": "Check nodes exist in every topology domain.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Pods land on the intended nodes.",
+      "Other workloads are excluded from dedicated pools."
+    ],
+    "escalate": [
+      "Which node the pod chose",
+      "The pod's placement constraints",
+      "Labels and taints on the target nodes"
+    ]
+  },
+  {
+    "id": "k8s-crd-not-recognised",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "title": "Custom resource is not recognised",
+    "summary": "Applying a custom resource fails because the kind is unknown.",
+    "aliases": [
+      "no matches for kind",
+      "crd not found",
+      "unknown resource type",
+      "custom resource error",
+      "apiversion not found"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/",
+    "inputs": [
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the apply error",
+        "cmd": "kubectl apply -f <manifest>",
+        "risk": "safe",
+        "look": "No matches for kind names the kind and apiVersion that could not be resolved. Both matter.",
+        "signals": [
+          {
+            "match": "no matches for kind",
+            "means": "The CRD is absent, or the apiVersion is wrong.",
+            "goto": "cause:crd-missing"
+          },
+          {
+            "match": "ensure CRDs are installed first",
+            "means": "Applying resources before the CRD that defines them.",
+            "goto": "cause:ordering"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the CRD exists",
+        "cmd": "kubectl get crd | findstr <kind>",
+        "risk": "safe",
+        "look": "Present means the definition is installed. Absent means the operator was never installed or was removed."
+      },
+      {
+        "title": "Check the served versions",
+        "cmd": "kubectl get crd <name> -o jsonpath='{.spec.versions[*].name}{\" served: \"}{.spec.versions[*].served}'",
+        "risk": "safe",
+        "look": "Your apiVersion must be one that is served. An old version can exist but be disabled after an operator upgrade."
+      },
+      {
+        "title": "Refresh the local discovery cache",
+        "cmd": "kubectl api-resources | findstr <kind>",
+        "risk": "safe",
+        "look": "kubectl caches API discovery. A CRD installed seconds ago may not appear until the cache refreshes."
+      }
+    ],
+    "causes": [
+      {
+        "id": "crd-missing",
+        "cause": "The CRD is not installed.",
+        "fix": "Install the operator or chart that defines it, first.",
+        "confirm": ""
+      },
+      {
+        "id": "ordering",
+        "cause": "Resources applied before their CRD.",
+        "fix": "Apply CRDs first. Use sync waves in GitOps.",
+        "confirm": ""
+      },
+      {
+        "id": "version-not-served",
+        "cause": "The apiVersion is no longer served.",
+        "fix": "Update the manifest to a served version.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-cache",
+        "cause": "The discovery cache is stale.",
+        "fix": "Delete ~/.kube/cache/discovery.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-cluster",
+        "cause": "The CRD exists elsewhere.",
+        "fix": "Check your context.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The custom resource applies.",
+      "kubectl api-resources lists the kind."
+    ],
+    "escalate": [
+      "The apply error",
+      "Whether the CRD exists",
+      "Which versions are served"
+    ]
+  },
+  {
+    "id": "k8s-service-account-image-pull",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Pods & Containers",
+    "title": "Image pull works for one namespace but not another",
+    "summary": "The same image pulls fine in one place and fails elsewhere.",
+    "aliases": [
+      "imagepullsecret namespace",
+      "pull works one namespace",
+      "secret not found pull",
+      "serviceaccount pull secret"
+    ],
+    "source": "https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/",
+    "inputs": [
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      },
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Compare pull secrets between namespaces",
+        "cmd": "kubectl get secret -n {namespace} --field-selector type=kubernetes.io/dockerconfigjson",
+        "risk": "safe",
+        "look": "Pull secrets are namespaced. Working elsewhere means the secret exists there and not here."
+      },
+      {
+        "title": "Check the ServiceAccount carries it",
+        "cmd": "kubectl get sa default -n {namespace} -o jsonpath='{.imagePullSecrets}'",
+        "risk": "safe",
+        "look": "Attaching the secret to the ServiceAccount applies it to every pod using that account, which is usually cleaner than per-pod.",
+        "signals": [
+          {
+            "match": "^$|^\\[\\]$",
+            "means": "The ServiceAccount has no pull secret attached.",
+            "goto": "cause:sa-no-secret"
+          }
+        ]
+      },
+      {
+        "title": "Check the pod's own reference",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.imagePullSecrets}'",
+        "risk": "safe",
+        "look": "A pod-level secret overrides nothing but adds to the ServiceAccount's. Either path works; neither existing does not."
+      },
+      {
+        "title": "Verify the secret's contents are valid",
+        "cmd": "kubectl get secret <name> -n {namespace} -o jsonpath='{.data.\\.dockerconfigjson}'",
+        "risk": "safe",
+        "look": "Base64 of the registry config. A secret created with the wrong type is ignored silently by the kubelet."
+      }
+    ],
+    "causes": [
+      {
+        "id": "secret-missing",
+        "cause": "No pull secret in this namespace.",
+        "fix": "Create it here. Secrets never cross namespaces.",
+        "confirm": ""
+      },
+      {
+        "id": "sa-no-secret",
+        "cause": "The ServiceAccount has no pull secret.",
+        "fix": "Patch it onto the ServiceAccount so all its pods inherit it.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-type",
+        "cause": "The secret is not dockerconfigjson.",
+        "fix": "Recreate with kubectl create secret docker-registry.",
+        "confirm": ""
+      },
+      {
+        "id": "expired-token",
+        "cause": "The registry token in the secret expired.",
+        "fix": "Rotate it. Cloud registry tokens are often short-lived.",
+        "confirm": ""
+      },
+      {
+        "id": "automation-needed",
+        "cause": "Every new namespace needs this by hand.",
+        "fix": "Use a controller that replicates the secret, or bake it into namespace provisioning.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The image pulls in this namespace.",
+      "New pods inherit the secret automatically."
+    ],
+    "escalate": [
+      "Which secrets exist per namespace",
+      "The ServiceAccount's pull secrets",
+      "The secret type"
+    ]
   }
 ]
