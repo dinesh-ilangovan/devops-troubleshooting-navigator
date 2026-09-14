@@ -4028,5 +4028,193 @@
       "Which form is used",
       "Path and Args on the running container"
     ]
+  },
+  {
+    "id": "docker-compose-network-isolation",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Compose",
+    "title": "Services in different compose projects cannot talk",
+    "summary": "Containers that should communicate cannot resolve or reach each other.",
+    "aliases": [
+      "compose networks",
+      "cannot reach other project",
+      "external network",
+      "two compose files",
+      "service not found compose"
+    ],
+    "source": "https://docs.docker.com/reference/compose-file/networks/",
+    "inputs": [
+      {
+        "key": "service",
+        "label": "Service",
+        "example": "api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "List the networks each project created",
+        "cmd": "docker network ls",
+        "risk": "safe",
+        "look": "Compose creates a network per project, named after the project. Containers only resolve names within their own network."
+      },
+      {
+        "title": "Check which networks the container joined",
+        "cmd": "docker inspect $(docker compose ps -q {service}) --format '{{json .NetworkSettings.Networks}}'",
+        "risk": "safe",
+        "look": "The network names. Two containers must share at least one to reach each other by name.",
+        "signals": [
+          {
+            "match": "_default",
+            "means": "On the project's default network only. Nothing outside that project is reachable.",
+            "goto": "cause:separate-projects"
+          }
+        ]
+      },
+      {
+        "title": "Check whether an external network is declared",
+        "cmd": "findstr /C:\"external\" docker-compose.yml",
+        "risk": "safe",
+        "look": "An external network lets several projects share one. Without it, each project is isolated by design."
+      },
+      {
+        "title": "Test resolution across projects",
+        "cmd": "docker compose exec {service} getent hosts <other-service>",
+        "risk": "safe",
+        "look": "Empty means the name is not resolvable from here, which confirms they are on separate networks."
+      }
+    ],
+    "causes": [
+      {
+        "id": "separate-projects",
+        "cause": "Each project has its own network.",
+        "fix": "Create a shared external network and attach both projects to it.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-name",
+        "cause": "Using the container name rather than the service name.",
+        "fix": "Within a project, the service name is the resolvable name.",
+        "confirm": ""
+      },
+      {
+        "id": "network-not-created",
+        "cause": "The external network does not exist.",
+        "fix": "docker network create it before bringing the projects up.",
+        "confirm": ""
+      },
+      {
+        "id": "should-be-one-project",
+        "cause": "Two projects that always run together.",
+        "fix": "Merge them into one compose file. Simpler than sharing a network.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Services resolve each other by name.",
+      "The arrangement is declared in the compose files."
+    ],
+    "escalate": [
+      "Which networks exist",
+      "Which networks each container joined",
+      "Whether an external network is declared"
+    ]
+  },
+  {
+    "id": "docker-user-namespace-permissions",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Storage & Disk",
+    "title": "Files created by a container have odd ownership on the host",
+    "summary": "Files appear owned by a high-numbered user, or root-owned files clutter a bind mount.",
+    "aliases": [
+      "root owned files",
+      "userns",
+      "file ownership container",
+      "cannot delete files created by container",
+      "uid mapping"
+    ],
+    "source": "https://docs.docker.com/engine/security/userns-remap/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      },
+      {
+        "key": "path",
+        "label": "Host path",
+        "example": "./data"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check ownership on the host",
+        "cmd": "ls -ln {path}",
+        "risk": "safe",
+        "look": "Numeric UIDs. A file owned by 0 means the container ran as root and wrote through the mount as root."
+      },
+      {
+        "title": "Check what user the container runs as",
+        "cmd": "docker inspect {container} --format 'user={{.Config.User}}'",
+        "risk": "safe",
+        "look": "Empty means root. Anything the container writes to a bind mount lands as root on the host too.",
+        "signals": [
+          {
+            "match": "user=$",
+            "means": "Running as root. Bind mount writes are root-owned on the host.",
+            "goto": "cause:runs-as-root"
+          }
+        ]
+      },
+      {
+        "title": "Check whether user namespace remapping is on",
+        "cmd": "docker info --format '{{.SecurityOptions}}'",
+        "risk": "safe",
+        "look": "userns remapping shifts container UIDs to a high host range, which explains ownership by a UID like 100000."
+      },
+      {
+        "title": "Run as your own user instead",
+        "cmd": "docker run --user $(id -u):$(id -g) ...",
+        "risk": "state",
+        "look": "New files in the mount carry your UID.",
+        "note": "Changes the UID the process runs as. Files it creates will be owned by you, but the container may fail if the image expects to write to paths owned by root, such as a package cache or a log directory it created at build time. Test before adopting it everywhere."
+      }
+    ],
+    "causes": [
+      {
+        "id": "runs-as-root",
+        "cause": "The container runs as root.",
+        "fix": "Pass --user with your UID, or set USER in the Dockerfile.",
+        "confirm": ""
+      },
+      {
+        "id": "userns-remap",
+        "cause": "User namespace remapping shifts UIDs.",
+        "fix": "Expected. The high UID is the mapped range.",
+        "confirm": ""
+      },
+      {
+        "id": "cannot-delete",
+        "cause": "Root-owned files you cannot remove.",
+        "fix": "sudo chown them back, or delete from inside a container running as root.",
+        "confirm": ""
+      },
+      {
+        "id": "named-volume-better",
+        "cause": "A bind mount is used for data the host does not need.",
+        "fix": "Use a named volume. Ownership stops being your problem.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "New files carry the expected ownership.",
+      "You can manage them from the host without sudo."
+    ],
+    "escalate": [
+      "Numeric ownership on the host",
+      "The container's user",
+      "Whether userns remapping is enabled"
+    ]
   }
 ]

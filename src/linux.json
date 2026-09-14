@@ -3344,5 +3344,206 @@
       "Three samples over a minute",
       "Pss from smaps_rollup"
     ]
+  },
+  {
+    "id": "linux-service-restart-loop",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "systemd",
+    "title": "Service restarts in a loop",
+    "summary": "systemd keeps restarting a unit that immediately fails.",
+    "aliases": [
+      "restart loop systemd",
+      "start request repeated too quickly",
+      "service failing repeatedly",
+      "restart always",
+      "unit flapping"
+    ],
+    "source": "https://man7.org/linux/man-pages/man5/systemd.service.5.html",
+    "inputs": [
+      {
+        "key": "unit",
+        "label": "Unit",
+        "example": "checkout-api.service"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the status and restart count",
+        "cmd": "systemctl status {unit} --no-pager",
+        "risk": "safe",
+        "look": "Start request repeated too quickly means systemd gave up after hitting the rate limit. That is the safety valve working.",
+        "signals": [
+          {
+            "match": "repeated too quickly",
+            "means": "The start rate limit was hit. systemd stopped trying.",
+            "goto": "cause:rate-limited"
+          },
+          {
+            "match": "Result: exit-code",
+            "means": "The process exits non-zero every time.",
+            "goto": "cause:always-fails"
+          }
+        ]
+      },
+      {
+        "title": "Read the journal for one failed start",
+        "cmd": "journalctl -u {unit} -n 60 --no-pager",
+        "risk": "safe",
+        "look": "The application's own output. The same error repeating confirms it is deterministic rather than a race."
+      },
+      {
+        "title": "Check the restart policy",
+        "cmd": "systemctl show {unit} -p Restart -p RestartSec -p StartLimitBurst -p StartLimitIntervalSec",
+        "risk": "safe",
+        "look": "Restart=always with a short RestartSec masks failures and burns CPU. on-failure is usually the better default."
+      },
+      {
+        "title": "Stop the loop to investigate",
+        "cmd": "sudo systemctl stop {unit}",
+        "risk": "state",
+        "look": "The unit shows inactive and the journal stops scrolling.",
+        "note": "Stops the service and the restart attempts. The service is unavailable until you start it again, so on a production host arrange cover first. This is the right move: reading logs while it restarts every second is nearly impossible."
+      }
+    ],
+    "causes": [
+      {
+        "id": "always-fails",
+        "cause": "The process fails deterministically.",
+        "fix": "Read the journal. Restarting will never fix a configuration error.",
+        "confirm": ""
+      },
+      {
+        "id": "rate-limited",
+        "cause": "systemd hit the start limit.",
+        "fix": "Fix the failure, then systemctl reset-failed to clear the counter.",
+        "confirm": ""
+      },
+      {
+        "id": "dependency-not-ready",
+        "cause": "It starts before a dependency.",
+        "fix": "Order it properly, or add retry logic in the application.",
+        "confirm": ""
+      },
+      {
+        "id": "restartsec-too-short",
+        "cause": "RestartSec is very low.",
+        "fix": "Raise it. A tight loop makes diagnosis hard and wastes CPU.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-restart-policy",
+        "cause": "Restart=always hides real failures.",
+        "fix": "Use on-failure so a clean exit is respected.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The unit stays active.",
+      "The journal shows a clean start.",
+      "The underlying failure was fixed."
+    ],
+    "escalate": [
+      "systemctl status output",
+      "Journal from one failed start",
+      "The restart policy settings"
+    ]
+  },
+  {
+    "id": "linux-disk-io-slow",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Performance",
+    "title": "Disk is slow and everything waits on it",
+    "summary": "High I/O wait with low CPU usage. Work is blocked on storage.",
+    "aliases": [
+      "io wait",
+      "slow disk",
+      "iostat",
+      "disk latency",
+      "high await",
+      "storage slow linux"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/iostat.1.html",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Measure per-device latency",
+        "cmd": "iostat -xz 2 3",
+        "risk": "safe",
+        "look": "The await column is average latency in milliseconds. Double digits on an SSD means something is wrong; hundreds means the device is saturated.",
+        "signals": [
+          {
+            "match": "await.*\\d{3,}\\.",
+            "means": "Latency in the hundreds of milliseconds. The device is saturated or failing.",
+            "goto": "cause:saturated"
+          },
+          {
+            "match": "%util.*9\\d\\.",
+            "means": "Utilisation near 100%. The device has no headroom.",
+            "goto": "cause:saturated"
+          }
+        ]
+      },
+      {
+        "title": "Find which process is doing the I/O",
+        "cmd": "sudo iotop -b -n 2 -o 2>/dev/null | head -20",
+        "risk": "safe",
+        "look": "Per-process read and write rates. One process dominating is the usual answer."
+      },
+      {
+        "title": "Check for processes blocked on I/O",
+        "cmd": "ps -eo state,pid,comm | grep '^D'",
+        "risk": "safe",
+        "look": "State D is uninterruptible sleep on I/O. Several of these confirm storage is the bottleneck rather than CPU."
+      },
+      {
+        "title": "Check the device's health",
+        "cmd": "sudo smartctl -A /dev/sda 2>/dev/null | findstr /I \"reallocated pending error\"",
+        "risk": "safe",
+        "look": "Reallocated or pending sectors mean the disk is failing. Latency is a symptom and the priority becomes getting data off."
+      }
+    ],
+    "causes": [
+      {
+        "id": "saturated",
+        "cause": "The device is at its throughput limit.",
+        "fix": "Reduce I/O, or move to faster storage. More CPU will not help.",
+        "confirm": ""
+      },
+      {
+        "id": "one-process",
+        "cause": "A single process dominates.",
+        "fix": "Throttle it, or reschedule the work.",
+        "confirm": ""
+      },
+      {
+        "id": "failing-disk",
+        "cause": "The disk has reallocated sectors.",
+        "fix": "Replace it. Back up first; latency usually worsens.",
+        "confirm": ""
+      },
+      {
+        "id": "network-storage",
+        "cause": "The volume is network-attached.",
+        "fix": "Check the network path and any IOPS limit on the volume.",
+        "confirm": ""
+      },
+      {
+        "id": "swap-thrashing",
+        "cause": "The I/O is swap.",
+        "fix": "Follow the swap runbook. This is a memory problem wearing an I/O costume.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "await is back to normal for the device type.",
+      "Processes are no longer stuck in D state."
+    ],
+    "escalate": [
+      "iostat output over a minute",
+      "Which process dominates I/O",
+      "SMART attributes if physical"
+    ]
   }
 ]

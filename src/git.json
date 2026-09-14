@@ -2948,5 +2948,107 @@
       "What git ls-files records",
       "Whether CI builds"
     ]
+  },
+  {
+    "id": "git-commit-signing-fails",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Remotes",
+    "title": "Commit signing fails or shows unverified",
+    "summary": "Commits are rejected, or appear unverified on the hosting platform.",
+    "aliases": [
+      "gpg failed to sign",
+      "signing failed",
+      "unverified commit",
+      "ssh signing",
+      "commit not verified",
+      "secret key not available"
+    ],
+    "source": "https://git-scm.com/docs/git-commit",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Read the signing error",
+        "cmd": "git commit -m test",
+        "risk": "safe",
+        "look": "The message names whether the key is missing, the agent is unreachable, or the format is wrong.",
+        "signals": [
+          {
+            "match": "gpg failed to sign",
+            "means": "The signing backend could not produce a signature.",
+            "goto": "cause:gpg-broken"
+          },
+          {
+            "match": "secret key not available",
+            "means": "The configured key is not present on this machine.",
+            "goto": "cause:key-missing"
+          },
+          {
+            "match": "No such file or directory",
+            "means": "The signing program path is wrong.",
+            "goto": "cause:wrong-program"
+          }
+        ]
+      },
+      {
+        "title": "Check the signing configuration",
+        "cmd": "git config --show-origin user.signingkey gpg.format commit.gpgsign",
+        "risk": "safe",
+        "look": "format ssh uses an SSH key; the default uses GPG. Mixing the two configurations is a common cause."
+      },
+      {
+        "title": "Test the backend directly",
+        "cmd": "gpg --list-secret-keys --keyid-format=long",
+        "risk": "safe",
+        "look": "The key must be present and not expired. An expired key signs nothing and the error is unhelpful."
+      },
+      {
+        "title": "Check the platform knows the key",
+        "cmd": "git log --show-signature -1",
+        "risk": "safe",
+        "look": "Locally valid but unverified on the platform means the public key was never uploaded there, or the committer email does not match it."
+      }
+    ],
+    "causes": [
+      {
+        "id": "key-missing",
+        "cause": "The configured key is not on this machine.",
+        "fix": "Import it, or configure a key that exists here.",
+        "confirm": ""
+      },
+      {
+        "id": "gpg-broken",
+        "cause": "The GPG agent cannot sign.",
+        "fix": "Check GPG_TTY is exported. Passphrase prompts fail without it.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-program",
+        "cause": "gpg.program points somewhere wrong.",
+        "fix": "Set it to the real path, or unset it to use the default.",
+        "confirm": ""
+      },
+      {
+        "id": "email-mismatch",
+        "cause": "The signing key's email differs from the commit email.",
+        "fix": "They must match for the platform to mark it verified.",
+        "confirm": ""
+      },
+      {
+        "id": "not-uploaded",
+        "cause": "The public key is not registered on the platform.",
+        "fix": "Upload it. Local signing alone shows unverified.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Commits sign without error.",
+      "The platform shows them verified."
+    ],
+    "escalate": [
+      "The signing error",
+      "Signing configuration and format",
+      "Whether the key exists and is unexpired"
+    ]
   }
 ]
