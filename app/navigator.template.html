@@ -120,20 +120,15 @@ ol.steps{list-style:none;margin:0;padding:0}
   margin:0 0 10px;max-width:64ch;color:var(--ink)}
 .note-state{border-left-color:var(--state)}
 
-/* ---- output matcher ---- */
-.match{margin-top:10px}
-.match summary{font-size:13.5px;color:var(--focus);cursor:pointer;list-style:none}
-.match summary::-webkit-details-marker{display:none}
-.match summary::before{content:"+ ";font-family:var(--mono)}
-.match[open] summary::before{content:"- "}
-.match textarea{width:100%;margin-top:9px;min-height:78px;padding:10px 12px;border:1px solid var(--rule);
-  border-radius:5px;font-family:var(--mono);font-size:12.5px;background:var(--surface);resize:vertical}
-.verdict{margin-top:9px;padding:11px 13px;border-radius:5px;font-size:14.5px;background:var(--surface);
-  border:1px solid var(--rule)}
-.verdict.hit{border-color:var(--safe);border-left:3px solid var(--safe)}
-.verdict.miss{color:var(--muted)}
-.verdict b{display:block;margin-bottom:3px}
-.jump{background:none;border:0;color:var(--focus);padding:0;margin-top:6px;cursor:pointer;font-size:13.5px}
+/* ---- decision branches ---- */
+.branch{margin:12px 0 0;border-left:2px solid var(--rule);padding-left:13px}
+.bhead{font-size:11.5px;font-weight:650;color:var(--muted);margin-bottom:7px}
+.brow{margin-bottom:9px}
+.bif{font-size:14px}
+.bif b{font-weight:600}
+.bif code{font-family:var(--mono);font-size:12.5px;background:#E7ECF1;padding:1px 6px;border-radius:3px}
+.bthen{font-size:14px;color:var(--muted);margin-top:2px;max-width:66ch}
+.goto{color:var(--focus);white-space:nowrap;font-weight:600}
 
 /* ---- causes ---- */
 .sec{margin-top:34px;padding-top:20px;border-top:1px solid var(--rule)}
@@ -199,9 +194,7 @@ footer{color:var(--muted);font-size:12.5px;padding:0 0 30px;max-width:70ch;white
 
 <div class="bar" id="bar"><div class="wrap">
   <span class="prog" id="prog"></span>
-  <button class="act" id="a-safe">Copy read-only steps</button>
-  <button class="act" id="a-esc">Copy handoff notes</button>
-  <button class="act key" id="a-log">Copy incident log</button>
+  <button class="act key" id="a-esc">Copy handoff notes</button>
 </div></div>
 <div class="toast" id="toast"></div>
 
@@ -210,6 +203,18 @@ footer{color:var(--muted);font-size:12.5px;padding:0 0 30px;max-width:70ch;white
 "use strict";
 const BANK = JSON.parse(document.getElementById("data").textContent);
 const $ = s => document.querySelector(s);
+const readable = p => String(p || "")
+  .replace(/^\(\?[imsx]+\)/, "")
+  .replace(/\\[sdwSDW]\+?/g, " ")
+  .replace(/[\^$]/g, "")
+  .replace(/\\/g, "")
+  .replace(/\.\*|\.\+|\?/g, "")
+  .replace(/\(([^)]*)\)/g, "$1")
+  .replace(/\[[^\]]*\]/g, "")
+  .replace(/\{\d+,?\d*\}/g, "")
+  .replace(/\|/g, "  /  ")
+  .replace(/\s{2,}/g, "  ")
+  .trim();
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 /* ---------- session state (in memory only; nothing is persisted) ---------- */
@@ -327,10 +332,21 @@ function open(id) {
       : `<pre data-cmd="${esc(s.cmd)}"></pre><button class="copy" data-copy="${i}">Copy</button>`;
     const note = s.note ? `<p class="note${s.risk === "state" ? " note-state" : ""}">${esc(s.note)}</p>` : "";
     const sig = (s.signals || []).length
-      ? `<details class="match"><summary>Paste your actual output to read it</summary>
-           <textarea data-sig="${i}" placeholder="Paste the output you got, then release the key."></textarea>
-           <div class="verdict miss" data-verdict="${i}">Nothing matched yet. Paste output above.</div>
-         </details>` : "";
+      ? `<div class="branch"><div class="bhead">What you might see</div>` +
+        s.signals.map(g => {
+          const t = g.goto || "";
+          let next = "";
+          if (t.startsWith("cause:")) {
+            const cz = (CUR.causes || []).findIndex(x => x.id === t.slice(6));
+            if (cz >= 0) next = `<span class="goto">&rarr; cause ${cz + 1} below</span>`;
+          } else if (t.startsWith("step:")) {
+            next = `<span class="goto">&rarr; go to step ${t.slice(5)}</span>`;
+          }
+          return `<div class="brow">
+            <div class="bif"><b>If you see</b> <code>${esc(readable(g.match))}</code></div>
+            <div class="bthen">${esc(g.means)} ${next}</div>
+          </div>`;
+        }).join("") + `</div>` : "";
     return `<li class="step${danger ? " danger" : ""}" data-step="${i}">
       <button class="mark" data-done="${i}" aria-label="Mark step ${i + 1} done">${i + 1}</button>
       <div class="shead"><span class="stitle">${esc(s.title)}</span>
@@ -393,46 +409,6 @@ function wire() {
     progress();
   });
 
-  document.querySelectorAll("[data-sig]").forEach(ta => ta.oninput = () => {
-    const i = +ta.dataset.sig, s = CUR.steps[i], text = ta.value;
-    const out = $(`[data-verdict="${i}"]`);
-    document.querySelectorAll(".cause").forEach(c => c.classList.remove("lit"));
-    if (!text.trim()) {
-      out.className = "verdict miss";
-      out.textContent = "Nothing matched yet. Paste output above.";
-      return;
-    }
-    const m = (s.signals || []).find(g => {
-      const pat = String(g.match || "").replace(/^\(\?[imsx]+\)/, "");
-      if (!pat) return false;
-      try { return new RegExp(pat, "i").test(text); }
-      catch (e) { console.warn("signal regex failed:", g.match, e.message); return false; }
-    });
-    if (!m) {
-      out.className = "verdict miss";
-      out.textContent = "No known signature in that output. It may still be fine — read the note above, "
-        + "or add this output as a new signal so the next person gets a hit.";
-      return;
-    }
-    out.className = "verdict hit";
-    const target = m.goto || "";
-    out.innerHTML = `<b>That output means:</b>${esc(m.means)}`;
-    if (target.startsWith("cause:")) {
-      const c = (CUR.causes || []).find(x => x.id === target.slice(6));
-      const el = $(`[data-cause="${CSS.escape(target.slice(6))}"]`);
-      if (el) el.classList.add("lit");
-      if (c) out.innerHTML += `<button class="jump">Go to the fix: ${esc(c.cause)}</button>`;
-      out.querySelector(".jump") && (out.querySelector(".jump").onclick =
-        () => el && el.scrollIntoView({ behavior: "smooth", block: "center" }));
-    } else if (target.startsWith("step:")) {
-      const n = +target.slice(5);
-      out.innerHTML += `<button class="jump">Go to step ${n}</button>`;
-      out.querySelector(".jump").onclick = () =>
-        document.querySelector(`[data-step="${n - 1}"]`).scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-    LOG.push({ t: new Date().toISOString().slice(11, 19), step: s.title,
-               cmd: fill(s.cmd, false), note: m.means });
-  });
 }
 
 function progress() {
@@ -449,10 +425,6 @@ function copy(t, msg) {
   }, () => prompt("Copy manually:", t));
 }
 
-$("#a-safe").onclick = () => {
-  const c = (CUR.steps || []).filter(s => s.risk === "safe").map(s => `# ${s.title}\n${fill(s.cmd, false)}`);
-  copy(c.join("\n\n"), `${c.length} read-only commands copied`);
-};
 
 $("#a-esc").onclick = () => {
   const L = [`## ${CUR.title}`, "", "**What I checked**"];
@@ -463,14 +435,6 @@ $("#a-esc").onclick = () => {
   copy(L.join("\n"), "Handoff notes copied");
 };
 
-$("#a-log").onclick = () => {
-  const L = [`# Incident: ${CUR.title}`, `Runbook: ${CUR.id} (verified ${CUR.verified_on || "n/a"})`, ""];
-  Object.entries(CTX).filter(([, v]) => v).forEach(([k, v]) => L.push(`- ${k}: \`${v}\``));
-  L.push("", "| time | check | command | observed |", "|---|---|---|---|");
-  LOG.forEach(e => L.push(`| ${e.t} | ${e.step} | \`${e.cmd}\` | ${e.note || ""} |`));
-  if (!LOG.length) L.push("| | no checks recorded | | |");
-  copy(L.join("\n"), "Incident log copied as markdown");
-};
 
 /* ---------- navigation ---------- */
 function home() {

@@ -1558,5 +1558,401 @@
       "The original commit's diff",
       "Whether the change is already present"
     ]
+  },
+  {
+    "id": "git-wrong-branch-work",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Branches",
+    "title": "I did my work on the wrong branch",
+    "summary": "Changes are on main or another branch and need moving, committed or not.",
+    "aliases": [
+      "wrong branch",
+      "work on wrong branch",
+      "move changes branch",
+      "committed to wrong branch",
+      "should have branched"
+    ],
+    "source": "https://git-scm.com/docs/git-switch",
+    "inputs": [
+      {
+        "key": "branch",
+        "label": "Branch it should be on",
+        "example": "feature/checkout-retry"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check whether the work is committed",
+        "cmd": "git status -sb && git log --oneline -3",
+        "risk": "safe",
+        "look": "Uncommitted changes move trivially. Committed ones need the branch pointer moved instead.",
+        "signals": [
+          {
+            "match": "^ M|^M |^\\?\\?",
+            "means": "Uncommitted. Switching branches carries them across.",
+            "goto": "cause:uncommitted"
+          },
+          {
+            "match": "ahead \\d+",
+            "means": "Committed but not pushed. Move the commits.",
+            "goto": "cause:committed-local"
+          }
+        ]
+      },
+      {
+        "title": "For uncommitted work, just switch",
+        "cmd": "git switch -c {branch}",
+        "risk": "safe",
+        "look": "Uncommitted changes follow you to the new branch. Nothing is lost and no history changes."
+      },
+      {
+        "title": "For committed work, create the branch here first",
+        "cmd": "git branch {branch}",
+        "risk": "safe",
+        "look": "The branch now points at your commits. They are safe regardless of what you do to the original branch next."
+      },
+      {
+        "title": "Reset the original branch back",
+        "cmd": "git reset --hard origin/main",
+        "risk": "destructive",
+        "look": "The current branch matches the remote. Your work is on {branch}.",
+        "note": "Discards every commit and every uncommitted change on the current branch beyond origin/main. This is only safe because the previous step created {branch} at the current commit, so the work survives there. Run git log {branch} and confirm your commits are listed before running this."
+      }
+    ],
+    "causes": [
+      {
+        "id": "uncommitted",
+        "cause": "The work is not committed.",
+        "fix": "git switch -c carries it across. Simplest case.",
+        "confirm": ""
+      },
+      {
+        "id": "committed-local",
+        "cause": "Committed but not pushed.",
+        "fix": "Branch here, then reset the original. Nothing is shared yet so nothing breaks.",
+        "confirm": ""
+      },
+      {
+        "id": "already-pushed",
+        "cause": "The commits are on the remote.",
+        "fix": "Do not reset and force-push a shared branch. Use git revert on the original and apply the work properly on a branch.",
+        "confirm": ""
+      },
+      {
+        "id": "partial",
+        "cause": "Only some changes belong on the branch.",
+        "fix": "Use git stash push with specific paths, or commit selectively with git add -p.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The work is on the intended branch.",
+      "The original branch matches its remote.",
+      "Nothing shared was rewritten."
+    ],
+    "escalate": [
+      "git status -sb",
+      "git log on both branches",
+      "Whether the commits were pushed"
+    ]
+  },
+  {
+    "id": "git-reverting-a-merge",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "History & Undo",
+    "title": "I need to undo a merge",
+    "summary": "A merge introduced a problem and must be reversed. Merges revert differently from ordinary commits.",
+    "aliases": [
+      "revert merge",
+      "undo merge",
+      "mainline",
+      "commit is a merge but no -m option",
+      "rollback merge",
+      "bad merge"
+    ],
+    "source": "https://git-scm.com/docs/git-revert",
+    "inputs": [
+      {
+        "key": "sha",
+        "label": "Merge commit",
+        "example": "a1b2c3d"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm it is a merge and find its parents",
+        "cmd": "git show --no-patch --format='%h parents: %p' {sha}",
+        "risk": "safe",
+        "look": "Two parent hashes means a merge. Reverting one requires saying which side to keep, and that is what -m specifies.",
+        "signals": [
+          {
+            "match": "parents: \\w+ \\w+",
+            "means": "A merge commit with two parents. Reverting needs -m.",
+            "goto": "cause:needs-mainline"
+          }
+        ]
+      },
+      {
+        "title": "Check whether it has been pushed",
+        "cmd": "git branch -r --contains {sha}",
+        "risk": "safe",
+        "look": "Any remote branch listed means others may have it. That rules out rewriting history and points at revert instead."
+      },
+      {
+        "title": "Revert keeping the first parent",
+        "cmd": "git revert -m 1 {sha}",
+        "risk": "state",
+        "look": "A new revert commit. The merged changes are gone from the working tree.",
+        "note": "Creates a new commit undoing the merged changes. History is not rewritten, which makes this safe for shared branches. Be aware that re-merging the same branch later will not reintroduce those changes, because Git considers them already merged — you must revert the revert first."
+      },
+      {
+        "title": "Confirm the result",
+        "cmd": "git log --oneline -5 && git status",
+        "risk": "safe",
+        "look": "The revert commit on top and a clean tree. Run the tests; a reverted merge can leave a half-consistent state if other work depended on it."
+      }
+    ],
+    "causes": [
+      {
+        "id": "needs-mainline",
+        "cause": "Reverting a merge needs -m.",
+        "fix": "-m 1 keeps the branch you merged into, which is what you want almost always.",
+        "confirm": ""
+      },
+      {
+        "id": "not-pushed",
+        "cause": "The merge is local only.",
+        "fix": "git reset --hard to the commit before it is cleaner than a revert. No history is shared yet.",
+        "confirm": ""
+      },
+      {
+        "id": "remerge-problem",
+        "cause": "You reverted and now cannot re-merge.",
+        "fix": "Revert the revert. Git sees the branch as already merged otherwise.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-parent",
+        "cause": "Reverted with the wrong -m value.",
+        "fix": "Revert that revert and redo with the correct parent.",
+        "confirm": ""
+      },
+      {
+        "id": "dependent-work",
+        "cause": "Later commits depend on the merged code.",
+        "fix": "Reverting will break them. Fix forward instead.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The problem is gone.",
+      "Tests pass.",
+      "The path to re-merging later is understood."
+    ],
+    "escalate": [
+      "The merge commit's parents",
+      "Whether it is on any remote",
+      "Test results after the revert"
+    ]
+  },
+  {
+    "id": "git-bisect-find-bad-commit",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Debugging",
+    "title": "Something broke and I do not know which commit did it",
+    "summary": "A bug appeared somewhere in a range of commits. Bisect finds it in a handful of steps.",
+    "aliases": [
+      "which commit broke",
+      "bisect",
+      "find bad commit",
+      "regression",
+      "worked before",
+      "when did this break"
+    ],
+    "source": "https://git-scm.com/docs/git-bisect",
+    "inputs": [
+      {
+        "key": "good",
+        "label": "A commit known good",
+        "example": "v1.3.0"
+      },
+      {
+        "key": "bad",
+        "label": "A commit known bad",
+        "example": "HEAD"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the endpoints really are good and bad",
+        "cmd": "git log --oneline {good}..{bad} | measure-object -line",
+        "risk": "safe",
+        "look": "How many commits are in the range. Bisect needs about log2 of that many tests, so even hundreds of commits take under ten steps."
+      },
+      {
+        "title": "Start the bisect",
+        "cmd": "git bisect start {bad} {good}",
+        "risk": "state",
+        "look": "Git reports roughly how many steps remain and checks out a middle commit.",
+        "note": "Checks out a commit partway through the range, leaving you in detached HEAD. Any uncommitted work is in the way and should be committed or stashed first. git bisect reset returns you to where you started."
+      },
+      {
+        "title": "Test and mark each checkout",
+        "cmd": "git bisect good",
+        "risk": "safe",
+        "look": "Use good or bad after testing each one. Git halves the range each time and tells you how many steps are left."
+      },
+      {
+        "title": "Return to where you started",
+        "cmd": "git bisect reset",
+        "risk": "state",
+        "look": "You are back on your original branch with a clean tree.",
+        "note": "Leaves bisect mode and restores your original branch. Do this when finished, or the repository stays in detached HEAD and subsequent commits will not belong to any branch."
+      }
+    ],
+    "causes": [
+      {
+        "id": "found-it",
+        "cause": "Bisect names the first bad commit.",
+        "fix": "Read that commit. It is usually obvious once you know which one it is.",
+        "confirm": ""
+      },
+      {
+        "id": "flaky-test",
+        "cause": "The test is not deterministic.",
+        "fix": "Bisect needs a reliable signal. Make the check deterministic first or the result is meaningless.",
+        "confirm": ""
+      },
+      {
+        "id": "skip-needed",
+        "cause": "Some commits cannot be built or tested.",
+        "fix": "git bisect skip. Git works around them.",
+        "confirm": ""
+      },
+      {
+        "id": "automate-it",
+        "cause": "Testing by hand is slow.",
+        "fix": "git bisect run <script>. An exit code of zero means good, non-zero means bad.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-endpoints",
+        "cause": "The good commit is not actually good.",
+        "fix": "The result will be wrong. Verify both endpoints before starting.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The first bad commit is identified.",
+      "The repository is out of bisect mode.",
+      "The cause is understood, not just located."
+    ],
+    "escalate": [
+      "The bisect result",
+      "How the good and bad endpoints were verified",
+      "The test used at each step"
+    ]
+  },
+  {
+    "id": "git-rebase-gone-wrong",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Merging",
+    "title": "A rebase went wrong and I want out",
+    "summary": "Mid-rebase, conflicts everywhere, or the result looks nothing like what was intended.",
+    "aliases": [
+      "rebase gone wrong",
+      "abort rebase",
+      "rebase mess",
+      "interactive rebase",
+      "rebase conflicts everywhere",
+      "undo rebase"
+    ],
+    "source": "https://git-scm.com/docs/git-rebase",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check whether a rebase is in progress",
+        "cmd": "git status | findstr /C:\"rebase\"",
+        "risk": "safe",
+        "look": "Whether you are mid-rebase. That determines whether you abort or undo a finished one.",
+        "signals": [
+          {
+            "match": "rebase in progress",
+            "means": "Still mid-rebase. Abort returns you cleanly.",
+            "goto": "cause:in-progress"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "No rebase in progress. A finished rebase is undone through the reflog.",
+            "goto": "cause:already-finished"
+          }
+        ]
+      },
+      {
+        "title": "Abort an in-progress rebase",
+        "cmd": "git rebase --abort",
+        "risk": "safe",
+        "look": "Returns to exactly where you started. Nothing committed is lost, only the conflict resolution you had done."
+      },
+      {
+        "title": "For a finished rebase, find where you were",
+        "cmd": "git reflog -20",
+        "risk": "safe",
+        "look": "The entry just before the rebase started, usually marked rebase (start). That SHA is your pre-rebase state."
+      },
+      {
+        "title": "Reset back to the pre-rebase commit",
+        "cmd": "git reset --hard <sha-before-rebase>",
+        "risk": "destructive",
+        "look": "git log matches what you had before the rebase.",
+        "note": "Discards the rebased commits and any uncommitted changes, returning the branch to its pre-rebase state. The rebased commits remain in the reflog for about ninety days, so this is recoverable, but anything uncommitted right now is not. Verify the SHA with git show before running it."
+      }
+    ],
+    "causes": [
+      {
+        "id": "in-progress",
+        "cause": "A rebase is in progress.",
+        "fix": "git rebase --abort. Clean and complete.",
+        "confirm": ""
+      },
+      {
+        "id": "already-finished",
+        "cause": "The rebase completed and the result is wrong.",
+        "fix": "Find the pre-rebase SHA in the reflog and reset to it.",
+        "confirm": ""
+      },
+      {
+        "id": "too-many-conflicts",
+        "cause": "Every commit conflicts.",
+        "fix": "You are probably rebasing onto the wrong base. Check the target branch.",
+        "confirm": ""
+      },
+      {
+        "id": "shared-branch",
+        "cause": "The branch was rebased after being pushed.",
+        "fix": "Everyone who pulled now has divergent history. Coordinate before force-pushing.",
+        "confirm": ""
+      },
+      {
+        "id": "should-merge",
+        "cause": "Rebasing a long-lived branch.",
+        "fix": "Merge instead. Rebase suits short private branches.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The branch is in the state you intended.",
+      "git status is clean.",
+      "No shared history was rewritten without agreement."
+    ],
+    "escalate": [
+      "Whether a rebase is in progress",
+      "Reflog around the rebase",
+      "What the branch looked like before"
+    ]
   }
 ]

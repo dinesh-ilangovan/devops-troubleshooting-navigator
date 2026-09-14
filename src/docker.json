@@ -2160,5 +2160,509 @@
       "Whether the host resolves",
       "Whether a VPN is connected"
     ]
+  },
+  {
+    "id": "docker-compose-wrong-file",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Compose",
+    "title": "Compose runs the wrong file or wrong project",
+    "summary": "Changes have no effect, or containers appear under a name you did not expect.",
+    "aliases": [
+      "compose wrong file",
+      "project name",
+      "no such service",
+      "compose not picking up",
+      "override file",
+      "wrong compose"
+    ],
+    "source": "https://docs.docker.com/reference/compose-file/",
+    "inputs": [
+      {
+        "key": "service",
+        "label": "Service",
+        "example": "api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See which files and project Compose resolved",
+        "cmd": "docker compose config --no-interpolate | more",
+        "risk": "safe",
+        "look": "Compose merges several files silently. This shows the final result, which is often not what you assumed."
+      },
+      {
+        "title": "Check the project name",
+        "cmd": "docker compose ls",
+        "risk": "safe",
+        "look": "The project name defaults to the directory name. Two directories with the same name produce confusing collisions.",
+        "signals": [
+          {
+            "match": "\\w+\\s+running",
+            "means": "A project is running. Confirm it is the one you are editing.",
+            "goto": "cause:wrong-project"
+          }
+        ]
+      },
+      {
+        "title": "Check for an override file being picked up",
+        "cmd": "dir docker-compose*.y*ml compose*.y*ml",
+        "risk": "safe",
+        "look": "docker-compose.override.yml is merged automatically without being named. It is the most common source of unexpected behaviour."
+      },
+      {
+        "title": "Check which containers belong to this project",
+        "cmd": "docker ps --filter label=com.docker.compose.project",
+        "risk": "safe",
+        "look": "The project label on each container. Orphans from a renamed project keep running and confuse everything."
+      }
+    ],
+    "causes": [
+      {
+        "id": "override-merged",
+        "cause": "An override file is merged automatically.",
+        "fix": "Read it. Rename it if the merge is not wanted.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-project",
+        "cause": "The project name differs from what you expect.",
+        "fix": "Set it explicitly with -p or COMPOSE_PROJECT_NAME.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-directory",
+        "cause": "Running from a different directory.",
+        "fix": "Compose resolves relative paths from the invocation directory.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-containers",
+        "cause": "Containers from a previous project name still run.",
+        "fix": "docker compose down in the old project, or remove them by label.",
+        "confirm": ""
+      },
+      {
+        "id": "env-file-missing",
+        "cause": "A .env file in another directory is not read.",
+        "fix": "Compose reads .env from the working directory only.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "docker compose config shows what you intend.",
+      "Containers carry the expected project label.",
+      "Changes take effect on up."
+    ],
+    "escalate": [
+      "Output of docker compose config",
+      "The resolved project name",
+      "Which compose files exist in the directory"
+    ]
+  },
+  {
+    "id": "docker-time-drift-container",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "title": "Container clock or timezone is wrong",
+    "summary": "Logs have the wrong timestamps, or certificate and token validation fails inside the container.",
+    "aliases": [
+      "container time wrong",
+      "timezone container",
+      "utc container",
+      "clock skew container",
+      "wrong timestamp logs",
+      "tz docker"
+    ],
+    "source": "https://docs.docker.com/reference/dockerfile/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Compare container time against the host",
+        "cmd": "docker exec {container} date && date",
+        "risk": "safe",
+        "look": "A timezone difference is expected and usually harmless. An actual clock difference is a real problem.",
+        "signals": [
+          {
+            "match": "UTC",
+            "means": "The container is on UTC, which is the correct default. Only the display differs.",
+            "goto": "cause:tz-display"
+          }
+        ]
+      },
+      {
+        "title": "Check the timezone configuration inside",
+        "cmd": "docker exec {container} sh -c \"cat /etc/timezone 2>/dev/null; echo TZ=$TZ\"",
+        "risk": "safe",
+        "look": "Most base images are UTC with no TZ set. Applications that format local times will show UTC unless told otherwise."
+      },
+      {
+        "title": "Check whether the host itself drifted",
+        "cmd": "w32tm /query /status",
+        "risk": "safe",
+        "look": "Containers inherit the host kernel's clock. If the host is wrong, every container is wrong and fixing the container achieves nothing."
+      },
+      {
+        "title": "Check for VM suspend on Docker Desktop",
+        "cmd": "docker run --rm alpine date",
+        "risk": "safe",
+        "look": "After a laptop sleeps, the Docker Desktop VM clock can lag until it resyncs. A fresh container shows the VM's current view."
+      }
+    ],
+    "causes": [
+      {
+        "id": "tz-display",
+        "cause": "Only the timezone display differs.",
+        "fix": "Set the TZ environment variable if local time matters. Storing UTC and formatting at the edge is better practice.",
+        "confirm": ""
+      },
+      {
+        "id": "host-drift",
+        "cause": "The host clock is wrong.",
+        "fix": "Fix time sync on the host. Containers cannot have a different clock from the kernel.",
+        "confirm": ""
+      },
+      {
+        "id": "vm-suspend",
+        "cause": "The Docker Desktop VM clock lagged after sleep.",
+        "fix": "Restart Docker Desktop. It resyncs on start.",
+        "confirm": ""
+      },
+      {
+        "id": "no-tzdata",
+        "cause": "The image has no timezone database.",
+        "fix": "Install tzdata if the application needs named zones. Alpine omits it by default.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Container time matches the host.",
+      "Timestamps in logs are correct.",
+      "Certificate and token validation succeeds."
+    ],
+    "escalate": [
+      "date inside and outside the container",
+      "TZ setting inside",
+      "Host time sync status"
+    ]
+  },
+  {
+    "id": "docker-multistage-artifact-missing",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Build & Cache",
+    "title": "Final image is missing the built artifact",
+    "summary": "The build succeeds but the runtime image does not contain what the build stage produced.",
+    "aliases": [
+      "copy from not found",
+      "artifact missing",
+      "multistage copy",
+      "file missing final image",
+      "build output missing",
+      "stage not found"
+    ],
+    "source": "https://docs.docker.com/build/building/multi-stage/",
+    "inputs": [
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check what the final image contains",
+        "cmd": "docker run --rm --entrypoint ls {image} -la /app",
+        "risk": "safe",
+        "look": "Whether the artifact is there. An empty directory means the COPY --from did not bring what you expected."
+      },
+      {
+        "title": "Check what the build stage produced",
+        "cmd": "docker build --target build -t tmp-build . && docker run --rm --entrypoint ls tmp-build -la /app",
+        "risk": "safe",
+        "look": "Building only the earlier stage lets you inspect it directly. The path there must match the COPY source exactly."
+      },
+      {
+        "title": "Check the stage names match",
+        "cmd": "findstr /C:\"AS \" /C:\"--from\" Dockerfile",
+        "risk": "safe",
+        "look": "Stage names are case-sensitive. A --from referring to a nonexistent stage is treated as an external image and silently pulls instead.",
+        "signals": [
+          {
+            "match": "--from=\\d",
+            "means": "Referring to a stage by index. Fragile — any reorder breaks it silently.",
+            "goto": "cause:index-reference"
+          }
+        ]
+      },
+      {
+        "title": "Check the working directory in each stage",
+        "cmd": "findstr /C:\"WORKDIR\" Dockerfile",
+        "risk": "safe",
+        "look": "WORKDIR does not carry between stages. A relative COPY source resolves differently than you might assume."
+      }
+    ],
+    "causes": [
+      {
+        "id": "wrong-path",
+        "cause": "The source path does not exist in the earlier stage.",
+        "fix": "Build with --target and inspect. Use absolute paths in COPY --from.",
+        "confirm": ""
+      },
+      {
+        "id": "stage-name-typo",
+        "cause": "The stage name does not match.",
+        "fix": "Names are case-sensitive. A typo makes Docker treat it as an image name and pull it.",
+        "confirm": ""
+      },
+      {
+        "id": "index-reference",
+        "cause": "Referring to a stage by number.",
+        "fix": "Name your stages. Index references break silently when stages are reordered.",
+        "confirm": ""
+      },
+      {
+        "id": "workdir-reset",
+        "cause": "WORKDIR does not persist across stages.",
+        "fix": "Use absolute paths.",
+        "confirm": ""
+      },
+      {
+        "id": "build-failed-silently",
+        "cause": "The build step produced nothing but exited zero.",
+        "fix": "Add a check in the build stage that fails if the artifact is absent.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The artifact is present in the final image.",
+      "The container starts and finds it.",
+      "The build fails loudly if the artifact goes missing."
+    ],
+    "escalate": [
+      "Listing of the expected path in the final image",
+      "Listing from the build stage",
+      "The COPY --from lines"
+    ]
+  },
+  {
+    "id": "docker-container-cannot-reach-host",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Networking & DNS",
+    "title": "Container cannot reach a service on the host machine",
+    "summary": "Connecting to localhost from inside a container reaches the container, not the host.",
+    "aliases": [
+      "cannot reach host",
+      "host.docker.internal",
+      "localhost inside container",
+      "connection refused host",
+      "container to host",
+      "127.0.0.1 container"
+    ],
+    "source": "https://docs.docker.com/desktop/features/networking/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      },
+      {
+        "key": "port",
+        "label": "Host port",
+        "example": "5432"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm what localhost means inside the container",
+        "cmd": "docker exec {container} sh -c \"getent hosts localhost; getent hosts host.docker.internal\"",
+        "risk": "safe",
+        "look": "Inside a container, localhost is the container itself. Reaching the host needs a different name entirely.",
+        "signals": [
+          {
+            "match": "host.docker.internal",
+            "means": "The special host alias resolves. Use it instead of localhost.",
+            "goto": "cause:use-host-internal"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "The alias does not resolve, so it is not configured on this platform.",
+            "goto": "cause:alias-missing"
+          }
+        ]
+      },
+      {
+        "title": "Check the host service is listening on all interfaces",
+        "cmd": "netstat -ano | findstr :{port}",
+        "risk": "safe",
+        "look": "A host service bound to 127.0.0.1 is unreachable from containers. It must bind 0.0.0.0 or the Docker bridge address."
+      },
+      {
+        "title": "Test from inside the container",
+        "cmd": "docker exec {container} sh -c \"nc -zv host.docker.internal {port} 2>&1 || echo FAIL\"",
+        "risk": "safe",
+        "look": "Whether the path works. FAIL with the host listening on 0.0.0.0 points at the firewall."
+      },
+      {
+        "title": "Check the Windows firewall",
+        "cmd": "netsh advfirewall firewall show rule name=all | findstr /C:\"{port}\"",
+        "risk": "safe",
+        "look": "Windows Defender frequently blocks the Docker bridge reaching host ports, and it does so silently."
+      }
+    ],
+    "causes": [
+      {
+        "id": "use-host-internal",
+        "cause": "localhost inside a container is the container.",
+        "fix": "Use host.docker.internal on Docker Desktop. On Linux add --add-host=host.docker.internal:host-gateway.",
+        "confirm": ""
+      },
+      {
+        "id": "bound-loopback",
+        "cause": "The host service listens only on 127.0.0.1.",
+        "fix": "Bind it to 0.0.0.0. Nothing outside the host can reach a loopback-only service.",
+        "confirm": ""
+      },
+      {
+        "id": "firewall",
+        "cause": "The host firewall blocks the bridge.",
+        "fix": "Allow inbound on that port from the Docker network range.",
+        "confirm": ""
+      },
+      {
+        "id": "alias-missing",
+        "cause": "host.docker.internal is not available.",
+        "fix": "On Linux it must be added explicitly at run time.",
+        "confirm": ""
+      },
+      {
+        "id": "should-be-container",
+        "cause": "The dependency should run in a container too.",
+        "fix": "Put both on a user-defined network and use the service name.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The container reaches the host service.",
+      "It works after both are restarted.",
+      "The approach is recorded in the compose file."
+    ],
+    "escalate": [
+      "What localhost and host.docker.internal resolve to",
+      "What the host service binds to",
+      "Firewall rules for the port"
+    ]
+  },
+  {
+    "id": "docker-env-not-passed",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "title": "Environment variable is empty inside the container",
+    "summary": "The app behaves as if unconfigured because a variable never reached it.",
+    "aliases": [
+      "env not set",
+      "environment variable empty",
+      "env missing container",
+      "variable not passed",
+      "docker -e not working"
+    ],
+    "source": "https://docs.docker.com/reference/cli/docker/container/run/#env",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      },
+      {
+        "key": "var",
+        "label": "Variable",
+        "example": "DATABASE_URL"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check what the container actually has",
+        "cmd": "docker exec {container} printenv {var}",
+        "risk": "safe",
+        "look": "Empty output means it was never set. This is the ground truth and everything else is a theory.",
+        "signals": [
+          {
+            "match": "^\\s*$",
+            "means": "The variable is absent inside the container.",
+            "goto": "step:2"
+          }
+        ]
+      },
+      {
+        "title": "Check what was passed at creation",
+        "cmd": "docker inspect {container} --format '{{json .Config.Env}}'",
+        "risk": "safe",
+        "look": "Environment is fixed when the container is created. Changing the compose file afterwards has no effect until the container is recreated."
+      },
+      {
+        "title": "Check whether the shell expanded it before Docker saw it",
+        "cmd": "echo $env:{var}",
+        "risk": "safe",
+        "look": "Passing -e VAR without a value forwards the shell's value. If the shell does not have it, Docker receives nothing."
+      },
+      {
+        "title": "Recreate the container to pick up new values",
+        "cmd": "docker compose up -d --force-recreate {container}",
+        "risk": "state",
+        "look": "The new container has the variable. Confirm with printenv.",
+        "note": "Destroys and recreates the container. Anything written inside it but not to a volume is lost, and there is a brief outage while it restarts. Check what is mounted before running this."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-recreated",
+        "cause": "The container predates the change.",
+        "fix": "Environment is set at creation. Recreate it.",
+        "confirm": ""
+      },
+      {
+        "id": "shell-not-set",
+        "cause": "-e VAR relied on a shell value that was empty.",
+        "fix": "Pass -e VAR=value explicitly, or set it in the shell first.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-case",
+        "cause": "The name differs in case.",
+        "fix": "Environment variable names are case-sensitive on Linux.",
+        "confirm": ""
+      },
+      {
+        "id": "dockerfile-overwritten",
+        "cause": "An ENV in the Dockerfile sets it after your value.",
+        "fix": "Runtime -e wins over ENV, but a later ENTRYPOINT script can overwrite it.",
+        "confirm": ""
+      },
+      {
+        "id": "entrypoint-clears",
+        "cause": "The entrypoint script resets the variable.",
+        "fix": "Read the entrypoint. Some images normalise their environment on start.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "printenv shows the value inside the container.",
+      "The application behaves as configured.",
+      "The value is in the compose file, not typed by hand."
+    ],
+    "escalate": [
+      "printenv result",
+      "Config.Env from inspect",
+      "How the variable was passed"
+    ]
   }
 ]

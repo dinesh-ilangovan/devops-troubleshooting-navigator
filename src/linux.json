@@ -1747,5 +1747,417 @@
       "The login shell",
       "Relevant auth.log lines"
     ]
+  },
+  {
+    "id": "linux-service-slow-start",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "systemd",
+    "title": "Service takes a very long time to start or stop",
+    "summary": "Boot or shutdown hangs on one unit, often for a fixed timeout.",
+    "aliases": [
+      "service slow",
+      "job running for",
+      "timeout stopping",
+      "boot slow",
+      "a stop job is running",
+      "systemd hangs"
+    ],
+    "source": "https://man7.org/linux/man-pages/man5/systemd.service.5.html",
+    "inputs": [
+      {
+        "key": "unit",
+        "label": "Unit",
+        "example": "checkout-api.service"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Find what is slow at boot",
+        "cmd": "systemd-analyze blame | head -10",
+        "risk": "safe",
+        "look": "Time taken per unit. One unit taking exactly ninety seconds is a timeout, not slow work.",
+        "signals": [
+          {
+            "match": "1min 30|90\\.\\d+s",
+            "means": "Exactly the default timeout. Something is waiting and failing rather than working.",
+            "goto": "cause:timeout-hit"
+          }
+        ]
+      },
+      {
+        "title": "Check the critical chain",
+        "cmd": "systemd-analyze critical-chain {unit}",
+        "risk": "safe",
+        "look": "What this unit waits for. A dependency that is itself slow accounts for most apparent slowness."
+      },
+      {
+        "title": "Check the timeout settings",
+        "cmd": "systemctl show {unit} -p TimeoutStartUSec -p TimeoutStopUSec -p Type",
+        "risk": "safe",
+        "look": "Type notify with an app that never signals readiness always waits the full timeout, then is killed. That mismatch is the classic cause."
+      },
+      {
+        "title": "Read what it was doing",
+        "cmd": "journalctl -u {unit} -b --no-pager | tail -40",
+        "risk": "safe",
+        "look": "The unit's own output during the slow period. Usually a network wait or a DNS lookup that eventually times out."
+      }
+    ],
+    "causes": [
+      {
+        "id": "timeout-hit",
+        "cause": "The unit hits its start or stop timeout.",
+        "fix": "Find what it waits for. Raising the timeout hides the problem rather than fixing it.",
+        "confirm": ""
+      },
+      {
+        "id": "type-mismatch",
+        "cause": "Type notify or forking but the app does not behave that way.",
+        "fix": "Use Type=simple for a foreground process. This is the most common systemd misconfiguration.",
+        "confirm": ""
+      },
+      {
+        "id": "network-wait",
+        "cause": "Waiting on network-online.target.",
+        "fix": "Only order after it if genuinely required. Most services can start and retry.",
+        "confirm": ""
+      },
+      {
+        "id": "dns-timeout",
+        "cause": "A DNS lookup at startup times out.",
+        "fix": "Fix resolution, or make the lookup lazy.",
+        "confirm": ""
+      },
+      {
+        "id": "no-sigterm-handler",
+        "cause": "The process ignores SIGTERM, so stop waits the full timeout.",
+        "fix": "Handle SIGTERM in the application.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The unit starts and stops promptly.",
+      "systemd-analyze blame shows no outlier.",
+      "The cause was fixed rather than the timeout raised."
+    ],
+    "escalate": [
+      "systemd-analyze blame output",
+      "The critical chain",
+      "Unit Type and timeout settings"
+    ]
+  },
+  {
+    "id": "linux-permission-denied-execute",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Access",
+    "title": "Permission denied running a script or binary",
+    "summary": "The file exists and looks right but will not run.",
+    "aliases": [
+      "permission denied",
+      "cannot execute",
+      "bad interpreter",
+      "not executable",
+      "exec format error",
+      "command not found script"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/chmod.1.html",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "File",
+        "example": "/opt/app/deploy.sh"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the exact error",
+        "cmd": "{file}",
+        "risk": "safe",
+        "look": "Permission denied, bad interpreter and not found are three different problems that all look like the script being broken.",
+        "signals": [
+          {
+            "match": "Permission denied",
+            "means": "The execute bit is missing, or the filesystem is mounted noexec.",
+            "goto": "cause:no-exec-bit"
+          },
+          {
+            "match": "bad interpreter",
+            "means": "The shebang points at something that does not exist, often because of CRLF line endings.",
+            "goto": "cause:bad-shebang"
+          },
+          {
+            "match": "cannot execute binary file",
+            "means": "Wrong architecture for this machine.",
+            "goto": "cause:wrong-arch"
+          }
+        ]
+      },
+      {
+        "title": "Check the permissions and ownership",
+        "cmd": "ls -l {file}",
+        "risk": "safe",
+        "look": "The x bits and the owner. A file owned by root with 700 is unrunnable by anyone else, which is easy to miss."
+      },
+      {
+        "title": "Check the interpreter line",
+        "cmd": "head -1 {file} | cat -A",
+        "risk": "safe",
+        "look": "cat -A reveals a trailing ^M, which is a Windows CRLF ending. That makes the interpreter path invalid and produces bad interpreter."
+      },
+      {
+        "title": "Check whether the filesystem forbids execution",
+        "cmd": "findmnt -T {file} -o TARGET,OPTIONS",
+        "risk": "safe",
+        "look": "A noexec mount option blocks execution regardless of permissions. Common on /tmp and on some hardened mounts."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-exec-bit",
+        "cause": "The execute bit is not set.",
+        "fix": "chmod +x. If it came from a Windows checkout, set it in Git too with update-index --chmod=+x.",
+        "confirm": ""
+      },
+      {
+        "id": "bad-shebang",
+        "cause": "The shebang is invalid, usually CRLF endings.",
+        "fix": "Convert to LF. Add the pattern to .gitattributes so it does not recur.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-arch",
+        "cause": "The binary is for a different architecture.",
+        "fix": "Get the right build. Check with the file command.",
+        "confirm": ""
+      },
+      {
+        "id": "noexec-mount",
+        "cause": "The filesystem is mounted noexec.",
+        "fix": "Move the file elsewhere. Remounting is usually the wrong answer.",
+        "confirm": ""
+      },
+      {
+        "id": "not-owner",
+        "cause": "The permissions exclude your user.",
+        "fix": "Check ownership and group. Adding yourself to a group needs a new session.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The script runs.",
+      "It runs for the intended user.",
+      "The permission is recorded in Git so it survives a fresh checkout."
+    ],
+    "escalate": [
+      "The exact error",
+      "ls -l output",
+      "The shebang shown with cat -A",
+      "Mount options"
+    ]
+  },
+  {
+    "id": "linux-log-not-rotating",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Storage",
+    "title": "Log files grow until the disk fills",
+    "summary": "Rotation is configured but not happening, or not happening often enough.",
+    "aliases": [
+      "logs not rotating",
+      "logrotate not working",
+      "log file huge",
+      "disk full logs",
+      "logrotate",
+      "journal too big"
+    ],
+    "source": "https://man7.org/linux/man-pages/man8/logrotate.8.html",
+    "inputs": [
+      {
+        "key": "logfile",
+        "label": "Log file",
+        "example": "/var/log/app/app.log"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the file size and rotation state",
+        "cmd": "ls -lh {logfile}* && cat /var/lib/logrotate/status 2>/dev/null | grep app",
+        "risk": "safe",
+        "look": "Whether rotated copies exist and when rotation last ran for this file. No entry means logrotate has never processed it."
+      },
+      {
+        "title": "Test the configuration without changing anything",
+        "cmd": "sudo logrotate -d /etc/logrotate.conf 2>&1 | grep -A5 {logfile}",
+        "risk": "safe",
+        "look": "Debug mode shows what logrotate would do and why it would skip. This is the fastest way to find the problem.",
+        "signals": [
+          {
+            "match": "(?:does not need rotating)",
+            "means": "Conditions are not met yet. Check size and time settings.",
+            "goto": "cause:conditions-not-met"
+          },
+          {
+            "match": "(?:skipping|error)",
+            "means": "A configuration or permission problem prevents rotation.",
+            "goto": "cause:config-error"
+          }
+        ]
+      },
+      {
+        "title": "Check the timer is running",
+        "cmd": "systemctl status logrotate.timer",
+        "risk": "safe",
+        "look": "logrotate runs from a timer. A disabled timer means it never runs at all, whatever the config says."
+      },
+      {
+        "title": "Check the journal's own size separately",
+        "cmd": "journalctl --disk-usage",
+        "risk": "safe",
+        "look": "The systemd journal is not managed by logrotate. It has its own size limits in journald.conf and is a common cause of a full /var."
+      }
+    ],
+    "causes": [
+      {
+        "id": "conditions-not-met",
+        "cause": "The size or time threshold is not reached.",
+        "fix": "Lower it, or add a size directive if only daily is set.",
+        "confirm": ""
+      },
+      {
+        "id": "timer-disabled",
+        "cause": "The logrotate timer is not running.",
+        "fix": "Enable and start it.",
+        "confirm": ""
+      },
+      {
+        "id": "config-error",
+        "cause": "A configuration error stops rotation.",
+        "fix": "The debug output names it. Wrong permissions on the directory are common.",
+        "confirm": ""
+      },
+      {
+        "id": "app-holds-handle",
+        "cause": "The application keeps writing to the rotated file.",
+        "fix": "Use copytruncate, or send the app a signal in postrotate so it reopens.",
+        "confirm": ""
+      },
+      {
+        "id": "journal-unbounded",
+        "cause": "The systemd journal has no size cap.",
+        "fix": "Set SystemMaxUse in journald.conf.",
+        "confirm": ""
+      },
+      {
+        "id": "should-be-stdout",
+        "cause": "The application writes its own log files.",
+        "fix": "Log to stdout and let the platform handle it. Simpler everywhere.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Old logs are rotated and compressed.",
+      "Disk usage is stable.",
+      "The application keeps writing after rotation."
+    ],
+    "escalate": [
+      "File sizes and rotation state",
+      "logrotate debug output",
+      "Whether the timer is active"
+    ]
+  },
+  {
+    "id": "linux-swap-thrashing",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Memory",
+    "title": "System is slow and swapping heavily",
+    "summary": "Everything crawls. Memory pressure is pushing active pages to disk.",
+    "aliases": [
+      "swapping",
+      "thrashing",
+      "system slow memory",
+      "high swap usage",
+      "swap full",
+      "si so high"
+    ],
+    "source": "https://man7.org/linux/man-pages/man8/vmstat.8.html",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check swap activity rather than swap usage",
+        "cmd": "vmstat 2 5",
+        "risk": "safe",
+        "look": "The si and so columns. Sustained non-zero values mean active thrashing. Swap merely being used is normal and harmless.",
+        "signals": [
+          {
+            "match": "\\s[1-9]\\d*\\s+[1-9]\\d*\\s",
+            "means": "Sustained swap in and out. This is thrashing and it is the cause of the slowness.",
+            "goto": "cause:thrashing"
+          }
+        ]
+      },
+      {
+        "title": "See the memory picture",
+        "cmd": "free -h",
+        "risk": "safe",
+        "look": "available, not free. Low available with high swap used means genuine pressure rather than the kernel being efficient."
+      },
+      {
+        "title": "Find which processes are swapped",
+        "cmd": "for p in /proc/[0-9]*; do awk '/VmSwap/{print $2, FILENAME}' $p/status 2>/dev/null; done | sort -rn | head -10",
+        "risk": "safe",
+        "look": "Swap usage per process. The biggest one is usually the cause rather than the victim."
+      },
+      {
+        "title": "Check the swappiness setting",
+        "cmd": "sysctl vm.swappiness",
+        "risk": "safe",
+        "look": "Higher values swap more eagerly. On a server with enough RAM, a low value is usually preferable, but it is not a fix for genuine shortage."
+      }
+    ],
+    "causes": [
+      {
+        "id": "thrashing",
+        "cause": "Active pages are being swapped continuously.",
+        "fix": "Reduce memory demand or add RAM. Nothing else resolves genuine thrashing.",
+        "confirm": ""
+      },
+      {
+        "id": "one-process",
+        "cause": "One process dominates memory.",
+        "fix": "Limit it with a cgroup or fix the leak.",
+        "confirm": ""
+      },
+      {
+        "id": "swappiness-high",
+        "cause": "The kernel swaps too eagerly.",
+        "fix": "Lower vm.swappiness. Helps only when there is enough RAM overall.",
+        "confirm": ""
+      },
+      {
+        "id": "no-swap-worse",
+        "cause": "Removing swap seems tempting.",
+        "fix": "Without swap the OOM killer acts instead. Swap gives the kernel room to reclaim.",
+        "confirm": ""
+      },
+      {
+        "id": "normal-usage",
+        "cause": "Swap is used but si and so are zero.",
+        "fix": "Nothing is wrong. Idle pages in swap are the kernel doing its job.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "si and so return to zero under normal load.",
+      "available memory is healthy.",
+      "Response times are back to baseline."
+    ],
+    "escalate": [
+      "vmstat output over a minute",
+      "free -h",
+      "Per-process swap usage"
+    ]
   }
 ]

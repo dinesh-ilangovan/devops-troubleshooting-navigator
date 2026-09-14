@@ -2805,5 +2805,648 @@
       "Whether the container has started",
       "Whether the app logs to stdout"
     ]
+  },
+  {
+    "id": "k8s-secret-not-found",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "title": "Pod fails because a Secret or ConfigMap is missing",
+    "summary": "The pod cannot start because a referenced Secret or ConfigMap does not exist in this namespace.",
+    "aliases": [
+      "secret not found",
+      "configmap not found",
+      "createcontainerconfigerror",
+      "couldn't find key",
+      "optional false",
+      "missing secret"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/configuration/secret/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the config error",
+        "cmd": "kubectl describe pod {pod} -n {namespace} | findstr /C:\"Error\" /C:\"Warning\"",
+        "risk": "safe",
+        "look": "CreateContainerConfigError names the exact object and key. This is the whole answer most of the time.",
+        "signals": [
+          {
+            "match": "secret .* not found",
+            "means": "The Secret does not exist in this namespace.",
+            "goto": "cause:missing-object"
+          },
+          {
+            "match": "configmap .* not found",
+            "means": "The ConfigMap does not exist in this namespace.",
+            "goto": "cause:missing-object"
+          },
+          {
+            "match": "couldn't find key",
+            "means": "The object exists but the specific key does not.",
+            "goto": "cause:missing-key"
+          }
+        ]
+      },
+      {
+        "title": "Check the object exists here",
+        "cmd": "kubectl get secret,configmap -n {namespace}",
+        "risk": "safe",
+        "look": "Secrets and ConfigMaps are namespaced. An object in another namespace is invisible, which is the most common cause after a copy-paste between environments."
+      },
+      {
+        "title": "Check the key name inside it",
+        "cmd": "kubectl get secret <name> -n {namespace} -o jsonpath='{.data}'",
+        "risk": "safe",
+        "look": "The key names, not the values. Key names are case-sensitive and a hyphen against an underscore is enough to fail."
+      },
+      {
+        "title": "Check what the pod is asking for",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].envFrom}{.spec.containers[*].env}'",
+        "risk": "safe",
+        "look": "Compare the requested names against what exists. Marking a reference optional lets the pod start without it, which may or may not be what you want."
+      }
+    ],
+    "causes": [
+      {
+        "id": "missing-object",
+        "cause": "The Secret or ConfigMap does not exist in this namespace.",
+        "fix": "Create it here. Objects do not cross namespaces.",
+        "confirm": ""
+      },
+      {
+        "id": "missing-key",
+        "cause": "The object exists but lacks the key.",
+        "fix": "Check spelling and case. Base64 encoding hides typos in values but not in key names.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-namespace",
+        "cause": "It exists in a different namespace.",
+        "fix": "Copy it, or use an operator that replicates it deliberately.",
+        "confirm": ""
+      },
+      {
+        "id": "not-optional",
+        "cause": "The reference is required and absent.",
+        "fix": "Either create the object or mark the reference optional if the app can run without it.",
+        "confirm": ""
+      },
+      {
+        "id": "deleted-by-prune",
+        "cause": "A GitOps prune removed it.",
+        "fix": "Ensure it is managed in Git, or excluded from pruning if managed elsewhere.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The pod starts.",
+      "The environment inside the container has the expected values."
+    ],
+    "escalate": [
+      "The CreateContainerConfigError message",
+      "What exists in the namespace",
+      "Which keys the pod requests"
+    ]
+  },
+  {
+    "id": "k8s-hostport-conflict",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "title": "Pod cannot schedule due to a host port conflict",
+    "summary": "Only one pod per node can bind a given hostPort, so replicas collide.",
+    "aliases": [
+      "hostport conflict",
+      "node ports conflict",
+      "didn't have free ports",
+      "hostport",
+      "port taken node",
+      "cannot schedule port"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/services-networking/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the scheduling reason",
+        "cmd": "kubectl get event -n {namespace} --field-selector reason=FailedScheduling -o jsonpath='{.items[-1:].message}'",
+        "risk": "safe",
+        "look": "A message about free ports means hostPort, not resources. That distinction saves a lot of wasted investigation.",
+        "signals": [
+          {
+            "match": "didn't have free ports",
+            "means": "A hostPort is already taken on every candidate node.",
+            "goto": "cause:hostport-used"
+          },
+          {
+            "match": "node\\(s\\) didn't match",
+            "means": "A selector is also narrowing the candidates.",
+            "goto": "cause:few-nodes"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the pod declares a hostPort",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].ports}'",
+        "risk": "safe",
+        "look": "hostPort binds the node's own port. Replicas exceeding the node count can never all be placed."
+      },
+      {
+        "title": "Find what already holds it",
+        "cmd": "kubectl get pods -A -o wide | findstr /R \"[0-9]\" && kubectl get ds -A",
+        "risk": "safe",
+        "look": "Every pod using a hostPort cluster-wide. Usually a DaemonSet already occupies it."
+      },
+      {
+        "title": "Count schedulable nodes",
+        "cmd": "kubectl get nodes --no-headers | measure-object -line",
+        "risk": "safe",
+        "look": "Replicas using hostPort cannot exceed the node count. That is a hard ceiling."
+      }
+    ],
+    "causes": [
+      {
+        "id": "hostport-used",
+        "cause": "Another pod holds that host port on every node.",
+        "fix": "Drop hostPort and use a Service. hostPort is rarely the right tool outside DaemonSets.",
+        "confirm": ""
+      },
+      {
+        "id": "too-many-replicas",
+        "cause": "More replicas than nodes.",
+        "fix": "hostPort caps replicas at one per node.",
+        "confirm": ""
+      },
+      {
+        "id": "few-nodes",
+        "cause": "Selectors narrow the candidate nodes further.",
+        "fix": "Widen the selector or add nodes.",
+        "confirm": ""
+      },
+      {
+        "id": "daemonset-holds",
+        "cause": "A DaemonSet already binds the port.",
+        "fix": "Pick a different port, or reconsider the design.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The pod is scheduled.",
+      "The chosen approach scales past one pod per node."
+    ],
+    "escalate": [
+      "The FailedScheduling message",
+      "The pod's port declarations",
+      "What else uses that hostPort"
+    ]
+  },
+  {
+    "id": "k8s-cannot-exec",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Access & RBAC",
+    "title": "kubectl exec fails",
+    "summary": "You cannot get a shell in a running pod.",
+    "aliases": [
+      "cannot exec",
+      "exec failed",
+      "OCI runtime exec failed",
+      "executable file not found",
+      "unable to upgrade connection",
+      "no shell in container"
+    ],
+    "source": "https://kubernetes.io/docs/tasks/debug/debug-application/get-shell-running-container/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the exec failure",
+        "cmd": "kubectl exec -it {pod} -n {namespace} -- sh",
+        "risk": "safe",
+        "look": "The wording separates a missing shell from a permissions problem from a connection problem.",
+        "signals": [
+          {
+            "match": "executable file not found",
+            "means": "The image has no shell. Distroless and scratch images contain nothing but the binary.",
+            "goto": "cause:no-shell"
+          },
+          {
+            "match": "unable to upgrade connection",
+            "means": "The API server cannot reach the kubelet.",
+            "goto": "cause:kubelet-unreachable"
+          },
+          {
+            "match": "forbidden",
+            "means": "RBAC does not permit exec on pods.",
+            "goto": "cause:rbac"
+          },
+          {
+            "match": "container not found",
+            "means": "The pod has several containers and none was named.",
+            "goto": "cause:multi-container"
+          }
+        ]
+      },
+      {
+        "title": "Check the pod is actually running",
+        "cmd": "kubectl get pod {pod} -n {namespace}",
+        "risk": "safe",
+        "look": "You cannot exec into a pod that is not Running. Terminating or Pending pods have no process to attach to."
+      },
+      {
+        "title": "Try other shells the image might have",
+        "cmd": "kubectl exec -it {pod} -n {namespace} -- /bin/bash",
+        "risk": "safe",
+        "look": "Alpine has sh but not bash. Some images have neither, which is a deliberate hardening choice."
+      },
+      {
+        "title": "Attach a debug container instead",
+        "cmd": "kubectl debug {pod} -n {namespace} -it --image=busybox --target=<container>",
+        "risk": "state",
+        "look": "A shell with the target container's namespaces. The original container is untouched.",
+        "note": "Adds an ephemeral container to the running pod. The pod is not restarted and the application keeps serving, but the container persists for the pod's lifetime and shares its namespaces, so it can see the application's processes and network. On a cluster with admission policies this may be blocked or audited."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-shell",
+        "cause": "The image contains no shell.",
+        "fix": "Use kubectl debug with an ephemeral container. Do not add a shell to a hardened image just for debugging.",
+        "confirm": ""
+      },
+      {
+        "id": "multi-container",
+        "cause": "The pod has several containers.",
+        "fix": "Name one with -c.",
+        "confirm": ""
+      },
+      {
+        "id": "rbac",
+        "cause": "You lack pods/exec permission.",
+        "fix": "Grant it. exec is a separate RBAC subresource from get.",
+        "confirm": ""
+      },
+      {
+        "id": "kubelet-unreachable",
+        "cause": "The API server cannot reach the kubelet.",
+        "fix": "A node or network problem. Check node status.",
+        "confirm": ""
+      },
+      {
+        "id": "not-running",
+        "cause": "The pod is not in Running state.",
+        "fix": "There is no process to attach to yet.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "You get a shell, or a debug container attached.",
+      "The original container was not modified."
+    ],
+    "escalate": [
+      "The exec error verbatim",
+      "Pod state and container names",
+      "Whether the image has a shell"
+    ]
+  },
+  {
+    "id": "k8s-endpoints-flapping",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Services & Networking",
+    "title": "Service endpoints keep appearing and disappearing",
+    "summary": "Intermittent 502s because pods flap in and out of the Service.",
+    "aliases": [
+      "endpoints flapping",
+      "intermittent 502",
+      "pods flapping ready",
+      "readiness flapping",
+      "service unstable",
+      "random errors service"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/services-networking/service/",
+    "inputs": [
+      {
+        "key": "service",
+        "label": "Service",
+        "example": "checkout-api"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Watch the endpoints change",
+        "cmd": "kubectl get endpointslices -n {namespace} -l kubernetes.io/service-name={service} -w",
+        "risk": "safe",
+        "look": "Whether addresses come and go. A stable list means the problem is elsewhere; a changing one confirms flapping."
+      },
+      {
+        "title": "Check readiness transitions on the pods",
+        "cmd": "kubectl get events -n {namespace} --field-selector reason=Unhealthy --sort-by=.lastTimestamp",
+        "risk": "safe",
+        "look": "Repeated Unhealthy events mean the readiness probe is failing intermittently, which is the usual cause.",
+        "signals": [
+          {
+            "match": "Readiness probe failed",
+            "means": "Readiness is flapping, so pods leave and rejoin the Service.",
+            "goto": "cause:probe-flapping"
+          }
+        ]
+      },
+      {
+        "title": "Check whether restarts are occurring",
+        "cmd": "kubectl get pods -n {namespace} -l app={service}",
+        "risk": "safe",
+        "look": "Climbing RESTARTS means liveness is killing containers, which is a stronger problem than readiness flapping."
+      },
+      {
+        "title": "Check resource pressure on the pods",
+        "cmd": "kubectl top pods -n {namespace} -l app={service}",
+        "risk": "safe",
+        "look": "CPU at the limit causes throttling, which makes probes time out. That is the most common hidden cause of flapping."
+      }
+    ],
+    "causes": [
+      {
+        "id": "probe-flapping",
+        "cause": "Readiness fails intermittently.",
+        "fix": "Raise timeoutSeconds and failureThreshold. The probe should not be as slow as a real request.",
+        "confirm": ""
+      },
+      {
+        "id": "cpu-throttling",
+        "cause": "CPU limits cause throttling under load.",
+        "fix": "Raise the limit. A throttled container fails probes even though it is healthy.",
+        "confirm": ""
+      },
+      {
+        "id": "probe-too-heavy",
+        "cause": "The readiness endpoint does real work.",
+        "fix": "Make it cheap. It should not query the database on every probe.",
+        "confirm": ""
+      },
+      {
+        "id": "gc-pauses",
+        "cause": "Garbage collection pauses exceed the probe timeout.",
+        "fix": "Tune the heap, or raise the timeout above the worst pause.",
+        "confirm": ""
+      },
+      {
+        "id": "liveness-restarts",
+        "cause": "Liveness is restarting containers.",
+        "fix": "Most services need only readiness. Liveness should detect deadlock, not slowness.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The endpoint list is stable over several minutes.",
+      "No Unhealthy events during normal load.",
+      "Error rate returns to baseline."
+    ],
+    "escalate": [
+      "Endpoint changes over time",
+      "Unhealthy events",
+      "CPU usage against limits"
+    ]
+  },
+  {
+    "id": "k8s-namespace-terminating",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "title": "Namespace stuck Terminating",
+    "summary": "Deleting a namespace hangs forever because something in it will not finalize.",
+    "aliases": [
+      "namespace terminating",
+      "namespace stuck",
+      "cannot delete namespace",
+      "finalizer namespace",
+      "namespace wont delete"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/",
+    "inputs": [
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the namespace conditions",
+        "cmd": "kubectl get namespace {namespace} -o jsonpath='{.status.conditions}'",
+        "risk": "safe",
+        "look": "The conditions name which resources cannot be removed. This is far more useful than the Terminating status alone.",
+        "signals": [
+          {
+            "match": "SomeResourcesRemain|ContentDeletionFailed",
+            "means": "Resources inside still exist and cannot be deleted.",
+            "goto": "cause:resources-remain"
+          },
+          {
+            "match": "DiscoveryFailed|ResourcesRemaining",
+            "means": "An API service backing a custom resource is unavailable.",
+            "goto": "cause:apiservice-down"
+          }
+        ]
+      },
+      {
+        "title": "Find what is still in it",
+        "cmd": "kubectl api-resources --verbs=list --namespaced -o name | ForEach-Object { kubectl get $_ -n {namespace} --ignore-not-found }",
+        "risk": "safe",
+        "look": "Everything remaining. Custom resources with finalizers are the usual blocker."
+      },
+      {
+        "title": "Check for unavailable API services",
+        "cmd": "kubectl get apiservice | findstr False",
+        "risk": "safe",
+        "look": "A broken aggregated API server blocks namespace deletion entirely, because Kubernetes cannot enumerate its resources."
+      },
+      {
+        "title": "Remove the finalizer from a blocking resource",
+        "cmd": "kubectl patch <kind> <name> -n {namespace} -p '{\"metadata\":{\"finalizers\":null}}' --type=merge",
+        "risk": "destructive",
+        "look": "The resource is deleted and the namespace proceeds. Check for orphaned cloud resources afterwards.",
+        "note": "Skips the cleanup that the owning controller was waiting to perform. For a resource representing cloud infrastructure, that infrastructure is orphaned and keeps costing money with nothing tracking it. Identify which controller owns the finalizer and why it is stuck before removing it."
+      }
+    ],
+    "causes": [
+      {
+        "id": "resources-remain",
+        "cause": "Resources with finalizers remain.",
+        "fix": "Find the owning controller. If it is gone, its finalizers will never be released and must be removed manually.",
+        "confirm": ""
+      },
+      {
+        "id": "apiservice-down",
+        "cause": "An aggregated API service is unavailable.",
+        "fix": "Fix or delete the APIService. Metrics-server and custom API servers commonly cause this.",
+        "confirm": ""
+      },
+      {
+        "id": "operator-gone",
+        "cause": "An operator that owned finalizers was uninstalled.",
+        "fix": "Remove its finalizers. Uninstalling an operator before its resources is the usual sequence error.",
+        "confirm": ""
+      },
+      {
+        "id": "webhook-blocking",
+        "cause": "A webhook rejects the deletion.",
+        "fix": "Check failurePolicy. A webhook pointing at a deleted service blocks everything.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The namespace is gone.",
+      "No orphaned cloud resources remain.",
+      "The root cause was addressed rather than forced past."
+    ],
+    "escalate": [
+      "Namespace conditions",
+      "What resources remain",
+      "Whether any APIService is unavailable"
+    ]
+  },
+  {
+    "id": "k8s-image-pull-slow",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Pods & Containers",
+    "title": "Pods take a very long time to start pulling images",
+    "summary": "Deployments crawl because image pulls dominate startup time.",
+    "aliases": [
+      "slow image pull",
+      "pulling image slow",
+      "deployment slow",
+      "pull takes minutes",
+      "image pull performance"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/containers/images/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Measure how long the pull took",
+        "cmd": "kubectl describe pod {pod} -n {namespace} | findstr /C:\"Pulling\" /C:\"Pulled\"",
+        "risk": "safe",
+        "look": "The Pulled event includes the elapsed time. Anything over a minute for a normal service image is worth investigating.",
+        "signals": [
+          {
+            "match": "Successfully pulled.*in (\\d+m|[1-9]\\d+\\.\\d+s)",
+            "means": "The pull is slow enough to matter.",
+            "goto": "cause:large-image"
+          },
+          {
+            "match": "Pulling image",
+            "means": "Still pulling. Watch rather than assume it is stuck.",
+            "goto": ""
+          }
+        ]
+      },
+      {
+        "title": "Check the image size",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].image}'",
+        "risk": "safe",
+        "look": "Then check that image's size in the registry. Multi-gigabyte images are the most common cause and the easiest to fix."
+      },
+      {
+        "title": "Check the pull policy",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].imagePullPolicy}'",
+        "risk": "safe",
+        "look": "Always re-checks the registry every start. With a mutable tag like latest that means a full pull far more often than you expect."
+      },
+      {
+        "title": "Check whether the node already has it cached",
+        "cmd": "kubectl get nodes -o wide",
+        "risk": "safe",
+        "look": "A pod scheduled onto a fresh node always pulls cold. Autoscaled clusters pay this cost constantly."
+      }
+    ],
+    "causes": [
+      {
+        "id": "large-image",
+        "cause": "The image is very large.",
+        "fix": "Use multi-stage builds and a slim base. This is the highest-leverage fix.",
+        "confirm": ""
+      },
+      {
+        "id": "always-policy",
+        "cause": "imagePullPolicy Always with a mutable tag.",
+        "fix": "Pin by digest and use IfNotPresent where the tag is immutable.",
+        "confirm": ""
+      },
+      {
+        "id": "registry-far",
+        "cause": "The registry is geographically distant.",
+        "fix": "Use a regional mirror or a pull-through cache.",
+        "confirm": ""
+      },
+      {
+        "id": "no-cache",
+        "cause": "New nodes have no cached layers.",
+        "fix": "Pre-pull critical images with a DaemonSet, or use a node image that includes them.",
+        "confirm": ""
+      },
+      {
+        "id": "registry-throttling",
+        "cause": "The registry is rate-limiting.",
+        "fix": "Authenticate, or mirror the image internally. Anonymous pulls from public registries are limited.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Pull time is a few seconds on a warm node.",
+      "Rollouts complete in a reasonable window."
+    ],
+    "escalate": [
+      "Pulling and Pulled event timestamps",
+      "Image size",
+      "Pull policy and tag strategy"
+    ]
   }
 ]

@@ -1462,5 +1462,304 @@
       "The backend key",
       "Which account the credentials target"
     ]
+  },
+  {
+    "id": "tf-resource-recreated-unexpectedly",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "Plan",
+    "title": "Plan wants to destroy and recreate a resource",
+    "summary": "An apparently small change forces replacement, which for a stateful resource means data loss.",
+    "aliases": [
+      "forces replacement",
+      "must be replaced",
+      "destroy and recreate",
+      "replacement required",
+      "why is it recreating"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle",
+    "inputs": [
+      {
+        "key": "address",
+        "label": "Resource",
+        "example": "aws_db_instance.main"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Find which attribute forces it",
+        "cmd": "terraform plan -target={address}",
+        "risk": "safe",
+        "look": "Terraform marks the specific attribute with 'forces replacement'. That one line is the entire answer.",
+        "signals": [
+          {
+            "match": "forces replacement",
+            "means": "An immutable attribute changed. In-place update is impossible.",
+            "goto": "cause:immutable-attr"
+          },
+          {
+            "match": "must be replaced",
+            "means": "Replacement is planned. Understand the impact before applying.",
+            "goto": "cause:immutable-attr"
+          }
+        ]
+      },
+      {
+        "title": "Check what the current value is",
+        "cmd": "terraform state show {address}",
+        "risk": "safe",
+        "look": "The stored value against your configuration. Sometimes the difference is formatting rather than a real change."
+      },
+      {
+        "title": "Check whether a provider upgrade changed defaults",
+        "cmd": "terraform providers",
+        "risk": "safe",
+        "look": "A provider version bump can change a default and force replacement on resources nobody touched."
+      },
+      {
+        "title": "Protect the resource while you decide",
+        "cmd": "terraform plan",
+        "risk": "safe",
+        "look": "Add a prevent_destroy lifecycle block to the resource in code, then re-plan. Terraform will refuse to plan a destroy for it, which turns an accident into an explicit decision."
+      }
+    ],
+    "causes": [
+      {
+        "id": "immutable-attr",
+        "cause": "An immutable attribute changed.",
+        "fix": "Some attributes cannot change in place. For a database that means data loss unless you plan a migration.",
+        "confirm": ""
+      },
+      {
+        "id": "provider-default",
+        "cause": "A provider upgrade changed a default.",
+        "fix": "Read the changelog. Pin the value explicitly to match reality.",
+        "confirm": ""
+      },
+      {
+        "id": "formatting-only",
+        "cause": "The value differs only in formatting.",
+        "fix": "Match the provider's normalised form, or use ignore_changes.",
+        "confirm": ""
+      },
+      {
+        "id": "name-change",
+        "cause": "A name or identifier changed.",
+        "fix": "Most providers cannot rename in place. Plan a migration deliberately.",
+        "confirm": ""
+      },
+      {
+        "id": "moved-block",
+        "cause": "The resource address changed in code.",
+        "fix": "Use a moved block so Terraform tracks the rename instead of recreating.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The plan shows no unintended replacement.",
+      "Any genuine replacement is planned with a migration.",
+      "Stateful resources carry prevent_destroy."
+    ],
+    "escalate": [
+      "The attribute marked forces replacement",
+      "Current value from state",
+      "Whether the provider version changed"
+    ]
+  },
+  {
+    "id": "tf-output-not-updating",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "Outputs",
+    "title": "Outputs are stale or missing after apply",
+    "summary": "terraform output shows old values or nothing at all.",
+    "aliases": [
+      "output not updating",
+      "no outputs",
+      "stale output",
+      "output empty",
+      "outputs missing"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/values/outputs",
+    "inputs": [
+      {
+        "key": "output",
+        "label": "Output name",
+        "example": "cluster_endpoint"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check what state holds",
+        "cmd": "terraform output -json",
+        "risk": "safe",
+        "look": "Outputs come from state, not from the configuration. Empty here means the last apply did not record them.",
+        "signals": [
+          {
+            "match": "\\{\\s*\\}",
+            "means": "No outputs in state at all.",
+            "goto": "cause:not-applied"
+          },
+          {
+            "match": "\"sensitive\": true",
+            "means": "Present but redacted. Use -raw to read it.",
+            "goto": "cause:sensitive"
+          }
+        ]
+      },
+      {
+        "title": "Check the output is declared and reachable",
+        "cmd": "findstr /S /C:\"output \\\"{output}\\\"\" *.tf",
+        "risk": "safe",
+        "look": "An output inside a module is not exposed at the root unless the root also declares one that references it."
+      },
+      {
+        "title": "Refresh state from reality",
+        "cmd": "terraform refresh 2>nul || terraform apply -refresh-only",
+        "risk": "state",
+        "look": "Outputs repopulate from current reality.",
+        "note": "Updates state to match the real infrastructure without changing anything. It rewrites the state file, so a concurrent apply elsewhere could conflict. It does not modify infrastructure, but it can reveal drift you were not expecting in the next plan."
+      },
+      {
+        "title": "Check you are in the right workspace",
+        "cmd": "terraform workspace show",
+        "risk": "safe",
+        "look": "Outputs are per workspace. Reading from the wrong one returns different values or nothing, with no error."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-applied",
+        "cause": "Apply has not run since the outputs were added.",
+        "fix": "Run apply. Outputs are written to state at apply time.",
+        "confirm": ""
+      },
+      {
+        "id": "module-not-exposed",
+        "cause": "The output lives in a module.",
+        "fix": "Declare a root-level output referencing module.<name>.<output>.",
+        "confirm": ""
+      },
+      {
+        "id": "sensitive",
+        "cause": "The output is marked sensitive.",
+        "fix": "terraform output -raw <name>.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-workspace",
+        "cause": "Reading from a different workspace.",
+        "fix": "Select the right one.",
+        "confirm": ""
+      },
+      {
+        "id": "depends-on-unknown",
+        "cause": "The value was unknown at apply time.",
+        "fix": "Check the resource actually produced the attribute.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "terraform output returns current values.",
+      "Values match reality.",
+      "The right workspace is selected."
+    ],
+    "escalate": [
+      "Output of terraform output -json",
+      "Where the output is declared",
+      "Current workspace"
+    ]
+  },
+  {
+    "id": "tf-plan-slow",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "Performance",
+    "title": "Plan takes many minutes",
+    "summary": "Every plan is slow, which makes the whole workflow painful and discourages small changes.",
+    "aliases": [
+      "terraform slow",
+      "plan takes forever",
+      "slow refresh",
+      "performance terraform",
+      "plan timeout"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Count what is in state",
+        "cmd": "terraform state list | measure-object -line",
+        "risk": "safe",
+        "look": "Plan refreshes every resource by default. Several hundred resources in one state is the most common cause of a slow plan."
+      },
+      {
+        "title": "Time a plan without refresh",
+        "cmd": "terraform plan -refresh=false",
+        "risk": "safe",
+        "look": "Much faster here means refresh is the cost, not evaluation. That points at API round trips rather than your configuration.",
+        "signals": [
+          {
+            "match": "No changes",
+            "means": "Fast without refresh. The API calls are the bottleneck.",
+            "goto": "cause:refresh-cost"
+          }
+        ]
+      },
+      {
+        "title": "Check provider parallelism",
+        "cmd": "terraform plan -parallelism=20",
+        "risk": "safe",
+        "look": "The default is ten concurrent operations. Raising it helps when the provider API is the limit, though rate limits apply."
+      },
+      {
+        "title": "Check for large data sources",
+        "cmd": "findstr /S /C:\"data \\\"\" *.tf",
+        "risk": "safe",
+        "look": "A data source listing every object in an account runs on every plan. Those are frequently the real cost."
+      }
+    ],
+    "causes": [
+      {
+        "id": "refresh-cost",
+        "cause": "Refreshing every resource is slow.",
+        "fix": "Split the configuration into smaller states. One state per component is the usual answer.",
+        "confirm": ""
+      },
+      {
+        "id": "too-many-resources",
+        "cause": "Hundreds of resources in one state.",
+        "fix": "Split by lifecycle. Things that change together belong together.",
+        "confirm": ""
+      },
+      {
+        "id": "broad-data-source",
+        "cause": "A data source enumerates everything.",
+        "fix": "Filter it, or replace it with a variable.",
+        "confirm": ""
+      },
+      {
+        "id": "low-parallelism",
+        "cause": "Default parallelism limits throughput.",
+        "fix": "Raise it, watching for provider rate limits.",
+        "confirm": ""
+      },
+      {
+        "id": "remote-state-chain",
+        "cause": "Many remote state data sources.",
+        "fix": "Each is a fetch. Reduce the chain.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Plan completes in a reasonable time.",
+      "State size is manageable.",
+      "Data sources are filtered."
+    ],
+    "escalate": [
+      "Resource count in state",
+      "Plan timing with and without refresh",
+      "Which data sources are used"
+    ]
   }
 ]
