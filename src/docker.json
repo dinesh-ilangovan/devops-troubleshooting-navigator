@@ -3645,5 +3645,195 @@
       "Image creation date",
       "Whether it was pushed"
     ]
+  },
+  {
+    "id": "docker-compose-recreate-loop",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Compose",
+    "title": "Compose recreates containers on every up",
+    "summary": "Containers are destroyed and rebuilt even when nothing changed.",
+    "aliases": [
+      "recreate every time",
+      "compose recreating",
+      "container recreated",
+      "up recreates",
+      "orphan containers"
+    ],
+    "source": "https://docs.docker.com/reference/cli/docker/compose/up/",
+    "inputs": [
+      {
+        "key": "service",
+        "label": "Service",
+        "example": "api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See what Compose thinks changed",
+        "cmd": "docker compose up --dry-run",
+        "risk": "safe",
+        "look": "It reports which services it would recreate and why. That is usually a configuration hash difference.",
+        "signals": [
+          {
+            "match": "Recreate",
+            "means": "A change was detected. Compare the resolved config against the running container.",
+            "goto": "cause:config-changed"
+          }
+        ]
+      },
+      {
+        "title": "Compare resolved config against the running container",
+        "cmd": "docker compose config --hash=*",
+        "risk": "safe",
+        "look": "The config hash per service. A different hash than the running container's label forces recreation."
+      },
+      {
+        "title": "Check for a changing value in the config",
+        "cmd": "docker compose config | findstr /I \"date time random build\"",
+        "risk": "safe",
+        "look": "A value derived from the current time or a build number changes the hash every run."
+      },
+      {
+        "title": "Check for orphan containers",
+        "cmd": "docker compose ps -a",
+        "risk": "safe",
+        "look": "Containers from a renamed service linger and confuse Compose into thinking the project changed."
+      }
+    ],
+    "causes": [
+      {
+        "id": "config-changed",
+        "cause": "The resolved configuration differs.",
+        "fix": "Find the changing value. An unpinned image tag or a timestamp is the usual cause.",
+        "confirm": ""
+      },
+      {
+        "id": "env-changing",
+        "cause": "A variable in .env changes between runs.",
+        "fix": "Pin it, or move it into the container's environment rather than the compose file.",
+        "confirm": ""
+      },
+      {
+        "id": "image-updated",
+        "cause": "A new image was pulled.",
+        "fix": "Expected. Pin by digest if you want stability.",
+        "confirm": ""
+      },
+      {
+        "id": "orphans",
+        "cause": "Orphan containers from an earlier project name.",
+        "fix": "docker compose down --remove-orphans once, then it settles.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "A second up with no changes recreates nothing.",
+      "The config hash is stable."
+    ],
+    "escalate": [
+      "Dry-run output",
+      "The config hash",
+      "What changes between runs"
+    ]
+  },
+  {
+    "id": "docker-cannot-stop-container",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "title": "Container will not stop",
+    "summary": "docker stop hangs for the full timeout, then the container is killed.",
+    "aliases": [
+      "container wont stop",
+      "docker stop hangs",
+      "sigterm ignored",
+      "stop timeout",
+      "container stuck stopping"
+    ],
+    "source": "https://docs.docker.com/reference/cli/docker/container/stop/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Time the stop",
+        "cmd": "docker stop -t 10 {container}",
+        "risk": "safe",
+        "look": "Ten seconds exactly means SIGTERM was ignored and SIGKILL did the work. Faster means the process handled it.",
+        "signals": [
+          {
+            "match": "^\\w+$",
+            "means": "It stopped. If it took the full timeout, PID 1 is not handling SIGTERM.",
+            "goto": "cause:ignores-sigterm"
+          }
+        ]
+      },
+      {
+        "title": "Check what PID 1 is",
+        "cmd": "docker exec {container} ps -p 1 -o comm=",
+        "risk": "safe",
+        "look": "A shell as PID 1 does not forward signals to the real process, so SIGTERM goes nowhere useful.",
+        "signals": [
+          {
+            "match": "sh|bash",
+            "means": "A shell is PID 1 and will not forward signals.",
+            "goto": "cause:shell-pid1"
+          }
+        ]
+      },
+      {
+        "title": "Check the stop signal configured",
+        "cmd": "docker inspect {container} --format '{{.Config.StopSignal}}'",
+        "risk": "safe",
+        "look": "Some applications expect a different signal. nginx wants SIGQUIT for a graceful stop, not SIGTERM."
+      },
+      {
+        "title": "Force it if genuinely stuck",
+        "cmd": "docker kill {container}",
+        "risk": "destructive",
+        "look": "The container stops at once. Fix the signal handling so this is not needed again.",
+        "note": "Sends SIGKILL immediately with no chance to shut down cleanly. In-flight requests are dropped and anything buffered but not flushed is lost. For a database this can mean an unclean shutdown and a recovery on next start."
+      }
+    ],
+    "causes": [
+      {
+        "id": "ignores-sigterm",
+        "cause": "The process does not handle SIGTERM.",
+        "fix": "Add a handler. Containers get no default handling for PID 1.",
+        "confirm": ""
+      },
+      {
+        "id": "shell-pid1",
+        "cause": "A shell wraps the process.",
+        "fix": "Use exec form in CMD so the application becomes PID 1.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-signal",
+        "cause": "The app expects a different signal.",
+        "fix": "Set STOPSIGNAL in the Dockerfile.",
+        "confirm": ""
+      },
+      {
+        "id": "long-shutdown",
+        "cause": "It is finishing work in flight.",
+        "fix": "Raise the timeout. A slow clean shutdown is better than a fast kill.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The container stops promptly and cleanly.",
+      "No data loss on shutdown."
+    ],
+    "escalate": [
+      "How long stop takes",
+      "What PID 1 is",
+      "The configured stop signal"
+    ]
   }
 ]

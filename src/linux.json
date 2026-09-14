@@ -2954,5 +2954,194 @@
       "The directories with the most entries",
       "What is creating them"
     ]
+  },
+  {
+    "id": "linux-out-of-memory-container",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Memory",
+    "title": "Process killed inside a cgroup",
+    "summary": "A process dies with no error and the host has plenty of free memory.",
+    "aliases": [
+      "cgroup oom",
+      "memory.max",
+      "container killed memory",
+      "systemd memorymax",
+      "killed in cgroup"
+    ],
+    "source": "https://man7.org/linux/man-pages/man7/cgroups.7.html",
+    "inputs": [
+      {
+        "key": "unit",
+        "label": "Unit or cgroup",
+        "example": "checkout-api.service"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the kernel log for a cgroup OOM",
+        "cmd": "sudo dmesg -T | grep -i 'memory cgroup out of memory' | tail -5",
+        "risk": "safe",
+        "look": "This names the cgroup, not the host. A cgroup OOM with free host memory is a limit problem, not a capacity one.",
+        "signals": [
+          {
+            "match": "memory cgroup out of memory",
+            "means": "A cgroup limit was hit. The host was never short.",
+            "goto": "cause:cgroup-limit"
+          }
+        ]
+      },
+      {
+        "title": "Read the limit and peak usage",
+        "cmd": "systemctl show {unit} -p MemoryMax -p MemoryPeak",
+        "risk": "safe",
+        "look": "Peak against max. Peak equal to max confirms the limit was the binding constraint."
+      },
+      {
+        "title": "Check current usage",
+        "cmd": "systemctl status {unit} | findstr Memory",
+        "risk": "safe",
+        "look": "Live usage. Steadily climbing towards the limit points at a leak rather than a burst."
+      },
+      {
+        "title": "Raise the limit deliberately",
+        "cmd": "sudo systemctl set-property {unit} MemoryMax=2G",
+        "risk": "state",
+        "look": "MemoryMax shows the new value and the process survives its normal workload.",
+        "note": "Changes the limit immediately and persists it. Raising it lets the process take more of the host, which can starve other services if the real problem is a leak. Measure the genuine working set before choosing a number."
+      }
+    ],
+    "causes": [
+      {
+        "id": "cgroup-limit",
+        "cause": "The cgroup limit is below the working set.",
+        "fix": "Raise MemoryMax after measuring what it actually needs.",
+        "confirm": ""
+      },
+      {
+        "id": "leak",
+        "cause": "Usage climbs without bound.",
+        "fix": "Raising the limit only delays it. Profile the process.",
+        "confirm": ""
+      },
+      {
+        "id": "runtime-unaware",
+        "cause": "The runtime sized itself against the host.",
+        "fix": "Set an explicit heap limit. Many runtimes ignore cgroup limits.",
+        "confirm": ""
+      },
+      {
+        "id": "host-fine",
+        "cause": "The host has memory but the cgroup does not.",
+        "fix": "That is the limit working as designed.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The process survives a full workload cycle.",
+      "Peak sits below the limit with headroom."
+    ],
+    "escalate": [
+      "The cgroup OOM line from dmesg",
+      "MemoryMax and MemoryPeak",
+      "Whether usage climbs over time"
+    ]
+  },
+  {
+    "id": "linux-command-not-found",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Configuration",
+    "title": "Command not found even though it is installed",
+    "summary": "A binary exists on disk but the shell cannot find it.",
+    "aliases": [
+      "command not found",
+      "not in path",
+      "which returns nothing",
+      "binary exists but not found",
+      "path problem"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/which.1.html",
+    "inputs": [
+      {
+        "key": "cmd",
+        "label": "Command",
+        "example": "terraform"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check whether the shell can find it",
+        "cmd": "which {cmd}; command -v {cmd}; echo $PATH",
+        "risk": "safe",
+        "look": "Empty output with a populated PATH means the directory holding the binary is not listed.",
+        "signals": [
+          {
+            "match": "^\\s*$",
+            "means": "Not on PATH at all.",
+            "goto": "cause:not-on-path"
+          }
+        ]
+      },
+      {
+        "title": "Find where it actually is",
+        "cmd": "find / -name {cmd} -type f 2>/dev/null | head -5",
+        "risk": "safe",
+        "look": "The real locations. /usr/local/bin and ~/.local/bin are common and not always on PATH for non-login shells."
+      },
+      {
+        "title": "Check which startup file sets PATH",
+        "cmd": "grep -l PATH ~/.bashrc ~/.bash_profile ~/.profile /etc/environment 2>/dev/null",
+        "risk": "safe",
+        "look": "Non-interactive shells read a different file than your terminal does. That is why it works for you and not in cron or a script."
+      },
+      {
+        "title": "Check it is executable",
+        "cmd": "ls -l $(find / -name {cmd} -type f 2>/dev/null | head -1)",
+        "risk": "safe",
+        "look": "Present on PATH but not executable produces permission denied rather than not found. Different error, different fix."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-on-path",
+        "cause": "The directory is not on PATH.",
+        "fix": "Add it in the right startup file for the shell that needs it.",
+        "confirm": ""
+      },
+      {
+        "id": "login-vs-interactive",
+        "cause": "PATH is set in a file the shell does not read.",
+        "fix": "bashrc for interactive, bash_profile for login. cron reads neither.",
+        "confirm": ""
+      },
+      {
+        "id": "sudo-path",
+        "cause": "Works as you but not under sudo.",
+        "fix": "sudo resets PATH by default. Use the absolute path.",
+        "confirm": ""
+      },
+      {
+        "id": "not-executable",
+        "cause": "The file is present but not executable.",
+        "fix": "chmod +x.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-arch",
+        "cause": "The binary is for another architecture.",
+        "fix": "Check with the file command.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The command runs from a fresh shell.",
+      "It works in cron and scripts too."
+    ],
+    "escalate": [
+      "Output of command -v and PATH",
+      "Where the binary actually is",
+      "Which startup file sets PATH"
+    ]
   }
 ]

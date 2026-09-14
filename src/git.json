@@ -2693,5 +2693,175 @@
       "Whether a merge base exists",
       "The graph of both histories"
     ]
+  },
+  {
+    "id": "git-file-mode-changes",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Working Tree",
+    "title": "Every file shows a permission change",
+    "summary": "git diff reports mode changes on files you did not touch.",
+    "aliases": [
+      "old mode new mode",
+      "filemode",
+      "permission changes git",
+      "100644 100755",
+      "chmod diff"
+    ],
+    "source": "https://git-scm.com/docs/git-config",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Confirm the diff is only modes",
+        "cmd": "git diff --summary",
+        "risk": "safe",
+        "look": "mode change lines with no content change. On Windows this is almost always a filesystem artifact rather than a real change.",
+        "signals": [
+          {
+            "match": "mode change 100644 => 100755",
+            "means": "The execute bit appears set on everything.",
+            "goto": "cause:filemode-tracking"
+          }
+        ]
+      },
+      {
+        "title": "Check the filemode setting",
+        "cmd": "git config --show-origin core.fileMode",
+        "risk": "safe",
+        "look": "On Windows this should usually be false, because the filesystem does not carry a real execute bit."
+      },
+      {
+        "title": "Check what Git has recorded",
+        "cmd": "git ls-files -s | findstr 100755",
+        "risk": "safe",
+        "look": "Which files Git believes are executable. Scripts should be; source files should not."
+      },
+      {
+        "title": "Stop tracking mode changes",
+        "cmd": "git config core.fileMode false",
+        "risk": "state",
+        "look": "git status is clean again.",
+        "note": "Tells Git to ignore permission differences in this repository. Genuine execute-bit changes will then also be invisible, so a script that needs to be executable must be set explicitly with update-index --chmod=+x. This is local configuration and is not shared with the team."
+      }
+    ],
+    "causes": [
+      {
+        "id": "filemode-tracking",
+        "cause": "Git tracks modes on a filesystem that does not really have them.",
+        "fix": "Set core.fileMode false on Windows.",
+        "confirm": ""
+      },
+      {
+        "id": "wsl-crossing",
+        "cause": "Files accessed from both Windows and WSL.",
+        "fix": "The two see different permissions. Keep the repository on one side.",
+        "confirm": ""
+      },
+      {
+        "id": "genuinely-changed",
+        "cause": "A script really did lose its execute bit.",
+        "fix": "git update-index --chmod=+x and commit it.",
+        "confirm": ""
+      },
+      {
+        "id": "umask",
+        "cause": "A build step changed permissions.",
+        "fix": "Fix the build rather than the Git config.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "git status is clean.",
+      "Scripts still have the execute bit recorded."
+    ],
+    "escalate": [
+      "Output of git diff --summary",
+      "The core.fileMode value",
+      "Which files are recorded executable"
+    ]
+  },
+  {
+    "id": "git-remote-branch-deleted",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Branches",
+    "title": "Remote branch is gone but still shows locally",
+    "summary": "git branch -r lists branches that no longer exist on the remote.",
+    "aliases": [
+      "stale remote branch",
+      "deleted branch still shows",
+      "prune",
+      "remote branch gone",
+      "git fetch prune"
+    ],
+    "source": "https://git-scm.com/docs/git-fetch",
+    "inputs": [
+      {
+        "key": "remote",
+        "label": "Remote",
+        "example": "origin"
+      }
+    ],
+    "steps": [
+      {
+        "title": "List remote-tracking branches",
+        "cmd": "git branch -r",
+        "risk": "safe",
+        "look": "These are local caches of remote state, not live queries. They persist until pruned."
+      },
+      {
+        "title": "Check what the remote actually has",
+        "cmd": "git ls-remote --heads {remote}",
+        "risk": "safe",
+        "look": "The live list. Anything in branch -r but not here is stale."
+      },
+      {
+        "title": "See what would be pruned",
+        "cmd": "git remote prune {remote} --dry-run",
+        "risk": "safe",
+        "look": "The stale references. Read this before pruning for real."
+      },
+      {
+        "title": "Prune the stale references",
+        "cmd": "git fetch --prune {remote}",
+        "risk": "safe",
+        "look": "Removes remote-tracking references for deleted branches. Local branches are untouched, so nothing of yours is lost."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-pruned",
+        "cause": "Remote-tracking references are stale.",
+        "fix": "git fetch --prune. Set fetch.prune true to make it automatic.",
+        "confirm": ""
+      },
+      {
+        "id": "local-branch-remains",
+        "cause": "A local branch remains after the remote was deleted.",
+        "fix": "Delete it separately with git branch -d if merged.",
+        "confirm": ""
+      },
+      {
+        "id": "merged-cleanup",
+        "cause": "Many merged branches accumulate.",
+        "fix": "git branch --merged lists them. Delete in bulk after reading the list.",
+        "confirm": ""
+      },
+      {
+        "id": "gone-marker",
+        "cause": "Branches show as gone in status.",
+        "fix": "git branch -vv marks them. That is the signal to clean up.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "branch -r matches the remote.",
+      "No stale references remain."
+    ],
+    "escalate": [
+      "Local remote-tracking branches",
+      "What ls-remote reports",
+      "What prune would remove"
+    ]
   }
 ]

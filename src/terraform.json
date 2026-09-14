@@ -2243,5 +2243,102 @@
       "Whether the lock covers this platform",
       "Provider version in use"
     ]
+  },
+  {
+    "id": "tf-apply-timeout",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "Apply",
+    "title": "Apply times out waiting on a resource",
+    "summary": "Creation or deletion exceeds the provider timeout and errors, though the resource may still be in progress.",
+    "aliases": [
+      "terraform timeout",
+      "context deadline exceeded apply",
+      "waiting for state",
+      "timeout creating",
+      "operation timed out"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/resources/syntax#operation-timeouts",
+    "inputs": [
+      {
+        "key": "address",
+        "label": "Resource",
+        "example": "aws_db_instance.main"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read which operation timed out",
+        "cmd": "terraform apply",
+        "risk": "safe",
+        "look": "Create, update and delete have separate timeouts. The message names which one.",
+        "signals": [
+          {
+            "match": "timeout while waiting for state to become",
+            "means": "The provider gave up waiting. The resource may still be being created.",
+            "goto": "cause:slow-resource"
+          },
+          {
+            "match": "context deadline exceeded",
+            "means": "The operation exceeded its deadline.",
+            "goto": "cause:slow-resource"
+          }
+        ]
+      },
+      {
+        "title": "Check whether it was created anyway",
+        "cmd": "terraform plan -refresh-only",
+        "risk": "safe",
+        "look": "A timeout does not cancel the cloud operation. The resource often exists without being in state, which is an orphan."
+      },
+      {
+        "title": "Check the provider console",
+        "cmd": "terraform state show {address}",
+        "risk": "safe",
+        "look": "Whether state has it. If the console shows it and state does not, it must be imported rather than recreated."
+      },
+      {
+        "title": "Raise the timeout in the resource",
+        "cmd": "terraform plan",
+        "risk": "safe",
+        "look": "Add a timeouts block with a realistic create value. Large databases and clusters routinely exceed the defaults."
+      }
+    ],
+    "causes": [
+      {
+        "id": "slow-resource",
+        "cause": "The resource legitimately takes longer than the default.",
+        "fix": "Add a timeouts block. Databases and clusters commonly need this.",
+        "confirm": ""
+      },
+      {
+        "id": "orphaned",
+        "cause": "Created but not recorded in state.",
+        "fix": "Import it. Re-applying tries to create a duplicate.",
+        "confirm": ""
+      },
+      {
+        "id": "stuck-provider",
+        "cause": "The cloud operation itself is stuck.",
+        "fix": "Check the provider console. Terraform is reporting accurately.",
+        "confirm": ""
+      },
+      {
+        "id": "quota-wait",
+        "cause": "Waiting on a quota increase.",
+        "fix": "The operation will not complete. Cancel and raise the quota first.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Apply completes.",
+      "A subsequent plan shows no changes.",
+      "Nothing was orphaned."
+    ],
+    "escalate": [
+      "Which operation timed out",
+      "Whether the resource exists in the provider",
+      "The refresh-only plan"
+    ]
   }
 ]

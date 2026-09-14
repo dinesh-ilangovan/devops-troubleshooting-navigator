@@ -24,7 +24,18 @@ button,input{font:inherit;color:inherit}
 
 aside{width:var(--side);flex:0 0 var(--side);background:var(--nav);color:var(--navink);
   position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
-.brand{padding:18px 20px 14px;border-bottom:1px solid #22303C}
+.brand{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #22303C;
+  padding:18px 20px 14px;cursor:pointer;color:inherit}
+.brand:hover{background:#18242E}
+.crumb button{background:none;border:0;padding:0;color:var(--focus);cursor:pointer;font:inherit}
+.crumb button:hover{text-decoration:underline}
+.list{display:grid;gap:9px}
+.lrow{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;
+  text-align:left;cursor:pointer;width:100%}
+.lrow:hover{border-color:var(--ink)}
+.lrow h4{margin:0;font-size:15.5px;font-weight:640}
+.lrow p{margin:3px 0 0;font-size:13.5px;color:var(--muted)}
+.lrow .m{margin-top:7px;font-size:11.5px;color:var(--muted);display:flex;gap:14px}
 .brand .org{font-size:10.5px;letter-spacing:.14em;color:#7E93A6;font-weight:600}
 .brand h1{margin:3px 0 0;font-size:17px;font-weight:650;color:#fff;letter-spacing:-.01em}
 .brand .by{font-size:11.5px;color:#7E93A6;margin-top:3px}
@@ -161,11 +172,11 @@ ul.pl li{margin-bottom:6px}
 <div class="shell">
 
 <aside>
-  <div class="brand">
+  <button class="brand" id="brandbtn">
     <div class="org">MIRATECH &middot; INTERNAL</div>
     <h1>DevOps Runbook</h1>
     <div class="by">Designed &amp; built by Dinesh Ilangovan</div>
-  </div>
+  </button>
   <div class="sbox"><input id="q" placeholder="Search symptom or error…" autocomplete="off"></div>
   <nav id="nav"></nav>
 </aside>
@@ -193,90 +204,153 @@ const plain=p=>String(p||"").replace(/^\(\?[imsx]+\)/,"").replace(/\\[sdwSDW]\+?
   .replace(/\(([^)]*)\)/g,"$1").replace(/\[[^\]]*\]/g,"").replace(/\{\d+,?\d*\}/g,"")
   .replace(/\|/g,"  /  ").replace(/\s{2,}/g,"  ").trim();
 
-const CTX={}; let CUR=null;
+const CTX={}; let CUR=null, VIEW={k:"home"};
 const RISK={safe:["READ ONLY","c-safe"],state:["CHANGES STATE","c-state"],destructive:["DESTRUCTIVE","c-destructive"]};
+const TECHS=[...new Set(BANK.map(r=>r.technology))].sort();
+const catsOf=t=>[...new Set(BANK.filter(r=>r.technology===t).map(r=>r.category||"General"))].sort();
+const inCat=(t,c)=>BANK.filter(r=>r.technology===t&&(r.category||"General")===c);
 
 const flat=s=>String(s??"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 function score(r,q){if(!q.trim())return 1;const Q=flat(q),T=flat(r.title),A=(r.aliases||[]).map(flat);
   let s=0; if(T.includes(Q))s+=100; if(A.some(a=>a.includes(Q)||Q.includes(a)))s+=80;
   const hay=[T,flat(r.summary),A.join(" "),flat(r.category)].join(" ");
-  for(const t of Q.split(" ").filter(x=>x.length>1)){
-    if(T.includes(t))s+=18; else if(A.some(a=>a.includes(t)))s+=14; else if(hay.includes(t))s+=4;}
+  for(const x of Q.split(" ").filter(y=>y.length>1)){
+    if(T.includes(x))s+=18; else if(A.some(a=>a.includes(x)))s+=14; else if(hay.includes(x))s+=4;}
   return s;}
+const results=q=>BANK.map(r=>({r,s:score(r,q)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).map(x=>x.r);
 
+/* ---------------- sidebar ---------------- */
 function tree(){
-  const q=$("#q").value;
-  const hits=BANK.map(r=>({r,s:score(r,q)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
-  if(!hits.length){$("#nav").innerHTML='<div class="nohit">Nothing matched. Try the exact error text, or a plainer phrase.</div>';return;}
+  const q=$("#q").value, hits=results(q), searching=q.trim().length>0;
+  if(!hits.length){$("#nav").innerHTML='<div class="nohit">Nothing matched. Try the exact error text.</div>';return;}
   const byT={};
-  hits.forEach(({r})=>{if(!byT[r.technology])byT[r.technology]={};
-    const c=r.category||"General"; if(!byT[r.technology][c])byT[r.technology][c]=[];
-    byT[r.technology][c].push(r);});
-  const searching=q.trim().length>0;
+  hits.forEach(r=>{const c=r.category||"General";
+    (byT[r.technology]=byT[r.technology]||{}); (byT[r.technology][c]=byT[r.technology][c]||[]).push(r);});
   $("#nav").innerHTML=Object.keys(byT).sort().map(t=>{
     const n=Object.values(byT[t]).reduce((a,b)=>a+b.length,0);
-    const open=searching||(CUR&&CUR.technology===t);
-    return '<div class="tgroup'+(open?" open":"")+'" data-t="'+esc(t)+'">'+
-      '<button class="thead"><span class="car">'+(open?"\u25BE":"\u25B8")+'</span>'+esc(t)+
+    const to=searching||VIEW.t===t;
+    return '<div class="tgroup'+(to?" open":"")+'" data-t="'+esc(t)+'">'+
+      '<button class="thead"><span class="car">'+(to?"\u25BE":"\u25B8")+'</span>'+esc(t)+
       '<span class="ct">'+n+'</span></button><div class="tbody">'+
       Object.keys(byT[t]).sort().map(c=>{
-        const co=searching||(CUR&&CUR.technology===t&&CUR.category===c);
-        return '<div class="cgroup'+(co?" open":"")+'" data-c="'+esc(c)+'">'+
-          '<button class="chead"><span class="car">'+(co?"\u25BE":"\u25B8")+'</span>'+
-          esc(c)+'<span class="ct">'+byT[t][c].length+'</span></button><div class="cbody">'+
+        const co=searching||(VIEW.t===t&&VIEW.c===c);
+        return '<div class="cgroup'+(co?" open":"")+'" data-t="'+esc(t)+'" data-c="'+esc(c)+'">'+
+          '<button class="chead"><span class="car">'+(co?"\u25BE":"\u25B8")+'</span>'+esc(c)+
+          '<span class="ct">'+byT[t][c].length+'</span></button><div class="cbody">'+
           byT[t][c].map(r=>'<button class="item'+(CUR&&CUR.id===r.id?" sel":"")+'" data-id="'+
             esc(r.id)+'">'+esc(r.title)+'</button>').join("")+'</div></div>';}).join("")+
       '</div></div>';}).join("");
-  document.querySelectorAll(".thead").forEach(b=>b.onclick=()=>{
-    const g=b.closest(".tgroup"); g.classList.toggle("open");
-    g.querySelector(".car").textContent=g.classList.contains("open")?"\u25BE":"\u25B8";});
-  document.querySelectorAll(".chead").forEach(b=>b.onclick=e=>{
-    e.stopPropagation();
-    const g=b.closest(".cgroup"); g.classList.toggle("open");
-    g.querySelector(".car").textContent=g.classList.contains("open")?"\u25BE":"\u25B8";});
-  document.querySelectorAll(".item").forEach(b=>b.onclick=()=>{
-    open(b.dataset.id);document.body.classList.remove("nav");});
+  document.querySelectorAll(".thead").forEach(b=>b.onclick=()=>showTech(b.closest(".tgroup").dataset.t));
+  document.querySelectorAll(".chead").forEach(b=>b.onclick=e=>{e.stopPropagation();
+    const g=b.closest(".cgroup"); showCat(g.dataset.t,g.dataset.c);});
+  document.querySelectorAll(".item").forEach(b=>b.onclick=()=>openRb(b.dataset.id));
 }
 
+/* ---------------- shared bits ---------------- */
+function crumb(parts){
+  $("#crumb").innerHTML=parts.map((p,i)=>i===parts.length-1
+    ? '<b>'+esc(p.t)+'</b>'
+    : '<button data-nav="'+esc(p.go)+'">'+esc(p.t)+'</button>').join(' &nbsp;\u203A&nbsp; ');
+  document.querySelectorAll("#crumb button").forEach(b=>b.onclick=()=>{
+    const g=b.dataset.nav;
+    if(g==="home")home(); else if(g.indexOf("t:")===0)showTech(g.slice(2));
+    else{const x=g.slice(2).split("\u0001");showCat(x[0],x[1]);}});
+}
+const card=r=>'<button class="lrow" data-id="'+esc(r.id)+'"><h4>'+esc(r.title)+'</h4>'+
+  '<p>'+esc(r.summary)+'</p><span class="m"><span>'+r.steps.length+' steps</span><span>'+
+  r.steps.reduce((a,s)=>a+(s.signals||[]).length,0)+' branches</span><span>'+
+  r.causes.length+' causes</span></span></button>';
+function wireRows(){document.querySelectorAll(".lrow").forEach(b=>b.onclick=()=>openRb(b.dataset.id));}
+
+/* ---------------- views ---------------- */
+function home(){
+  CUR=null; VIEW={k:"home"}; $("#fields").innerHTML=""; $("#crumb").innerHTML="";
+  const st=BANK.reduce((a,r)=>a+r.steps.length,0);
+  const br=BANK.reduce((a,r)=>a+r.steps.reduce((b,s)=>b+(s.signals||[]).length,0),0);
+  const cz=BANK.reduce((a,r)=>a+r.causes.length,0);
+  $("#pane").innerHTML='<div class="hero"><h2>What is broken?</h2>'+
+    '<p>Search the symptom, the error string, or what you were doing when it failed. Every runbook gives '+
+    'the checks in order, what each output means, and where to go next.</p><div class="stats">'+
+    '<div class="stat"><b>'+BANK.length+'</b><span>runbooks</span></div>'+
+    '<div class="stat"><b>'+st+'</b><span>diagnostic steps</span></div>'+
+    '<div class="stat"><b>'+br+'</b><span>decision branches</span></div>'+
+    '<div class="stat"><b>'+cz+'</b><span>ranked causes</span></div>'+
+    '<div class="stat"><b>'+TECHS.length+'</b><span>technologies</span></div></div><div class="cards">'+
+    TECHS.map(t=>'<button class="card" data-tech="'+esc(t)+'"><h3>'+esc(t)+'</h3><p>'+
+      BANK.filter(r=>r.technology===t).length+' runbooks across '+catsOf(t).length+
+      ' sections</p></button>').join("")+'</div>'+
+    '<p class="src" style="margin-top:30px">Runs entirely in this one file. Nothing is sent anywhere, '+
+    'nothing is executed for you, and nothing is saved when you close the tab.</p></div>';
+  document.querySelectorAll(".card").forEach(b=>b.onclick=()=>showTech(b.dataset.tech));
+  window.scrollTo(0,0); tree();
+}
+
+function showTech(t){
+  CUR=null; VIEW={k:"tech",t:t}; $("#fields").innerHTML="";
+  crumb([{t:"All technologies",go:"home"},{t:t}]);
+  const cs=catsOf(t);
+  $("#pane").innerHTML='<div class="hero"><h2>'+esc(t)+'</h2><p>'+
+    BANK.filter(r=>r.technology===t).length+' runbooks across '+cs.length+
+    ' sections. Pick a section, or search above.</p><div class="cards">'+
+    cs.map(c=>'<button class="card" data-c="'+esc(c)+'"><h3>'+esc(c)+'</h3><p>'+
+      inCat(t,c).length+' runbooks</p></button>').join("")+'</div></div>';
+  document.querySelectorAll(".card").forEach(b=>b.onclick=()=>showCat(t,b.dataset.c));
+  window.scrollTo(0,0); tree();
+}
+
+function showCat(t,c){
+  CUR=null; VIEW={k:"cat",t:t,c:c}; $("#fields").innerHTML="";
+  crumb([{t:"All technologies",go:"home"},{t:t,go:"t:"+t},{t:c}]);
+  $("#pane").innerHTML='<div class="hero"><h2>'+esc(c)+'</h2><p>'+esc(t)+' \u00B7 '+
+    inCat(t,c).length+' runbooks</p></div><div class="list">'+inCat(t,c).map(card).join("")+'</div>';
+  wireRows(); window.scrollTo(0,0); tree();
+}
+
+function showSearch(q){
+  CUR=null; VIEW={k:"search"}; $("#fields").innerHTML="";
+  const hits=results(q);
+  crumb([{t:"All technologies",go:"home"},{t:'Search: "'+q+'"'}]);
+  $("#pane").innerHTML='<div class="hero"><h2>'+hits.length+' result'+(hits.length===1?"":"s")+
+    '</h2><p>Matching &ldquo;'+esc(q)+'&rdquo; across '+TECHS.length+' technologies.</p></div>'+
+    (hits.length?'<div class="list">'+hits.slice(0,80).map(card).join("")+'</div>'
+      :'<p class="src">Nothing matched. Try the exact error string from your terminal, or a plainer phrase.</p>');
+  wireRows(); window.scrollTo(0,0); tree();
+}
+
+/* ---------------- runbook ---------------- */
 function fill(cmd,html){return cmd.replace(/\{([a-z0-9_]+)\}/g,(m,k)=>{const v=CTX[k];
   return !html?(v||m):(v?'<span class="fill">'+esc(v)+'</span>':'<span class="un">'+esc(m)+'</span>');});}
 function repaint(){document.querySelectorAll("[data-cmd]").forEach(e=>e.innerHTML=fill(e.dataset.cmd,true));}
-function fields(){
-  $("#fields").innerHTML=((CUR&&CUR.inputs)||[]).map(i=>
-    '<label>'+esc(i.label)+'<input data-k="'+esc(i.key)+'" placeholder="'+esc(i.example||"")+
-    '" value="'+esc(CTX[i.key]||"")+'"></label>').join("");
-  document.querySelectorAll("#fields input").forEach(x=>x.oninput=()=>{
-    CTX[x.dataset.k]=x.value.trim();repaint();});
-}
 
-function open(id){
+function openRb(id){
   CUR=BANK.find(r=>r.id===id); if(!CUR)return;
+  VIEW={k:"rb",t:CUR.technology,c:CUR.category||"General"};
   (CUR.inputs||[]).forEach(i=>{if(!(i.key in CTX))CTX[i.key]="";});
-  fields();
-  $("#crumb").innerHTML=esc(CUR.technology)+' &nbsp;\u203A&nbsp; '+esc(CUR.category||"")+
-    ' &nbsp;\u203A&nbsp; <b>'+esc(CUR.title)+'</b>';
+  $("#fields").innerHTML=(CUR.inputs||[]).map(i=>'<label>'+esc(i.label)+
+    '<input data-k="'+esc(i.key)+'" placeholder="'+esc(i.example||"")+'" value="'+esc(CTX[i.key]||"")+'"></label>').join("");
+  document.querySelectorAll("#fields input").forEach(x=>x.oninput=()=>{CTX[x.dataset.k]=x.value.trim();repaint();});
+  crumb([{t:"All technologies",go:"home"},{t:CUR.technology,go:"t:"+CUR.technology},
+         {t:VIEW.c,go:"c:"+CUR.technology+"\u0001"+VIEW.c},{t:CUR.title}]);
 
   const steps=(CUR.steps||[]).map((s,i)=>{
-    const R=RISK[s.risk]||RISK.safe, dz=s.risk==="destructive";
+    const Rk=RISK[s.risk]||RISK.safe, dz=s.risk==="destructive";
     const body=dz?'<div class="veil" data-rv="'+i+'">\u25B8 Command hidden. Read the warning, then tap to reveal.</div>'
       :'<pre data-cmd="'+esc(s.cmd)+'"></pre><button class="cp" data-cp="'+i+'">Copy</button>';
     const br=(s.signals||[]).length?'<div class="br"><div class="brh">WHAT YOU MIGHT SEE</div>'+
-      s.signals.map(g=>{const t=g.goto||"";let nx="";
-        if(t.indexOf("cause:")===0){const k=(CUR.causes||[]).findIndex(x=>x.id===t.slice(6));
+      s.signals.map(g=>{const gt=g.goto||"";let nx="";
+        if(gt.indexOf("cause:")===0){const k=(CUR.causes||[]).findIndex(x=>x.id===gt.slice(6));
           if(k>=0)nx='<span class="goto">\u2192 cause '+(k+1)+'</span>';}
-        else if(t.indexOf("step:")===0)nx='<span class="goto">\u2192 step '+t.slice(5)+'</span>';
+        else if(gt.indexOf("step:")===0)nx='<span class="goto">\u2192 step '+gt.slice(5)+'</span>';
         return '<div class="brow"><div class="bif"><b>IF YOU SEE</b><code>'+esc(plain(g.match))+
           '</code></div><div class="bthen">'+esc(g.means)+' '+nx+'</div></div>';}).join("")+'</div>':"";
-    return '<li class="step'+(dz?" d":"")+'" data-step="'+i+'"><div class="num">'+(i+1)+'</div>'+
-      '<div class="sh"><span class="st">'+esc(s.title)+'</span><span class="chip '+R[1]+'">'+R[0]+'</span></div>'+
+    return '<li class="step'+(dz?" d":"")+'"><div class="num">'+(i+1)+'</div><div class="sh">'+
+      '<span class="st">'+esc(s.title)+'</span><span class="chip '+Rk[1]+'">'+Rk[0]+'</span></div>'+
       (s.note?'<p class="note'+(s.risk==="state"?" s":"")+'">'+esc(s.note)+'</p>':"")+
       '<div class="cmd">'+body+'</div><p class="look">'+esc(s.look)+'</p>'+br+'</li>';}).join("");
-
   const cz=(CUR.causes||[]).map((c,i)=>'<div class="cz"><div class="rk">'+(i+1)+'</div><div>'+
     '<div class="w">'+esc(c.cause)+'</div><div class="fx"><b>Fix.</b> '+esc(c.fix)+'</div></div></div>').join("");
 
-  $("#pane").innerHTML='<div class="rb"><h2>'+esc(CUR.title)+'</h2>'+
-    '<p class="sum">'+esc(CUR.summary)+'</p>'+
+  $("#pane").innerHTML='<div class="rb"><h2>'+esc(CUR.title)+'</h2><p class="sum">'+esc(CUR.summary)+'</p>'+
     '<div class="tags">'+(CUR.aliases||[]).slice(0,7).map(a=>'<span class="tag">'+esc(a)+'</span>').join("")+'</div>'+
     '<p class="src">Commands vary by version and environment \u2014 read each one before you run it.'+
     (CUR.source?' <a href="'+esc(CUR.source)+'" target="_blank" rel="noopener">Official documentation \u2197</a>':"")+'</p>'+
@@ -286,59 +360,34 @@ function open(id){
       CUR.verify.map(v=>'<li>'+esc(fill(v,false))+'</li>').join("")+'</ul></div>':"")+
     ((CUR.escalate||[]).length?'<div class="sec"><h3>IF YOU HAND THIS OVER, INCLUDE</h3><ul class="pl">'+
       CUR.escalate.map(v=>'<li>'+esc(fill(v,false))+'</li>').join("")+'</ul></div>':"")+'</div>';
-  window.scrollTo(0,0); repaint(); wire(); tree();
-}
-
-function wire(){
+  window.scrollTo(0,0); repaint();
   document.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>{
-    const t=fill(CUR.steps[+b.dataset.cp].cmd,false);
-    navigator.clipboard.writeText(t).then(()=>{const e=$("#toast");e.textContent="Command copied";
-      e.style.display="block";setTimeout(()=>e.style.display="none",1500);},()=>prompt("Copy:",t));});
+    const x=fill(CUR.steps[+b.dataset.cp].cmd,false);
+    navigator.clipboard.writeText(x).then(()=>{const e=$("#toast");e.textContent="Command copied";
+      e.style.display="block";setTimeout(()=>e.style.display="none",1500);},()=>prompt("Copy:",x));});
   document.querySelectorAll("[data-rv]").forEach(v=>v.onclick=()=>{
     const i=+v.dataset.rv,s=CUR.steps[i];
     v.outerHTML='<pre data-cmd="'+esc(s.cmd)+'"></pre><button class="cp" data-cp="'+i+'">Copy</button>';
-    repaint();wire();});
+    repaint();openRbRewire();});
+  tree(); document.body.classList.remove("nav");
 }
+function openRbRewire(){document.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>{
+  const x=fill(CUR.steps[+b.dataset.cp].cmd,false);
+  navigator.clipboard.writeText(x).then(()=>{const e=$("#toast");e.textContent="Command copied";
+    e.style.display="block";setTimeout(()=>e.style.display="none",1500);},()=>prompt("Copy:",x));});}
 
-function home(){
-  CUR=null; $("#fields").innerHTML=""; $("#crumb").innerHTML="";
-  const T=[...new Set(BANK.map(r=>r.technology))].sort();
-  const st=BANK.reduce((a,r)=>a+r.steps.length,0);
-  const br=BANK.reduce((a,r)=>a+r.steps.reduce((b,s)=>b+(s.signals||[]).length,0),0);
-  const cz=BANK.reduce((a,r)=>a+r.causes.length,0);
-  $("#pane").innerHTML='<div class="hero"><h2>What is broken?</h2>'+
-    '<p>Search the symptom, the error string, or what you were doing when it failed. Every runbook gives '+
-    'the checks in order, what each output means, and where to go next.</p>'+
-    '<div class="stats">'+
-    '<div class="stat"><b>'+BANK.length+'</b><span>runbooks</span></div>'+
-    '<div class="stat"><b>'+st+'</b><span>diagnostic steps</span></div>'+
-    '<div class="stat"><b>'+br+'</b><span>decision branches</span></div>'+
-    '<div class="stat"><b>'+cz+'</b><span>ranked causes</span></div>'+
-    '<div class="stat"><b>'+T.length+'</b><span>technologies</span></div></div>'+
-    '<div class="cards">'+T.map(t=>{const n=BANK.filter(r=>r.technology===t).length;
-      const c=[...new Set(BANK.filter(r=>r.technology===t).map(r=>r.category))].length;
-      return '<button class="card" data-tech="'+esc(t)+'"><h3>'+esc(t)+'</h3><p>'+n+
-        ' runbooks across '+c+' categories</p></button>';}).join("")+'</div>'+
-    '<p class="src" style="margin-top:30px">Runs entirely in this one file. Nothing is sent anywhere, '+
-    'nothing is executed for you, and nothing is saved when you close the tab.</p></div>';
-  document.querySelectorAll(".card").forEach(b=>b.onclick=()=>{
-    const tech=b.dataset.tech;
-    const g=[...document.querySelectorAll(".tgroup")].find(x=>x.dataset.t===tech);
-    if(g){g.classList.add("open");g.querySelector(".car").textContent="\u25BE";
-      const c=g.querySelector(".cgroup");
-      if(c){c.classList.add("open");c.querySelector(".car").textContent="\u25BE";}
-      g.scrollIntoView({block:"start",behavior:"smooth"});}
-    document.body.classList.add("nav");
-    const first=BANK.filter(r=>r.technology===tech)[0];
-    if(first)open(first.id);});
-  tree();
-}
-
-$("#q").oninput=tree;
+/* ---------------- wiring ---------------- */
+let tmr=null;
+$("#q").oninput=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{
+  const q=$("#q").value; if(q.trim())showSearch(q); else home();},180);};
+$("#brandbtn").onclick=()=>{$("#q").value="";home();};
 $("#burger").onclick=()=>document.body.classList.toggle("nav");
 document.addEventListener("keydown",e=>{
   if(e.key==="/"&&document.activeElement!==$("#q")){e.preventDefault();$("#q").focus();$("#q").select();}
-  if(e.key==="Escape"){if(CUR)home();else{$("#q").value="";tree();}}});
+  if(e.key==="Escape"){
+    if(VIEW.k==="rb")showCat(VIEW.t,VIEW.c);
+    else if(VIEW.k==="cat")showTech(VIEW.t);
+    else{$("#q").value="";home();}}});
 home();
 </script>
 </body>

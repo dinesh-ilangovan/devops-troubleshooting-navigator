@@ -4769,5 +4769,314 @@
       "The pod's requests and constraints",
       "Pool maximum and current size"
     ]
+  },
+  {
+    "id": "k8s-ingress-tls-error",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Ingress",
+    "title": "HTTPS fails on an ingress",
+    "summary": "Browsers warn, or clients reject the certificate the ingress serves.",
+    "aliases": [
+      "ingress tls",
+      "certificate error ingress",
+      "fake certificate",
+      "kubernetes ingress controller fake",
+      "tls secret missing",
+      "cert-manager not issuing"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/services-networking/ingress/#tls",
+    "inputs": [
+      {
+        "key": "ingress",
+        "label": "Ingress",
+        "example": "checkout"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See which certificate is served",
+        "cmd": "openssl s_client -connect <host>:443 -servername <host> < /dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -dates",
+        "risk": "safe",
+        "look": "The issuer tells you immediately whether a real certificate or the controller's placeholder is being served.",
+        "signals": [
+          {
+            "match": "Kubernetes Ingress Controller Fake",
+            "means": "The controller's placeholder. Your TLS secret is missing or not found.",
+            "goto": "cause:secret-missing"
+          },
+          {
+            "match": "notAfter",
+            "means": "Compare the date against now. Expired means renewal stopped.",
+            "goto": "cause:expired"
+          }
+        ]
+      },
+      {
+        "title": "Check the ingress references a secret",
+        "cmd": "kubectl get ingress {ingress} -n {namespace} -o jsonpath='{.spec.tls}'",
+        "risk": "safe",
+        "look": "The secretName and the hosts it covers. The secret must live in the same namespace as the ingress."
+      },
+      {
+        "title": "Check the secret exists and has both keys",
+        "cmd": "kubectl get secret <name> -n {namespace} -o jsonpath='{.data}'",
+        "risk": "safe",
+        "look": "tls.crt and tls.key must both be present. A secret of the wrong type is ignored silently."
+      },
+      {
+        "title": "Check cert-manager issued it",
+        "cmd": "kubectl get certificate,certificaterequest -n {namespace}",
+        "risk": "safe",
+        "look": "READY False carries a message. ACME challenges failing on HTTP-01 usually means the ingress is not reachable from outside."
+      }
+    ],
+    "causes": [
+      {
+        "id": "secret-missing",
+        "cause": "The TLS secret does not exist in this namespace.",
+        "fix": "Create it there. Secrets do not cross namespaces.",
+        "confirm": ""
+      },
+      {
+        "id": "expired",
+        "cause": "The certificate expired.",
+        "fix": "Renewal stopped. Check cert-manager rather than just reissuing by hand.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-host",
+        "cause": "The certificate does not cover the requested host.",
+        "fix": "Add the host to the certificate's SAN list and to the ingress tls hosts.",
+        "confirm": ""
+      },
+      {
+        "id": "acme-failed",
+        "cause": "The ACME challenge cannot complete.",
+        "fix": "HTTP-01 needs the ingress publicly reachable on port 80. Use DNS-01 for private clusters.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-type",
+        "cause": "The secret is not type kubernetes.io/tls.",
+        "fix": "Recreate it with the right type.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The correct certificate is served.",
+      "It is valid for the host and not near expiry.",
+      "Renewal is automated."
+    ],
+    "escalate": [
+      "Subject, issuer and dates from openssl",
+      "The ingress tls block",
+      "Certificate resource status"
+    ]
+  },
+  {
+    "id": "k8s-two-controllers-fighting",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "title": "A resource keeps reverting to an old state",
+    "summary": "You change something and it changes back within seconds.",
+    "aliases": [
+      "reverts",
+      "changes back",
+      "controller fighting",
+      "gitops overwrites",
+      "resource reset",
+      "cannot change resource"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/architecture/controller/",
+    "inputs": [
+      {
+        "key": "deploy",
+        "label": "Deployment",
+        "example": "checkout-api"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Watch the resource version change",
+        "cmd": "kubectl get deploy {deploy} -n {namespace} -o jsonpath='{.metadata.resourceVersion}' -w",
+        "risk": "safe",
+        "look": "Rapidly incrementing with nobody editing means a controller is writing continuously."
+      },
+      {
+        "title": "Check for controller ownership",
+        "cmd": "kubectl get deploy {deploy} -n {namespace} -o jsonpath='{.metadata.managedFields[*].manager}'",
+        "risk": "safe",
+        "look": "Every manager that has written to this object. Two managers owning the same field is the whole problem.",
+        "signals": [
+          {
+            "match": "argocd|flux",
+            "means": "A GitOps controller owns it. It will revert anything not in Git.",
+            "goto": "cause:gitops"
+          },
+          {
+            "match": "hpa|autoscaler",
+            "means": "An autoscaler owns replicas.",
+            "goto": "cause:hpa-owns"
+          }
+        ]
+      },
+      {
+        "title": "Check annotations naming an owner",
+        "cmd": "kubectl get deploy {deploy} -n {namespace} -o jsonpath='{.metadata.annotations}'",
+        "risk": "safe",
+        "look": "GitOps tools record their source here. That tells you where the real change belongs."
+      },
+      {
+        "title": "Check for an operator managing it",
+        "cmd": "kubectl get deploy {deploy} -n {namespace} -o jsonpath='{.metadata.ownerReferences}'",
+        "risk": "safe",
+        "look": "An owner reference means a higher-level resource controls this one. Editing the child is always futile."
+      }
+    ],
+    "causes": [
+      {
+        "id": "gitops",
+        "cause": "A GitOps controller reverts drift.",
+        "fix": "Change it in Git. That is the tool working correctly.",
+        "confirm": ""
+      },
+      {
+        "id": "hpa-owns",
+        "cause": "An HPA owns the replica count.",
+        "fix": "Remove replicas from your manifest so the two do not fight.",
+        "confirm": ""
+      },
+      {
+        "id": "operator-owned",
+        "cause": "An operator owns the object.",
+        "fix": "Edit the custom resource, not the generated object.",
+        "confirm": ""
+      },
+      {
+        "id": "two-pipelines",
+        "cause": "Two pipelines deploy the same workload.",
+        "fix": "Pick one owner. This is an organisational fix, not a technical one.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The change persists.",
+      "Only one controller owns each field."
+    ],
+    "escalate": [
+      "Which managers have written to the object",
+      "Any owner references",
+      "Whether GitOps manages it"
+    ]
+  },
+  {
+    "id": "k8s-slow-api-server",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Access & RBAC",
+    "title": "kubectl commands are very slow",
+    "summary": "Every command takes many seconds even for simple reads.",
+    "aliases": [
+      "kubectl slow",
+      "api server slow",
+      "timeout kubectl",
+      "throttling",
+      "client-side throttling",
+      "slow cluster"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/cluster-administration/",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Time a trivial request with verbose output",
+        "cmd": "kubectl get --raw /healthz -v=6",
+        "risk": "safe",
+        "look": "The round trip time. Throttling messages name the client-side rate limiter rather than the server.",
+        "signals": [
+          {
+            "match": "Throttling request",
+            "means": "The client is rate-limiting itself, not the server.",
+            "goto": "cause:client-throttle"
+          },
+          {
+            "match": "Response Status: 200.*in [1-9]\\d{3,} milliseconds",
+            "means": "Seconds for a health check means the server is genuinely slow.",
+            "goto": "cause:server-slow"
+          }
+        ]
+      },
+      {
+        "title": "Check how large the responses are",
+        "cmd": "kubectl get pods -A --no-headers | measure-object -line",
+        "risk": "safe",
+        "look": "Thousands of objects means every list is expensive. Namespace-scoped queries are far cheaper."
+      },
+      {
+        "title": "Check the discovery cache",
+        "cmd": "dir %USERPROFILE%\\.kube\\cache\\discovery",
+        "risk": "safe",
+        "look": "A stale or missing cache forces rediscovery on every command, which is slow on clusters with many CRDs."
+      },
+      {
+        "title": "Check control plane health",
+        "cmd": "kubectl get --raw /readyz?verbose",
+        "risk": "safe",
+        "look": "Each check individually. A failing etcd check explains cluster-wide slowness better than anything client-side."
+      }
+    ],
+    "causes": [
+      {
+        "id": "client-throttle",
+        "cause": "The client rate-limits itself.",
+        "fix": "Raise --request-timeout and QPS, or scope queries to a namespace.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-discovery",
+        "cause": "The discovery cache is stale.",
+        "fix": "Delete the cache directory. It rebuilds on the next command.",
+        "confirm": ""
+      },
+      {
+        "id": "too-many-objects",
+        "cause": "Cluster-wide lists are expensive.",
+        "fix": "Query by namespace and label. Avoid -A in scripts.",
+        "confirm": ""
+      },
+      {
+        "id": "server-slow",
+        "cause": "The API server or etcd is under load.",
+        "fix": "A cluster-level problem. Check etcd latency metrics.",
+        "confirm": ""
+      },
+      {
+        "id": "network",
+        "cause": "High latency to the endpoint.",
+        "fix": "Check the path, especially over VPN.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Commands return promptly.",
+      "No throttling messages.",
+      "Control plane checks pass."
+    ],
+    "escalate": [
+      "Timing from a verbose request",
+      "Object counts",
+      "readyz verbose output"
+    ]
   }
 ]
