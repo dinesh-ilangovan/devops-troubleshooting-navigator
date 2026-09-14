@@ -985,14 +985,24 @@
         "look": "The Client block always prints. If the Server block is missing, the client is fine and the engine is not reachable.",
         "signals": [
           {
-            "match": "(?i)error during connect|cannot connect",
-            "means": "The engine is not reachable from this client.",
+            "match": "(?i)(failed|error|unable) (during |to )?connect.*docker|cannot connect to the docker daemon|docker_engine|docker\\.sock.*(no such file|refused)|Is the docker daemon running",
+            "means": "The client is fine but the engine is not reachable. On Windows that almost always means Docker Desktop is not running.",
             "goto": "step:2"
           },
           {
-            "match": "(?i)permission denied.*docker.sock",
-            "means": "The engine is running but your user cannot use the socket.",
+            "match": "(?i)permission denied.*docker\\.sock|dial unix.*permission denied",
+            "means": "The engine is running but your user cannot use its socket.",
             "goto": "cause:socket-permission"
+          },
+          {
+            "match": "(?i)the system cannot find the file specified|no such host|npipe.*not found",
+            "means": "The named pipe does not exist, so the engine has not created it. The engine is stopped.",
+            "goto": "cause:desktop-stopped"
+          },
+          {
+            "match": "(?i)Server:\\s*\\n?\\s*Engine",
+            "means": "A Server block is present, so the engine is reachable. Whatever failed is not the daemon.",
+            "goto": ""
           }
         ]
       },
@@ -1000,7 +1010,19 @@
         "title": "Check whether Docker Desktop is actually running",
         "cmd": "tasklist | findstr /I \"Docker Desktop\"",
         "risk": "safe",
-        "look": "On Windows the engine lives inside Docker Desktop. No process means nothing to connect to, regardless of the client."
+        "look": "On Windows the engine lives inside Docker Desktop. No process means nothing to connect to, regardless of the client.",
+        "signals": [
+          {
+            "match": "(?i)Docker Desktop\\.exe",
+            "means": "The process is running. If the client still cannot connect, the engine inside it may still be starting or may have crashed.",
+            "goto": "cause:engine-crashed"
+          },
+          {
+            "match": "(?i)INFO: No tasks|^\\s*$",
+            "means": "Docker Desktop is not running at all. Start it and wait for the engine to report ready.",
+            "goto": "cause:desktop-stopped"
+          }
+        ]
       },
       {
         "title": "Check what endpoint the client is trying",

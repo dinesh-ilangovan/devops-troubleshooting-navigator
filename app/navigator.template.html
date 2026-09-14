@@ -402,7 +402,12 @@ function wire() {
       out.textContent = "Nothing matched yet. Paste output above.";
       return;
     }
-    const m = (s.signals || []).find(g => { try { return new RegExp(g.match, "i").test(text); } catch { return false; } });
+    const m = (s.signals || []).find(g => {
+      const pat = String(g.match || "").replace(/^\(\?[imsx]+\)/, "");
+      if (!pat) return false;
+      try { return new RegExp(pat, "i").test(text); }
+      catch (e) { console.warn("signal regex failed:", g.match, e.message); return false; }
+    });
     if (!m) {
       out.className = "verdict miss";
       out.textContent = "No known signature in that output. It may still be fine — read the note above, "
