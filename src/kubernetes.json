@@ -3448,5 +3448,712 @@
       "Image size",
       "Pull policy and tag strategy"
     ]
+  },
+  {
+    "id": "k8s-taint-toleration",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "title": "Pods will not run on a specific node pool",
+    "summary": "Nodes exist and have capacity but the scheduler avoids them.",
+    "aliases": [
+      "taint",
+      "toleration",
+      "node pool empty",
+      "pods avoid nodes",
+      "nodeselector pool",
+      "dedicated nodes",
+      "spot nodes empty"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "List taints on every node",
+        "cmd": "kubectl get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints",
+        "risk": "safe",
+        "look": "Which nodes carry taints and with what effect. NoSchedule blocks new pods; NoExecute also evicts running ones.",
+        "signals": [
+          {
+            "match": "NoExecute",
+            "means": "Existing pods are evicted too, not just new ones blocked.",
+            "goto": "cause:noexecute"
+          },
+          {
+            "match": "NoSchedule",
+            "means": "New pods are blocked unless they tolerate the taint.",
+            "goto": "cause:missing-toleration"
+          }
+        ]
+      },
+      {
+        "title": "Check the pod's tolerations",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.tolerations}'",
+        "risk": "safe",
+        "look": "A toleration must match the key, value and effect. Kubernetes adds default tolerations for node conditions, so ignore those."
+      },
+      {
+        "title": "Check node labels against the selector",
+        "cmd": "kubectl get nodes --show-labels",
+        "risk": "safe",
+        "look": "Taints and selectors are separate mechanisms. A pod usually needs both a toleration and a matching selector to land on dedicated nodes."
+      },
+      {
+        "title": "Check whether the autoscaler knows about the taint",
+        "cmd": "kubectl get nodes -l node.kubernetes.io/instance-type -o wide",
+        "risk": "safe",
+        "look": "A cluster autoscaler will not scale up a tainted pool for a pod that does not tolerate it, so the pod stays Pending forever."
+      }
+    ],
+    "causes": [
+      {
+        "id": "missing-toleration",
+        "cause": "The pod does not tolerate the node's taint.",
+        "fix": "Add a toleration matching key, value and effect exactly.",
+        "confirm": ""
+      },
+      {
+        "id": "noexecute",
+        "cause": "A NoExecute taint evicts running pods.",
+        "fix": "Add a toleration with tolerationSeconds, or remove the taint if it was not intended.",
+        "confirm": ""
+      },
+      {
+        "id": "no-selector",
+        "cause": "The pod tolerates the taint but has no reason to prefer those nodes.",
+        "fix": "Tolerations permit; they do not attract. Add nodeAffinity to target the pool.",
+        "confirm": ""
+      },
+      {
+        "id": "taint-typo",
+        "cause": "The toleration key or value does not match.",
+        "fix": "These are exact string comparisons. Compare character by character.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The pod schedules onto the intended pool.",
+      "Nodes in that pool are used as expected."
+    ],
+    "escalate": [
+      "Node taints",
+      "Pod tolerations and selectors",
+      "Whether the pool autoscales"
+    ]
+  },
+  {
+    "id": "k8s-pdb-blocking-drain",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Nodes",
+    "title": "Node drain hangs forever",
+    "summary": "kubectl drain never completes because a disruption budget will not allow eviction.",
+    "aliases": [
+      "drain stuck",
+      "cannot evict pod",
+      "pdb blocking",
+      "disruption budget",
+      "drain hangs",
+      "node maintenance stuck"
+    ],
+    "source": "https://kubernetes.io/docs/tasks/run-application/configure-pdb/",
+    "inputs": [
+      {
+        "key": "node",
+        "label": "Node",
+        "example": "ip-10-0-3-14"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read what drain is waiting on",
+        "cmd": "kubectl drain {node} --ignore-daemonsets --dry-run=server",
+        "risk": "safe",
+        "look": "The pods it cannot evict and why. Cannot evict due to a budget is very different from a pod with local storage.",
+        "signals": [
+          {
+            "match": "Cannot evict pod.*budget",
+            "means": "A PodDisruptionBudget forbids the eviction.",
+            "goto": "cause:pdb"
+          },
+          {
+            "match": "local storage|emptyDir",
+            "means": "The pod uses local storage, which drain refuses to discard without a flag.",
+            "goto": "cause:local-storage"
+          },
+          {
+            "match": "DaemonSet-managed",
+            "means": "Normal. DaemonSet pods are not drained.",
+            "goto": ""
+          }
+        ]
+      },
+      {
+        "title": "Check allowed disruptions on each budget",
+        "cmd": "kubectl get pdb -A",
+        "risk": "safe",
+        "look": "ALLOWED DISRUPTIONS at zero means eviction is blocked. That is the budget doing its job, not a bug."
+      },
+      {
+        "title": "Check whether the workload has healthy replicas elsewhere",
+        "cmd": "kubectl get pods -A -o wide | findstr {node}",
+        "risk": "safe",
+        "look": "If all replicas sit on this node, no eviction can satisfy the budget. That is a spread problem."
+      },
+      {
+        "title": "Check for pods with no controller",
+        "cmd": "kubectl get pods -A --field-selector spec.nodeName={node} -o json | findstr ownerReferences",
+        "risk": "safe",
+        "look": "A bare pod with no controller will not be recreated elsewhere, so drain refuses it without --force."
+      }
+    ],
+    "causes": [
+      {
+        "id": "pdb",
+        "cause": "A disruption budget forbids eviction.",
+        "fix": "Scale the workload up so the budget can be satisfied, or relax minAvailable during maintenance.",
+        "confirm": ""
+      },
+      {
+        "id": "all-on-one-node",
+        "cause": "Every replica is on this node.",
+        "fix": "Add pod anti-affinity or topology spread so replicas distribute.",
+        "confirm": ""
+      },
+      {
+        "id": "local-storage",
+        "cause": "Pods use emptyDir or local volumes.",
+        "fix": "--delete-emptydir-data discards that data. Confirm nothing important is in it.",
+        "confirm": ""
+      },
+      {
+        "id": "bare-pod",
+        "cause": "A pod has no owning controller.",
+        "fix": "--force deletes it permanently; it will not come back. Move it to a Deployment instead.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The drain completes.",
+      "Workloads are running on other nodes.",
+      "No budget was permanently weakened."
+    ],
+    "escalate": [
+      "Drain dry-run output",
+      "PDB allowed disruptions",
+      "Where the replicas are placed"
+    ]
+  },
+  {
+    "id": "k8s-cronjob-overlap",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "title": "CronJob runs pile up or overlap",
+    "summary": "Jobs accumulate, or two runs execute at once and corrupt each other.",
+    "aliases": [
+      "cronjob overlap",
+      "jobs piling up",
+      "concurrencypolicy",
+      "too many jobs",
+      "cronjob duplicate",
+      "missed schedule"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/",
+    "inputs": [
+      {
+        "key": "job",
+        "label": "CronJob",
+        "example": "nightly-report"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Count how many jobs exist",
+        "cmd": "kubectl get jobs -n {namespace} | findstr {job}",
+        "risk": "safe",
+        "look": "Many completed jobs means history limits are too high. Many active jobs at once means concurrency is not restricted.",
+        "signals": [
+          {
+            "match": "Running.*Running",
+            "means": "More than one run is active simultaneously.",
+            "goto": "cause:concurrency-allow"
+          }
+        ]
+      },
+      {
+        "title": "Read the concurrency and history settings",
+        "cmd": "kubectl get cronjob {job} -n {namespace} -o jsonpath='{.spec.concurrencyPolicy}{\"|\"}{.spec.successfulJobsHistoryLimit}{\"|\"}{.spec.failedJobsHistoryLimit}'",
+        "risk": "safe",
+        "look": "Allow is the default and permits overlap. History limits control how many finished jobs are retained."
+      },
+      {
+        "title": "Check for missed schedules",
+        "cmd": "kubectl describe cronjob {job} -n {namespace} | findstr /C:\"missed\"",
+        "risk": "safe",
+        "look": "If the controller was down past startingDeadlineSeconds, runs are skipped entirely rather than queued."
+      },
+      {
+        "title": "Clean up finished jobs",
+        "cmd": "kubectl delete jobs -n {namespace} --field-selector status.successful=1",
+        "risk": "destructive",
+        "look": "The job list shrinks. Set history limits so this does not need doing by hand again.",
+        "note": "Deletes every successful Job in the namespace along with its pods and their logs. If anyone needs those logs for an audit trail, collect them first. Running jobs are untouched."
+      }
+    ],
+    "causes": [
+      {
+        "id": "concurrency-allow",
+        "cause": "concurrencyPolicy is Allow.",
+        "fix": "Use Forbid for jobs that must not overlap, or Replace to cancel the previous run.",
+        "confirm": ""
+      },
+      {
+        "id": "history-too-high",
+        "cause": "History limits retain too many jobs.",
+        "fix": "Lower successfulJobsHistoryLimit. The default of three is usually right.",
+        "confirm": ""
+      },
+      {
+        "id": "job-too-slow",
+        "cause": "Runs take longer than the interval.",
+        "fix": "Either make the job faster or widen the schedule. Overlap is a symptom.",
+        "confirm": ""
+      },
+      {
+        "id": "missed-deadline",
+        "cause": "startingDeadlineSeconds expired.",
+        "fix": "Raise it, or accept that runs are skipped when the controller is unavailable.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "One run active at a time.",
+      "Job history stays bounded.",
+      "No schedule is silently missed."
+    ],
+    "escalate": [
+      "Job count and states",
+      "Concurrency and history settings",
+      "Any missed-schedule events"
+    ]
+  },
+  {
+    "id": "k8s-sa-token-issues",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Access & RBAC",
+    "title": "Application cannot authenticate to the API server",
+    "summary": "In-cluster code gets 401 or cannot find its ServiceAccount token.",
+    "aliases": [
+      "serviceaccount token",
+      "401 in cluster",
+      "cannot read token",
+      "projected token",
+      "bound token",
+      "unauthorized in pod"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/security/service-accounts/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the ServiceAccount on the pod",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.serviceAccountName}'",
+        "risk": "safe",
+        "look": "Empty means the default ServiceAccount, which typically has almost no permissions. That is the usual cause of an in-cluster 401.",
+        "signals": [
+          {
+            "match": "^default$|^$",
+            "means": "Using the default ServiceAccount, which has no meaningful RBAC.",
+            "goto": "cause:default-sa"
+          }
+        ]
+      },
+      {
+        "title": "Check the token is mounted",
+        "cmd": "kubectl exec {pod} -n {namespace} -- ls -la /var/run/secrets/kubernetes.io/serviceaccount/",
+        "risk": "safe",
+        "look": "token, ca.crt and namespace should be present. Absent means automountServiceAccountToken is false somewhere.",
+        "signals": [
+          {
+            "match": "No such file",
+            "means": "No token is mounted at all.",
+            "goto": "cause:automount-off"
+          }
+        ]
+      },
+      {
+        "title": "Check automount settings",
+        "cmd": "kubectl get sa <name> -n {namespace} -o jsonpath='{.automountServiceAccountToken}'",
+        "risk": "safe",
+        "look": "This can be disabled on the ServiceAccount or on the pod. The pod setting wins."
+      },
+      {
+        "title": "Check what that identity is allowed to do",
+        "cmd": "kubectl auth can-i --list --as=system:serviceaccount:{namespace}:<name> -n {namespace}",
+        "risk": "safe",
+        "look": "The effective permissions for that ServiceAccount. Comparing against what the app needs usually makes the gap obvious."
+      }
+    ],
+    "causes": [
+      {
+        "id": "default-sa",
+        "cause": "Using the default ServiceAccount.",
+        "fix": "Create a dedicated one and bind only the permissions the app needs.",
+        "confirm": ""
+      },
+      {
+        "id": "automount-off",
+        "cause": "Token automounting is disabled.",
+        "fix": "Enable it on the pod if the app genuinely needs API access.",
+        "confirm": ""
+      },
+      {
+        "id": "no-rbac",
+        "cause": "The ServiceAccount has no binding.",
+        "fix": "Create a Role and RoleBinding. Grant the narrowest set that works.",
+        "confirm": ""
+      },
+      {
+        "id": "expired-token",
+        "cause": "A legacy long-lived token expired.",
+        "fix": "Modern tokens are projected and rotate automatically. Use the projected volume rather than a Secret.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-namespace",
+        "cause": "The binding is in a different namespace.",
+        "fix": "RoleBindings are namespaced. The binding must be where the resource lives.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The application authenticates.",
+      "It has only the permissions it needs.",
+      "The token rotates rather than being a static Secret."
+    ],
+    "escalate": [
+      "ServiceAccount name",
+      "Whether the token is mounted",
+      "Effective permissions from auth can-i"
+    ]
+  },
+  {
+    "id": "k8s-container-readonly-fs",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Pods & Containers",
+    "title": "Container cannot write to its filesystem",
+    "summary": "The app fails on writes even though it worked before hardening was applied.",
+    "aliases": [
+      "read-only file system pod",
+      "cannot write container",
+      "readonlyrootfilesystem",
+      "securitycontext write",
+      "permission denied write pod"
+    ],
+    "source": "https://kubernetes.io/docs/tasks/configure-pod-container/security-context/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the security context",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].securityContext}'",
+        "risk": "safe",
+        "look": "readOnlyRootFilesystem true means every write outside a mounted volume fails by design.",
+        "signals": [
+          {
+            "match": "readOnlyRootFilesystem.*true",
+            "means": "The root filesystem is read-only on purpose.",
+            "goto": "cause:readonly-rootfs"
+          },
+          {
+            "match": "runAsUser",
+            "means": "Running as a specific UID. It may not own the paths it needs.",
+            "goto": "cause:uid-ownership"
+          }
+        ]
+      },
+      {
+        "title": "Find where it is trying to write",
+        "cmd": "kubectl logs {pod} -n {namespace} --tail=50",
+        "risk": "safe",
+        "look": "The path in the error. Temp directories and cache paths are the usual ones applications forget about."
+      },
+      {
+        "title": "Check what volumes are mounted",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].volumeMounts}'",
+        "risk": "safe",
+        "look": "Whether a writable volume covers the path it needs. An emptyDir at that path is usually the whole fix."
+      },
+      {
+        "title": "Check volume ownership settings",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.securityContext.fsGroup}'",
+        "risk": "safe",
+        "look": "fsGroup chowns mounted volumes to that group on mount. Without it, a non-root user often cannot write to a fresh volume."
+      }
+    ],
+    "causes": [
+      {
+        "id": "readonly-rootfs",
+        "cause": "The root filesystem is read-only.",
+        "fix": "Mount an emptyDir at the path that needs writes. Keep the rootfs read-only; it is a good default.",
+        "confirm": ""
+      },
+      {
+        "id": "uid-ownership",
+        "cause": "The container user does not own the path.",
+        "fix": "Set fsGroup so volumes are chowned on mount.",
+        "confirm": ""
+      },
+      {
+        "id": "no-tmp-volume",
+        "cause": "The app writes to /tmp with a read-only rootfs.",
+        "fix": "Mount an emptyDir at /tmp. Almost every hardened workload needs this.",
+        "confirm": ""
+      },
+      {
+        "id": "hostpath-permissions",
+        "cause": "A hostPath mount has restrictive ownership.",
+        "fix": "Fix ownership on the host, or use a proper volume type.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The application writes successfully.",
+      "The root filesystem stays read-only.",
+      "Writable paths are explicit volumes."
+    ],
+    "escalate": [
+      "The security context",
+      "Which path the write failed on",
+      "Mounted volumes and fsGroup"
+    ]
+  },
+  {
+    "id": "k8s-nodeport-not-reachable",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Services & Networking",
+    "title": "NodePort service is not reachable from outside",
+    "summary": "The Service exists with a node port but connections from outside the cluster time out.",
+    "aliases": [
+      "nodeport not working",
+      "cannot reach nodeport",
+      "service external",
+      "nodeport timeout",
+      "port not open node"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/services-networking/service/",
+    "inputs": [
+      {
+        "key": "service",
+        "label": "Service",
+        "example": "checkout-api"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the allocated node port",
+        "cmd": "kubectl get svc {service} -n {namespace} -o jsonpath='{.spec.type}{\"|\"}{.spec.ports[*].nodePort}'",
+        "risk": "safe",
+        "look": "The type must be NodePort or LoadBalancer. The port is in the 30000 to 32767 range unless configured otherwise.",
+        "signals": [
+          {
+            "match": "ClusterIP",
+            "means": "ClusterIP is internal only. There is no node port to reach.",
+            "goto": "cause:wrong-type"
+          }
+        ]
+      },
+      {
+        "title": "Check the Service has endpoints",
+        "cmd": "kubectl get endpointslices -n {namespace} -l kubernetes.io/service-name={service}",
+        "risk": "safe",
+        "look": "No endpoints means the node port answers with nothing. Fix that before looking at the network."
+      },
+      {
+        "title": "Test from a node itself",
+        "cmd": "kubectl get nodes -o wide",
+        "risk": "safe",
+        "look": "Get a node IP, then curl that IP on the node port from somewhere inside the network. Working there but not from outside isolates it to the firewall."
+      },
+      {
+        "title": "Check externalTrafficPolicy",
+        "cmd": "kubectl get svc {service} -n {namespace} -o jsonpath='{.spec.externalTrafficPolicy}'",
+        "risk": "safe",
+        "look": "Local means only nodes actually running a pod will answer. Hitting any other node gives a timeout that looks like a firewall problem."
+      }
+    ],
+    "causes": [
+      {
+        "id": "wrong-type",
+        "cause": "The Service is ClusterIP.",
+        "fix": "Change the type to NodePort or LoadBalancer.",
+        "confirm": ""
+      },
+      {
+        "id": "firewall",
+        "cause": "The node port is blocked at the cloud firewall.",
+        "fix": "Open the port range in the security group. It is closed by default.",
+        "confirm": ""
+      },
+      {
+        "id": "policy-local",
+        "cause": "externalTrafficPolicy is Local.",
+        "fix": "Only nodes with a pod respond. Use Cluster, or target nodes that host the workload.",
+        "confirm": ""
+      },
+      {
+        "id": "no-endpoints",
+        "cause": "The Service has no ready endpoints.",
+        "fix": "Follow the no-endpoints runbook.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-node-ip",
+        "cause": "Using an internal IP from outside the network.",
+        "fix": "Use the external address, or a load balancer in front.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The service answers on the node port from outside.",
+      "It answers from any node, or Local is understood."
+    ],
+    "escalate": [
+      "Service type and node port",
+      "Endpoint list",
+      "Whether it works from inside the network"
+    ]
+  },
+  {
+    "id": "k8s-kubeconfig-context-mess",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Access & RBAC",
+    "title": "Commands run against the wrong cluster",
+    "summary": "You applied something and it landed in the wrong environment.",
+    "aliases": [
+      "wrong cluster",
+      "wrong context",
+      "applied to prod",
+      "kubeconfig context",
+      "current-context",
+      "multiple clusters"
+    ],
+    "source": "https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Show the active context and its cluster",
+        "cmd": "kubectl config current-context && kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'",
+        "risk": "safe",
+        "look": "The server URL, not just the context name. Names lie; the URL does not."
+      },
+      {
+        "title": "List every context available",
+        "cmd": "kubectl config get-contexts",
+        "risk": "safe",
+        "look": "The asterisk marks the active one. Similar names between environments are how accidents happen."
+      },
+      {
+        "title": "Check the default namespace for this context",
+        "cmd": "kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}'",
+        "risk": "safe",
+        "look": "An empty value means default. Commands without -n go there, which is rarely what you want in a shared cluster."
+      },
+      {
+        "title": "Switch deliberately before doing anything",
+        "cmd": "kubectl config use-context <name>",
+        "risk": "state",
+        "look": "current-context shows the intended cluster. Confirm the server URL again.",
+        "note": "Changes which cluster every subsequent kubectl command talks to, for every shell on this machine. If another terminal is mid-task it will silently switch too. Prefer --context on individual commands when working across clusters at the same time."
+      }
+    ],
+    "causes": [
+      {
+        "id": "similar-names",
+        "cause": "Context names look alike.",
+        "fix": "Rename them to be unmistakable. Put the environment first.",
+        "confirm": ""
+      },
+      {
+        "id": "no-prompt",
+        "cause": "Nothing shows the active context.",
+        "fix": "Add it to your shell prompt. This single change prevents most of these incidents.",
+        "confirm": ""
+      },
+      {
+        "id": "default-namespace",
+        "cause": "The context has no namespace set.",
+        "fix": "Set one per context so bare commands land somewhere predictable.",
+        "confirm": ""
+      },
+      {
+        "id": "shared-kubeconfig",
+        "cause": "One kubeconfig for every cluster.",
+        "fix": "Use --context explicitly, or separate files with KUBECONFIG.",
+        "confirm": ""
+      },
+      {
+        "id": "already-applied",
+        "cause": "You already applied to the wrong cluster.",
+        "fix": "Check what changed before reverting. A blind delete can make it worse.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The context matches the intended environment.",
+      "The prompt shows it.",
+      "A guardrail exists for production."
+    ],
+    "escalate": [
+      "Active context and server URL",
+      "All available contexts",
+      "What was applied and where"
+    ]
   }
 ]

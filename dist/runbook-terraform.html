@@ -3,475 +3,323 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Runbook</title>
+<title>Miratech DevOps Runbook</title>
 <style>
 :root{
-  --paper:#EEF1F4; --surface:#fff; --ink:#141C24; --muted:#5A6976;
-  --rule:#D5DCE3; --rule-soft:#E4E9ED;
-  --safe:#0F7B54; --state:#A15C00; --destructive:#BC2C24;
-  --focus:#1F5FA8;
+  --paper:#F4F6F8; --surface:#fff; --ink:#111A22; --muted:#5C6B7A;
+  --rule:#DCE2E8; --soft:#EAEEF2; --nav:#111A22; --navink:#C9D5E0;
+  --safe:#0E7A52; --state:#9C5A00; --danger:#BA2B24; --focus:#1F5FA8;
   --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
-  --mono:"Cascadia Mono",ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  --mono:"Cascadia Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+  --side:292px;
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
-  font-size:16px;line-height:1.5;font-feature-settings:"tnum" 1}
-button,input,textarea,select{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+html,body{margin:0;height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
-.wrap{max-width:940px;margin:0 auto;padding:0 20px}
+.shell{display:flex;min-height:100vh}
 
-/* ---- context strip ---- */
-.ctx{background:var(--ink);color:#DCE3EA;position:sticky;top:0;z-index:20}
-.ctx .wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding-top:9px;padding-bottom:9px}
-.ctx .brand{font-weight:650;letter-spacing:-.01em;color:#fff;margin-right:auto;font-size:15px}
-.ctx .by{font-weight:400;color:#8095A8;font-size:12.5px;margin-left:7px}
-@media(max-width:640px){.ctx .by{display:none}}
-.ctx label{display:flex;align-items:baseline;gap:6px;font-size:12.5px;color:#9FB0BF}
-.ctx input{background:transparent;border:0;border-bottom:1px solid #3C4A57;color:#fff;
-  font-family:var(--mono);font-size:13px;padding:1px 2px;width:15ch;min-width:0}
-.ctx input:focus{border-bottom-color:#7FA8D4;outline:none}
-.ctx input::placeholder{color:#5A6976}
+aside{width:var(--side);flex:0 0 var(--side);background:var(--nav);color:var(--navink);
+  position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.brand{padding:18px 20px 14px;border-bottom:1px solid #22303C}
+.brand .org{font-size:10.5px;letter-spacing:.14em;color:#7E93A6;font-weight:600}
+.brand h1{margin:3px 0 0;font-size:17px;font-weight:650;color:#fff;letter-spacing:-.01em}
+.brand .by{font-size:11.5px;color:#7E93A6;margin-top:3px}
+.sbox{padding:13px 16px;border-bottom:1px solid #22303C}
+.sbox input{width:100%;background:#1B2833;border:1px solid #2C3B49;border-radius:6px;
+  color:#fff;padding:8px 11px;font-size:14px}
+.sbox input:focus{border-color:#4A7CB0;outline:none}
+.sbox input::placeholder{color:#6B7F91}
+nav{flex:1;overflow-y:auto;padding:8px 0 26px}
+nav::-webkit-scrollbar{width:8px}
+nav::-webkit-scrollbar-thumb{background:#2C3B49;border-radius:4px}
+.tgroup{margin:2px 0}
+.thead{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;
+  padding:9px 18px;cursor:pointer;text-align:left;color:#E3EAF1;font-size:13.5px;font-weight:600}
+.thead:hover{background:#1A2732}
+.thead .car{font-family:var(--mono);font-size:10px;color:#6B7F91;width:9px}
+.thead .ct{margin-left:auto;font-size:11px;color:#6B7F91;font-variant-numeric:tabular-nums}
+.tbody{display:none}
+.tgroup.open .tbody{display:block}
+.tgroup.open .thead{color:#fff}
+.chead{padding:8px 18px 4px 35px;font-size:10.5px;letter-spacing:.08em;color:#66798B;font-weight:600}
+.item{display:block;width:100%;background:none;border:0;text-align:left;cursor:pointer;
+  padding:6px 18px 6px 35px;color:#A8BBCB;font-size:13.5px;line-height:1.35;border-left:2px solid transparent}
+.item:hover{background:#1A2732;color:#fff}
+.item.sel{background:#1E2D3A;color:#fff;border-left-color:#5B93CE}
+.nohit{padding:18px;color:#6B7F91;font-size:13px}
 
-/* ---- search ---- */
-.search{padding:44px 0 26px}
-h1{font-size:28px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:640}
-.lede{color:var(--muted);margin:0 0 22px;max-width:62ch}
-#q{width:100%;padding:14px 16px;border:1px solid var(--rule);border-radius:6px;
-  background:var(--surface);font-size:17px}
-#q:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px rgba(31,95,168,.12)}
-.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
-.chips.sub{margin-top:8px}
-.tab{background:var(--surface);border:1px solid var(--rule);border-radius:20px;padding:6px 14px;
-  font-size:13.5px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
-.tab:hover{border-color:var(--ink)}
-.tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
-.tab .n{font-size:11.5px;opacity:.6;font-variant-numeric:tabular-nums}
-.chips.sub .tab{padding:4px 11px;font-size:12.5px;border-radius:4px;color:var(--muted)}
-.chips.sub .tab.on{color:#fff}
-.hint{margin-top:13px;font-size:12.5px;color:var(--muted)}
-kbd{font-family:var(--mono);font-size:11.5px;border:1px solid var(--rule);border-bottom-width:2px;
-  border-radius:3px;padding:1px 5px;background:var(--surface)}
+main{flex:1;min-width:0;display:flex;flex-direction:column}
+.ctx{background:var(--surface);border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:9}
+.ctx .in{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:10px 34px;max-width:1080px}
+.crumb{font-size:12.5px;color:var(--muted);margin-right:auto}
+.crumb b{color:var(--ink);font-weight:600}
+.ctx label{display:flex;align-items:baseline;gap:6px;font-size:12px;color:var(--muted)}
+.ctx input{border:0;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:12.5px;
+  padding:2px 3px;width:16ch;background:transparent}
+.ctx input:focus{border-bottom-color:var(--focus);outline:none}
+.pane{flex:1;padding:30px 34px 80px;max-width:1080px}
 
-/* ---- results ---- */
-.results{list-style:none;margin:0;padding:0 0 56px}
-.results li{border-top:1px solid var(--rule-soft)}
-.results li:last-child{border-bottom:1px solid var(--rule-soft)}
-.hit{display:block;width:100%;text-align:left;background:none;border:0;padding:15px 14px;cursor:pointer}
-.hit:hover,.hit.cur{background:var(--surface)}
-.hit h3{margin:0;font-size:16.5px;font-weight:600;letter-spacing:-.005em}
-.hit p{margin:3px 0 0;color:var(--muted);font-size:14px}
-.meta{margin-top:7px;font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
-.empty{padding:40px 14px;color:var(--muted);border-top:1px solid var(--rule-soft)}
+.hero h2{margin:0 0 6px;font-size:27px;letter-spacing:-.02em;font-weight:650}
+.hero p{margin:0 0 26px;color:var(--muted);max-width:64ch}
+.stats{display:flex;gap:34px;flex-wrap:wrap;padding:20px 0;border-top:1px solid var(--rule);
+  border-bottom:1px solid var(--rule);margin-bottom:28px}
+.stat b{display:block;font-size:26px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px;
+  text-align:left;cursor:pointer}
+.card:hover{border-color:var(--ink)}
+.card h3{margin:0;font-size:15.5px;font-weight:640}
+.card p{margin:4px 0 0;font-size:13px;color:var(--muted)}
 
-/* ---- trust badge ---- */
-.trust{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600}
-.trust::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
-.t-verified{color:var(--safe)} .t-documented{color:var(--state)} .t-reference{color:var(--muted)}
+.rb h2{margin:0 0 6px;font-size:25px;letter-spacing:-.02em;font-weight:650;line-height:1.22}
+.rb .sum{margin:0 0 12px;color:var(--muted);max-width:66ch;font-size:16px}
+.src{font-size:12.5px;color:var(--muted);margin:0 0 28px}
+.src a{color:var(--focus)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 22px}
+.tag{font-size:11.5px;background:var(--soft);color:var(--muted);padding:3px 9px;border-radius:20px}
 
-/* ---- runbook ---- */
-.rb{padding:26px 0 90px;display:none}
-.back{background:none;border:0;padding:0;color:var(--muted);font-size:13.5px;cursor:pointer;margin-bottom:18px}
-.back:hover{color:var(--ink)}
-.rb h2{font-size:25px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:640}
-.rb .sum{color:var(--muted);margin:0 0 14px;max-width:64ch}
-.prov{font-size:12.5px;color:var(--muted);border-left:2px solid var(--rule);padding:2px 0 2px 11px;margin-bottom:26px}
-.prov code{font-family:var(--mono);font-size:12px}
-.prov a{color:var(--focus)}
-
-/* ---- the rail ---- */
 ol.steps{list-style:none;margin:0;padding:0}
-.step{position:relative;padding:0 0 26px 40px}
-.step::before{content:"";position:absolute;left:11px;top:24px;bottom:0;width:1px;background:var(--rule)}
+.step{position:relative;padding:0 0 28px 42px}
+.step::before{content:"";position:absolute;left:12px;top:26px;bottom:0;width:1px;background:var(--rule)}
 .step:last-child::before{display:none}
-.step.danger::before{background:var(--destructive);opacity:.35}
-.mark{position:absolute;left:0;top:2px;width:23px;height:23px;border:1px solid var(--rule);
-  background:var(--surface);border-radius:3px;cursor:pointer;padding:0;
-  font-family:var(--mono);font-size:12px;color:var(--muted);line-height:21px;text-align:center}
-.mark:hover{border-color:var(--ink)}
-.step.done .mark{background:var(--ink);border-color:var(--ink);color:#fff}
-.step.done .stitle{color:var(--muted)}
-.step.danger .mark{border-color:var(--destructive);color:var(--destructive)}
-
-.shead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:9px}
-.stitle{font-weight:600;font-size:16px;letter-spacing:-.005em}
-.chip{font-size:11px;font-weight:650;padding:2px 7px;border-radius:3px;white-space:nowrap}
-.c-safe{color:var(--safe);background:rgba(15,123,84,.09)}
-.c-state{color:var(--state);background:rgba(161,92,0,.10)}
-.c-destructive{color:#fff;background:var(--destructive)}
-
-.cmd{position:relative;background:var(--ink);border-radius:5px;margin:0 0 10px}
-.cmd pre{margin:0;padding:13px 84px 13px 14px;overflow-x:auto;font-family:var(--mono);
-  font-size:13.5px;line-height:1.55;color:#E8EEF3;white-space:pre-wrap;word-break:break-word}
-.cmd .fill{color:#8FD0A8;font-weight:600}
-.cmd .unfilled{color:#E0A86A;border-bottom:1px dashed #8A6A48}
-.copy{position:absolute;top:8px;right:8px;background:#2A3640;border:0;color:#C6D3DD;
-  font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
-.copy:hover{background:#3A4854;color:#fff}
-.veil{padding:13px 14px;color:#E0A86A;font-family:var(--mono);font-size:13px;cursor:pointer;
-  display:flex;align-items:center;gap:9px}
+.step.d::before{background:var(--danger);opacity:.3}
+.num{position:absolute;left:0;top:0;width:25px;height:25px;border:1px solid var(--rule);
+  background:var(--surface);border-radius:50%;font-family:var(--mono);font-size:12px;
+  color:var(--muted);line-height:23px;text-align:center}
+.step.d .num{border-color:var(--danger);color:var(--danger)}
+.sh{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:9px}
+.st{font-weight:640;font-size:16.5px;letter-spacing:-.005em}
+.chip{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:.03em}
+.c-safe{color:var(--safe);background:rgba(14,122,82,.09)}
+.c-state{color:var(--state);background:rgba(156,90,0,.10)}
+.c-destructive{color:#fff;background:var(--danger)}
+.cmd{position:relative;background:var(--ink);border-radius:7px;margin:0 0 11px}
+.cmd pre{margin:0;padding:14px 88px 14px 15px;overflow-x:auto;font-family:var(--mono);
+  font-size:13.5px;line-height:1.6;color:#E9EFF4;white-space:pre-wrap;word-break:break-word}
+.fill{color:#8AD3AC;font-weight:600}
+.un{color:#E4AC6E;border-bottom:1px dashed #8A6A48}
+.cp{position:absolute;top:9px;right:9px;background:#2A3742;border:0;color:#C6D3DD;
+  font-size:12px;padding:5px 11px;border-radius:5px;cursor:pointer}
+.cp:hover{background:#3A4854;color:#fff}
+.veil{padding:14px 15px;color:#E4AC6E;font-family:var(--mono);font-size:13px;cursor:pointer}
 .veil:hover{color:#fff}
+.look{font-size:15px;color:var(--muted);margin:0 0 9px;max-width:68ch}
+.note{font-size:14.5px;border-left:3px solid var(--danger);padding:8px 0 8px 13px;
+  margin:0 0 11px;max-width:66ch;background:linear-gradient(90deg,rgba(186,43,36,.045),transparent)}
+.note.s{border-left-color:var(--state);background:linear-gradient(90deg,rgba(156,90,0,.05),transparent)}
 
-.look{font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:66ch}
-.look b{color:var(--ink);font-weight:600}
-.note{font-size:14px;border-left:2px solid var(--destructive);padding:6px 0 6px 11px;
-  margin:0 0 10px;max-width:64ch;color:var(--ink)}
-.note-state{border-left-color:var(--state)}
+.br{margin:13px 0 0;background:var(--surface);border:1px solid var(--rule);border-radius:7px;overflow:hidden}
+.brh{font-size:10.5px;font-weight:700;letter-spacing:.07em;color:var(--muted);
+  padding:9px 15px;background:var(--soft);border-bottom:1px solid var(--rule)}
+.brow{padding:11px 15px;border-bottom:1px solid var(--soft);font-size:14.5px}
+.brow:last-child{border-bottom:0}
+.bif code{font-family:var(--mono);font-size:12.5px;background:var(--soft);padding:2px 7px;border-radius:4px}
+.bif b{font-weight:650;color:var(--muted);font-size:12px;letter-spacing:.03em;margin-right:5px}
+.bthen{color:var(--muted);margin-top:4px;max-width:68ch}
+.goto{color:var(--focus);font-weight:600;white-space:nowrap}
 
-/* ---- decision branches ---- */
-.branch{margin:12px 0 0;border-left:2px solid var(--rule);padding-left:13px}
-.bhead{font-size:11.5px;font-weight:650;color:var(--muted);margin-bottom:7px}
-.brow{margin-bottom:9px}
-.bif{font-size:14px}
-.bif b{font-weight:600}
-.bif code{font-family:var(--mono);font-size:12.5px;background:#E7ECF1;padding:1px 6px;border-radius:3px}
-.bthen{font-size:14px;color:var(--muted);margin-top:2px;max-width:66ch}
-.goto{color:var(--focus);white-space:nowrap;font-weight:600}
+.sec{margin-top:38px;padding-top:22px;border-top:1px solid var(--rule)}
+.sec h3{font-size:11.5px;font-weight:700;letter-spacing:.07em;margin:0 0 15px;color:var(--muted)}
+.cz{background:var(--surface);border:1px solid var(--rule);border-radius:7px;padding:14px 16px;
+  margin-bottom:9px;display:flex;gap:13px}
+.rk{font-family:var(--mono);font-size:12px;color:#fff;background:var(--muted);border-radius:50%;
+  width:21px;height:21px;line-height:21px;text-align:center;flex:0 0 21px;margin-top:2px}
+.cz .w{font-weight:640;font-size:15.5px}
+.cz .fx{color:var(--muted);font-size:14.5px;margin-top:4px;max-width:68ch}
+.cz .fx b{color:var(--ink);font-weight:640}
+ul.pl{margin:0;padding-left:20px;color:var(--muted);font-size:15px;max-width:68ch}
+ul.pl li{margin-bottom:6px}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--ink);
+  color:#fff;padding:10px 20px;border-radius:6px;font-size:13.5px;z-index:40;display:none}
+.burger{display:none}
 
-/* ---- causes ---- */
-.sec{margin-top:34px;padding-top:20px;border-top:1px solid var(--rule)}
-.sec h3{font-size:13px;font-weight:650;margin:0 0 14px;color:var(--muted);letter-spacing:.01em}
-.cause{padding:13px 15px;background:var(--surface);border:1px solid var(--rule-soft);border-radius:5px;margin-bottom:9px}
-.cause.lit{border-color:var(--safe);border-left:3px solid var(--safe)}
-.cause .rank{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-right:7px}
-.cause .what{font-weight:600;font-size:15px}
-.cause .fix{color:var(--muted);font-size:14.5px;margin-top:4px;max-width:66ch}
-.cause .fix b{color:var(--ink);font-weight:600}
-ul.plain{margin:0;padding-left:19px;color:var(--muted);font-size:14.5px;max-width:66ch}
-ul.plain li{margin-bottom:5px}
-
-/* ---- action bar ---- */
-.bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--rule);
-  padding:11px 0;display:none;z-index:15}
-.bar .wrap{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
-.bar .prog{font-size:13px;color:var(--muted);margin-right:auto;font-variant-numeric:tabular-nums}
-.act{background:var(--surface);border:1px solid var(--rule);border-radius:5px;padding:7px 13px;
-  font-size:13.5px;cursor:pointer}
-.act:hover{border-color:var(--ink)}
-.act.key{background:var(--ink);color:#fff;border-color:var(--ink)}
-.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
-  padding:9px 17px;border-radius:5px;font-size:13.5px;z-index:30;display:none}
-
-footer{color:var(--muted);font-size:12.5px;padding:0 0 30px;max-width:70ch;white-space:pre-line}
-
-@media(max-width:640px){
-  .wrap{padding:0 15px}
-  .search{padding:26px 0 18px} h1{font-size:23px} .rb h2{font-size:21px}
-  .ctx .wrap{gap:11px} .ctx input{width:11ch}
-  .step{padding-left:33px} .mark{width:21px;height:21px;line-height:19px}
-  .step::before{left:10px}
-  .cmd pre{padding-right:14px;padding-top:38px}
-  .copy{top:6px;right:auto;left:8px}
+@media(max-width:900px){
+  aside{position:fixed;left:0;top:0;z-index:30;transform:translateX(-100%);transition:transform .18s}
+  body.nav aside{transform:none}
+  .burger{display:inline-flex;background:none;border:1px solid var(--rule);border-radius:6px;
+    padding:5px 11px;cursor:pointer;font-size:15px;margin-right:12px}
+  .ctx .in,.pane{padding-left:16px;padding-right:16px}
+  .step{padding-left:33px}.num{width:22px;height:22px;line-height:20px}
+  .step::before{left:11px}
+  .cmd pre{padding:40px 15px 14px}.cp{top:8px;right:auto;left:9px}
+  .rb h2{font-size:21px}.hero h2{font-size:22px}
 }
 </style>
 </head>
 <body>
+<div class="shell">
 
-<div class="ctx"><div class="wrap">
-  <span class="brand">DevOps Runbook <span class="by">by Dinesh Ilangovan</span></span>
-  <span id="ctxfields"></span>
-</div></div>
+<aside>
+  <div class="brand">
+    <div class="org">MIRATECH &middot; INTERNAL</div>
+    <h1>DevOps Runbook</h1>
+    <div class="by">Designed &amp; built by Dinesh Ilangovan</div>
+  </div>
+  <div class="sbox"><input id="q" placeholder="Search symptom or error…" autocomplete="off"></div>
+  <nav id="nav"></nav>
+</aside>
 
-<main class="wrap">
-
-<section class="search" id="searchview">
-  <h1>What is broken?</h1>
-  <p class="lede">Type the symptom, the error string, or what you were doing when it failed.</p>
-  <input id="q" placeholder="CrashLoopBackOff, pod pending, committed to main, force push..." autocomplete="off" autofocus>
-  <div class="chips" id="techchips"></div>
-  <div class="chips sub" id="catchips"></div>
-  <p class="hint"><kbd>/</kbd> search &nbsp; <kbd>↑</kbd><kbd>↓</kbd> move &nbsp; <kbd>Enter</kbd> open &nbsp; <kbd>Esc</kbd> back</p>
-</section>
-
-<ul class="results" id="results"></ul>
-
-<section class="rb" id="rbview"></section>
-
-<footer id="foot"></footer>
+<main>
+  <div class="ctx"><div class="in">
+    <button class="burger" id="burger">&#9776;</button>
+    <span class="crumb" id="crumb"></span>
+    <span id="fields"></span>
+  </div></div>
+  <div class="pane" id="pane"></div>
 </main>
 
-<div class="bar" id="bar"><div class="wrap">
-  <span class="prog" id="prog"></span>
-  <button class="act key" id="a-esc">Copy handoff notes</button>
-</div></div>
+</div>
 <div class="toast" id="toast"></div>
 
-<script id="data" type="application/json">[{"id":"tf-state-lock","tier":"guide","technology":"Terraform","category":"State","title":"Error acquiring the state lock","summary":"Terraform will not run because another operation holds the lock, or a crashed run left it behind.","aliases":["state lock","error acquiring the state lock","lock id","conditionalcheckfailedexception","terraform locked","force-unlock"],"source":"https://developer.hashicorp.com/terraform/language/state/locking","inputs":[{"key":"lockid","label":"Lock ID from the error","example":"a1b2c3d4-0000-0000-0000-000000000000"}],"steps":[{"title":"Read the lock's own metadata","cmd":"terraform plan","risk":"safe","look":"The error block names Who, Created and Operation. Who and Created together tell you whether this is a live run or an abandoned lock.","signals":[{"match":"(?i)Who:.*@","means":"A named person or CI runner holds it. Check with them before doing anything.","goto":"cause:someone-running"},{"match":"(?i)Operation:\\s*OperationTypeApply","means":"An apply held this lock. If it crashed, state may be partially written.","goto":"cause:crashed-apply"}]},{"title":"Check whether a CI job is actually running","cmd":"echo 'Check your CI pipeline for a running plan or apply on this workspace'","risk":"safe","look":"Do this before force-unlocking. Breaking a live apply's lock is how state gets corrupted."},{"title":"Confirm the timestamp is genuinely stale","cmd":"terraform plan 2>&1 | findstr Created","risk":"safe","look":"A lock minutes old is probably live. Hours old with no running job is abandoned."},{"title":"Force-unlock the stale lock","cmd":"terraform force-unlock {lockid}","risk":"destructive","look":"Terraform confirms the lock was released. Run terraform plan immediately afterwards to check state consistency.","note":"Removes the lock without the holder's knowledge. If another apply is genuinely running, both processes will then write state concurrently and can corrupt it, which is far worse than waiting. Only run this once you have confirmed no job is active."}],"causes":[{"id":"someone-running","cause":"Another engineer or CI job holds the lock legitimately.","fix":"Wait. Do not force-unlock a live operation.","confirm":""},{"id":"crashed-apply","cause":"A previous apply died and left the lock.","fix":"Force-unlock, then plan carefully. Resources may have been created without being recorded.","confirm":""},{"id":"network-interrupt","cause":"A local run lost connectivity mid-operation.","fix":"Force-unlock, then plan to reconcile.","confirm":""},{"id":"permissions","cause":"The backend cannot write the lock at all.","fix":"Check IAM on the lock table or blob. This looks like a lock problem but is an access problem.","confirm":""}],"verify":["terraform plan runs without a lock error.","The plan shows no unexpected drift from a partial apply.","No concurrent operation was interrupted."],"escalate":["The full lock error including Who and Created","Whether any CI job was running","The plan output after unlocking"]},{"id":"tf-already-exists","tier":"guide","technology":"Terraform","category":"State","title":"Resource already exists in the provider","summary":"Apply fails because the real resource exists but Terraform's state does not know about it.","aliases":["already exists","entityalreadyexists","resource exists","import resource","alreadyexists","duplicate resource"],"source":"https://developer.hashicorp.com/terraform/cli/import","inputs":[{"key":"address","label":"Terraform address","example":"aws_s3_bucket.logs"},{"key":"realid","label":"Real resource ID","example":"my-logs-bucket"}],"steps":[{"title":"Confirm Terraform does not have it in state","cmd":"terraform state list | findstr {address}","risk":"safe","look":"No output means it is genuinely absent from state, and import is the right move. Output means state has it and the problem is different.","signals":[{"match":"\\w","means":"It is in state already. This is a naming collision or a second resource, not a missing import.","goto":"cause:name-collision"},{"match":"^\\s*$","means":"Absent from state. Import is appropriate.","goto":"cause:not-in-state"}]},{"title":"Check you are in the workspace you think","cmd":"terraform workspace show && terraform state list | measure-object -line","risk":"safe","look":"Applying against the wrong workspace produces exactly this error and is a common cause, especially in CI."},{"title":"Import the existing resource into state","cmd":"terraform import {address} {realid}","risk":"state","look":"Terraform confirms the import. Nothing in the real infrastructure has changed yet.","note":"Writes the real resource into state but does not generate configuration for you. If your .tf block does not match reality, the very next plan will propose changes to the live resource. Always plan immediately afterwards and read it carefully before applying."},{"title":"Check what Terraform now wants to change","cmd":"terraform plan","risk":"safe","look":"An empty plan means your configuration matches reality. Any proposed change is a real difference you must reconcile in the .tf file, not apply blindly.","signals":[{"match":"(?i)0 to add, 0 to change, 0 to destroy","means":"Configuration matches reality. The import is complete.","goto":""},{"match":"(?i)to destroy","means":"Stop. Your configuration would destroy something. Fix the .tf before applying.","goto":"cause:config-mismatch"}]}],"causes":[{"id":"not-in-state","cause":"The resource was created outside Terraform, or state was lost.","fix":"Import it, then reconcile the configuration until plan is empty.","confirm":""},{"id":"wrong-workspace","cause":"Applying against the wrong workspace or state file.","fix":"Check terraform workspace show. Confirm the backend key too.","confirm":""},{"id":"name-collision","cause":"A different resource already uses that name in the provider.","fix":"Rename one of them. Names are globally unique for some resource types.","confirm":""},{"id":"config-mismatch","cause":"Imported, but the configuration does not match reality.","fix":"Adjust the .tf until plan is empty. Never apply a plan that proposes destroying something you just imported.","confirm":""}],"verify":["terraform plan reports no changes.","The resource appears in terraform state list.","The configuration reflects the real resource accurately."],"escalate":["The exact already-exists error","Output of terraform workspace show","The plan output after import"]},{"id":"tf-unexpected-drift","tier":"guide","technology":"Terraform","category":"Plan","title":"Plan shows changes nobody made","summary":"A plan proposes changes to resources you did not touch. Distinguish real drift from provider noise.","aliases":["unexpected changes","drift","plan shows changes","forces replacement","perpetual diff","always shows changes"],"source":"https://developer.hashicorp.com/terraform/cli/commands/plan","inputs":[{"key":"address","label":"Resource address","example":"aws_ecs_service.api"}],"steps":[{"title":"Refresh state and see what actually drifted","cmd":"terraform plan -refresh-only","risk":"safe","look":"Differences between state and reality only. This separates genuine outside changes from configuration differences, which the normal plan blends together.","signals":[{"match":"(?i)No changes","means":"State matches reality. The diff comes from your configuration, not from drift.","goto":"cause:config-diff"},{"match":"(?i)has changed outside of Terraform","means":"Something modified the resource outside Terraform.","goto":"cause:manual-change"}]},{"title":"Read what specifically would change","cmd":"terraform plan -target={address}","risk":"safe","look":"The attribute-level diff. Watch for 'forces replacement' — that means destroy and recreate, not an in-place update."},{"title":"Check whether it is the same diff every time","cmd":"terraform plan -detailed-exitcode","risk":"safe","look":"Exit code 2 means changes are pending. The same diff reappearing after a successful apply is a perpetual diff, which is a provider or configuration issue rather than drift.","signals":[{"match":"(?i)forces replacement","means":"This would destroy and recreate the resource. Understand the downtime before proceeding.","goto":"cause:replacement"}]},{"title":"Inspect the stored state for the attribute","cmd":"terraform state show {address}","risk":"safe","look":"What Terraform believes. Comparing this against the provider console usually makes the source of the difference obvious."}],"causes":[{"id":"manual-change","cause":"Someone changed the resource in the console.","fix":"Either import the change into configuration, or apply to restore. Decide which is the intended source of truth.","confirm":""},{"id":"config-diff","cause":"The configuration differs from reality and always has.","fix":"A variable or default changed. Compare against the last applied configuration.","confirm":""},{"id":"perpetual-diff","cause":"The same diff returns after every apply.","fix":"Usually a provider normalising a value differently from how it is written. Match the provider's format, or use ignore_changes deliberately.","confirm":""},{"id":"provider-upgrade","cause":"A provider version change altered defaults.","fix":"Read the provider changelog. Pin the version so this does not happen unannounced.","confirm":""},{"id":"replacement","cause":"The change forces destroy and recreate.","fix":"Check which attribute is immutable. For stateful resources this may mean data loss, so plan the change properly.","confirm":""}],"verify":["A plan immediately after apply reports no changes.","Any drift was resolved deliberately, not by blind apply.","No resource was replaced without that being intended."],"escalate":["Output of terraform plan -refresh-only","The attribute-level diff","Provider version and whether it recently changed"]},{"id":"tf-provider-auth","tier":"guide","technology":"Terraform","category":"Providers","title":"Provider authentication fails","summary":"Terraform cannot authenticate to the cloud. The credential chain is layered and the error rarely says which layer.","aliases":["no valid credential","provider auth","invalidclienttokenid","unable to locate credentials","expiredtoken","terraform credentials"],"source":"https://developer.hashicorp.com/terraform/language/providers/configuration","inputs":[],"steps":[{"title":"Read which provider and which stage failed","cmd":"terraform plan","risk":"safe","look":"The provider name and the specific credential error. Expired and missing are completely different problems.","signals":[{"match":"(?i)ExpiredToken|expired","means":"The session token expired. Re-authenticate.","goto":"cause:expired"},{"match":"(?i)unable to locate credentials|no valid credential","means":"No credentials found anywhere in the chain.","goto":"cause:none-found"},{"match":"(?i)InvalidClientTokenId|SignatureDoesNotMatch","means":"Credentials exist but are wrong or from another account.","goto":"cause:wrong-creds"},{"match":"(?i)AccessDenied|not authorized","means":"Authenticated successfully, but lacking permission for the action.","goto":"cause:no-permission"}]},{"title":"See which identity is actually in use","cmd":"aws sts get-caller-identity","risk":"safe","look":"The account and ARN Terraform will use. Confirm it is the account you intend before anything else."},{"title":"Check what the environment is providing","cmd":"echo $env:AWS_PROFILE $env:AWS_REGION && terraform version","risk":"safe","look":"Environment variables override the shared config file. A leftover AWS_PROFILE in the shell is a very common cause."},{"title":"Check whether the provider block pins an assumed role","cmd":"findstr /S /C:\"assume_role\" *.tf","risk":"safe","look":"An assume_role block means your base credentials must be permitted to assume that role. The failure may be at the assume step rather than the base credentials."}],"causes":[{"id":"expired","cause":"The session token has expired.","fix":"Re-authenticate. SSO sessions are typically short-lived by design.","confirm":""},{"id":"none-found","cause":"No credentials in environment, shared config or instance metadata.","fix":"Set the profile or environment variables. Confirm with sts get-caller-identity before running Terraform.","confirm":""},{"id":"wrong-creds","cause":"Credentials belong to a different account.","fix":"Check AWS_PROFILE. A stale exported variable overrides the config file silently.","confirm":""},{"id":"no-permission","cause":"Authenticated but not authorized for the action.","fix":"Read the denied action in the error. It names the exact permission needed.","confirm":""},{"id":"assume-role-fail","cause":"The assume_role step failed.","fix":"Check the trust policy on the target role and whether your base identity is allowed to assume it.","confirm":""}],"verify":["terraform plan runs without a credential error.","sts get-caller-identity shows the intended account.","The credential source is explicit rather than accidental."],"escalate":["The provider error verbatim","Output of aws sts get-caller-identity","Which environment variables are set"]},{"id":"tf-destroy-blocked","tier":"guide","technology":"Terraform","category":"Plan","title":"Destroy fails on a dependency","summary":"Terraform cannot remove a resource because something still references it, or the provider refuses.","aliases":["destroy failed","dependency violation","resource in use","cannot delete","deleteconflict","has dependent objects"],"source":"https://developer.hashicorp.com/terraform/cli/commands/destroy","inputs":[{"key":"address","label":"Resource that will not destroy","example":"aws_security_group.api"}],"steps":[{"title":"Read which dependency is blocking","cmd":"terraform destroy","risk":"safe","look":"The provider names the dependent object. That object often lives outside this Terraform configuration entirely, which is why Terraform cannot see it.","signals":[{"match":"(?i)DependencyViolation|has dependent objects","means":"Something still references this resource.","goto":"cause:external-dependency"},{"match":"(?i)deletion protection|DeletionProtection","means":"Deletion protection is enabled on the resource.","goto":"cause:deletion-protection"},{"match":"(?i)timeout|context deadline","means":"The provider timed out rather than refused.","goto":"cause:timeout"}]},{"title":"See what Terraform itself knows depends on it","cmd":"terraform graph | findstr {address}","risk":"safe","look":"In-configuration dependencies only. If this shows nothing, the blocker is outside Terraform's knowledge."},{"title":"Inspect the resource's current state","cmd":"terraform state show {address}","risk":"safe","look":"Attributes that may indicate protection flags or attachments recorded at the last refresh."},{"title":"Remove it from state without destroying it","cmd":"terraform state rm {address}","risk":"destructive","look":"The address disappears from terraform state list. The real resource is untouched.","note":"Terraform forgets the resource but the real infrastructure keeps running and keeps costing money. It becomes unmanaged, and a future apply may try to create a duplicate. Only do this when you have deliberately decided to hand ownership elsewhere, and record where it went."}],"causes":[{"id":"external-dependency","cause":"Something outside this configuration references the resource.","fix":"Find and remove the dependent object first. Security group rules referencing each other are a classic case.","confirm":""},{"id":"deletion-protection","cause":"The provider has deletion protection enabled.","fix":"Disable it and apply that change, then destroy. Two steps, deliberately.","confirm":""},{"id":"timeout","cause":"The provider timed out during deletion.","fix":"Some resources take a long time to delete. Raise the timeout and retry before assuming failure.","confirm":""},{"id":"orphaned-state","cause":"The real resource is already gone but state still lists it.","fix":"terraform state rm to reconcile.","confirm":""}],"verify":["terraform destroy completes.","The provider console confirms the resource is gone.","Nothing was orphaned into an unmanaged state by accident."],"escalate":["The destroy error including the dependent object","terraform state show for the resource","Whether the dependency is inside or outside this configuration"]},{"id":"tf-for-each-error","tier":"guide","technology":"Terraform","category":"Language","title":"for_each or count fails on unknown values","summary":"The plan cannot proceed because the number of instances depends on something not yet created.","aliases":["invalid for_each argument","count cannot be determined","depends on resource attributes","unknown values","for_each error","cannot be determined until apply"],"source":"https://developer.hashicorp.com/terraform/language/meta-arguments/for_each","inputs":[{"key":"address","label":"Resource address","example":"aws_iam_policy.app"}],"steps":[{"title":"Read which value is unknown","cmd":"terraform plan","risk":"safe","look":"The error names the argument and why it cannot be resolved. for_each keys must be known before any resource is created.","signals":[{"match":"(?i)depends on resource attributes that cannot be determined","means":"The keys derive from something not yet created.","goto":"cause:unknown-keys"},{"match":"(?i)map or set of strings","means":"for_each received the wrong type, often a list of objects.","goto":"cause:wrong-type"},{"match":"(?i)duplicate.*key","means":"Two elements produce the same key.","goto":"cause:duplicate-keys"}]},{"title":"Inspect the expression producing the keys","cmd":"terraform console","risk":"safe","look":"Evaluate the expression interactively. Being able to see the actual value usually makes the problem obvious in seconds."},{"title":"Check whether it depends on an unbuilt resource","cmd":"terraform graph | findstr {address}","risk":"safe","look":"What this resource depends on. Any dependency on an attribute of an uncreated resource makes the keys unknown at plan time."},{"title":"Apply the dependency first as a targeted step","cmd":"terraform apply -target=<dependency-address>","risk":"state","look":"The dependency is created. The full plan can now resolve the keys.","note":"Applies only part of the configuration, deliberately leaving the rest inconsistent. HashiCorp recommends this only for recovery, not routine use. Follow it immediately with a full apply, and never leave a stack in a partially applied state."}],"causes":[{"id":"unknown-keys","cause":"for_each keys derive from an uncreated resource.","fix":"Base keys on static input such as a variable or a local, not on a computed attribute.","confirm":""},{"id":"wrong-type","cause":"for_each needs a map or a set of strings.","fix":"Convert with toset, or build a map keyed by a stable identifier.","confirm":""},{"id":"duplicate-keys","cause":"Two elements produce the same key.","fix":"Choose a genuinely unique key. Names collide more often than IDs.","confirm":""},{"id":"count-vs-foreach","cause":"Using count on a list that changes order.","fix":"count keys by index, so inserting an element shifts everything after it and forces recreation. for_each keyed by name avoids this entirely.","confirm":""}],"verify":["terraform plan resolves without unknown-value errors.","Keys are stable across runs.","Adding an element does not recreate unrelated resources."],"escalate":["The error naming the unknown value","The expression producing the keys","What the resource depends on"]},{"id":"tf-init-backend-error","tier":"guide","technology":"Terraform","category":"Backend","title":"terraform init fails on the backend","summary":"Initialisation cannot reach or configure remote state, so nothing else can run.","aliases":["backend initialization required","init failed","backend configuration changed","error loading state","cannot access backend","reconfigure"],"source":"https://developer.hashicorp.com/terraform/language/backend","inputs":[],"steps":[{"title":"Read the initialisation error","cmd":"terraform init","risk":"safe","look":"Whether it is access, a configuration change, or a missing resource. These are three different problems with similar wording.","signals":[{"match":"(?i)Backend configuration changed","means":"The backend block differs from what was initialised previously.","goto":"cause:config-changed"},{"match":"(?i)AccessDenied|403|Forbidden","means":"Credentials cannot reach the state store.","goto":"cause:no-access"},{"match":"(?i)NoSuchBucket|does not exist","means":"The state store itself is absent.","goto":"cause:missing-bucket"},{"match":"(?i)Failed to get existing workspaces","means":"Cannot list state, usually a permissions problem.","goto":"cause:no-access"}]},{"title":"Check which backend is recorded locally","cmd":"type .terraform\\terraform.tfstate","risk":"safe","look":"The backend configuration from the last successful init. Comparing it against your current backend block explains most of these errors."},{"title":"Confirm credentials reach the state store","cmd":"aws sts get-caller-identity && aws s3 ls s3://<state-bucket>","risk":"safe","look":"Whether this identity can actually list the bucket. Terraform needs read and write on the state object and on the lock table."},{"title":"Reinitialise with the new backend configuration","cmd":"terraform init -reconfigure","risk":"state","look":"Initialisation succeeds. Run terraform state list immediately and confirm your resources are there.","note":"Discards the local record of the previous backend and initialises the new one without copying state across. If you intended to move existing state, use -migrate-state instead; -reconfigure on a populated backend leaves Terraform pointing at empty state and the next plan will propose creating everything."}],"causes":[{"id":"config-changed","cause":"The backend block changed since the last init.","fix":"Use -migrate-state to move state, or -reconfigure only when the new backend already holds the correct state.","confirm":""},{"id":"no-access","cause":"Credentials cannot reach the state store.","fix":"Check IAM on both the bucket and the lock table. Read alone is not enough.","confirm":""},{"id":"missing-bucket","cause":"The state store does not exist.","fix":"Create it, in a separate configuration from the one that uses it.","confirm":""},{"id":"wrong-key","cause":"The state key points somewhere empty.","fix":"Check the key. A typo produces empty state and a plan proposing to create everything.","confirm":""},{"id":"partial-config","cause":"Backend values come from -backend-config and were not supplied.","fix":"Pass the same values, or commit a backend config file.","confirm":""}],"verify":["init completes.","terraform state list shows the expected resources.","A plan proposes no unexpected creation."],"escalate":["The init error verbatim","The recorded backend from .terraform","Whether credentials can list the state store"]},{"id":"tf-version-constraint","tier":"guide","technology":"Terraform","category":"Providers","title":"Version constraint conflict on init","summary":"Terraform cannot find a provider or module version satisfying all constraints at once.","aliases":["no available releases match","version constraint","provider version conflict","required_version","incompatible provider","constraint not satisfied"],"source":"https://developer.hashicorp.com/terraform/language/providers/requirements","inputs":[{"key":"provider","label":"Provider","example":"hashicorp/aws"}],"steps":[{"title":"Read which constraints conflict","cmd":"terraform init","risk":"safe","look":"The error lists every constraint and where each comes from. A module you did not write often carries the restrictive one.","signals":[{"match":"(?i)no available releases match","means":"No single version satisfies all constraints.","goto":"cause:impossible-constraint"},{"match":"(?i)locked provider.*does not match","means":"The lock file pins a version outside the constraints.","goto":"cause:lock-mismatch"},{"match":"(?i)Unsupported Terraform Core version","means":"The CLI version itself is outside required_version.","goto":"cause:core-version"}]},{"title":"See what is currently pinned","cmd":"terraform providers","risk":"safe","look":"The dependency tree with each module's constraint. This is the clearest view of who is asking for what."},{"title":"Check the lock file","cmd":"type .terraform.lock.hcl","risk":"safe","look":"The exact versions and hashes recorded. This file is meant to be committed, and a stale one causes exactly this error after a module upgrade."},{"title":"Upgrade within the constraints","cmd":"terraform init -upgrade","risk":"state","look":"init succeeds and the lock file updates. Run a plan and read it before applying.","note":"Rewrites .terraform.lock.hcl with the newest versions the constraints permit. A provider minor upgrade can change resource defaults and produce a plan with unexpected diffs. Review the plan carefully before applying, and commit the updated lock file so CI matches."}],"causes":[{"id":"impossible-constraint","cause":"Two modules require incompatible versions.","fix":"Upgrade the restrictive module. A single provider version is used for the whole configuration.","confirm":""},{"id":"lock-mismatch","cause":"The lock file pins a version outside the constraints.","fix":"terraform init -upgrade. Commit the result.","confirm":""},{"id":"core-version","cause":"The CLI version is outside required_version.","fix":"Install a matching version. tfenv or similar makes this manageable across projects.","confirm":""},{"id":"pessimistic-pin","cause":"A ~> constraint is narrower than intended.","fix":"~> 4.1 allows 4.x but not 5.0. Confirm that is what you meant.","confirm":""},{"id":"platform-hashes","cause":"The lock file lacks hashes for this platform.","fix":"terraform providers lock with the platforms your team and CI use.","confirm":""}],"verify":["init completes.","The lock file is committed and CI uses the same versions.","A plan after the upgrade shows no surprises."],"escalate":["The constraint error listing all sources","Output of terraform providers","The lock file contents"]},{"id":"tf-cycle-error","tier":"guide","technology":"Terraform","category":"Language","title":"Cycle error in the dependency graph","summary":"Two or more resources depend on each other, so Terraform cannot order them.","aliases":["cycle","dependency cycle","circular dependency","error cycle","graph cycle","resources depend on each other"],"source":"https://developer.hashicorp.com/terraform/internals/graph","inputs":[],"steps":[{"title":"Read the cycle Terraform reports","cmd":"terraform plan","risk":"safe","look":"The error lists every node in the cycle. Each arrow is a reference in your configuration, so the cycle is always findable by reading them."},{"title":"Render the graph around the cycle","cmd":"terraform graph | findstr /C:\"->\"","risk":"safe","look":"The edges. Following the chain from any node in the reported cycle back to itself locates the reference to break."},{"title":"Find the explicit depends_on entries","cmd":"findstr /S /C:\"depends_on\" *.tf","risk":"safe","look":"Manually added dependencies are the most common cause. Terraform infers dependencies from references already, so most depends_on entries are unnecessary and some are harmful."},{"title":"Find where the resources reference each other","cmd":"findstr /S /C:\"<resource-name>\" *.tf","risk":"safe","look":"Two resources naming each other in their arguments. Security groups referencing each other's IDs is the textbook case."}],"causes":[{"id":"mutual-reference","cause":"Two resources reference each other's attributes.","fix":"Break it with a separate association resource. For security groups, use standalone rule resources rather than inline rules.","confirm":""},{"id":"unnecessary-depends-on","cause":"A manual depends_on creates the cycle.","fix":"Remove it. Terraform infers ordering from references and usually gets it right.","confirm":""},{"id":"module-cycle","cause":"Two modules pass outputs to each other.","fix":"Restructure so data flows one way. Extract the shared piece into a third module.","confirm":""},{"id":"self-reference","cause":"A resource references its own attribute.","fix":"Use a local or a variable instead of referring to itself.","confirm":""},{"id":"destroy-cycle","cause":"The cycle only appears on destroy.","fix":"Destroy-time ordering is the reverse. A create_before_destroy lifecycle combined with depends_on frequently produces this.","confirm":""}],"verify":["terraform plan produces a graph with no cycle.","Ordering is inferred from references rather than forced.","Destroy also plans cleanly."],"escalate":["The cycle error listing every node","The relevant graph edges","Any depends_on entries involved"]},{"id":"tf-data-source-not-found","tier":"guide","technology":"Terraform","category":"Data Sources","title":"Data source finds no matching resource","summary":"A lookup returns nothing, so everything depending on it fails.","aliases":["no matching","data source not found","query returned no results","your query returned no results","data lookup failed","not found data"],"source":"https://developer.hashicorp.com/terraform/language/data-sources","inputs":[{"key":"address","label":"Data source address","example":"data.aws_vpc.main"}],"steps":[{"title":"Read which filter matched nothing","cmd":"terraform plan","risk":"safe","look":"The data source and its filters. The provider is usually explicit about which criteria produced no results.","signals":[{"match":"(?i)no matching.*found|returned no results","means":"The filters match nothing in the target account and region.","goto":"cause:filter-too-narrow"},{"match":"(?i)multiple.*found","means":"Too many matches. The data source needs exactly one.","goto":"cause:too-many-matches"}]},{"title":"Run the equivalent query with the CLI","cmd":"aws ec2 describe-vpcs --filters Name=tag:Name,Values=<value>","risk":"safe","look":"Whether the resource exists at all with those filters. This separates a wrong filter from a wrong account or region immediately."},{"title":"Confirm which account and region are in use","cmd":"terraform providers && aws sts get-caller-identity","risk":"safe","look":"A data source searches only the configured region. A resource in another region is invisible to it and the error looks identical."},{"title":"Check the resource is created before the lookup","cmd":"terraform graph | findstr {address}","risk":"safe","look":"A data source reading something created in the same apply resolves before it exists. That needs an explicit dependency or a direct reference instead."}],"causes":[{"id":"filter-too-narrow","cause":"The filters match nothing.","fix":"Verify with the CLI first. Tag values are case-sensitive.","confirm":""},{"id":"wrong-region","cause":"The resource is in a different region.","fix":"Data sources are region-scoped. Use a provider alias for cross-region lookups.","confirm":""},{"id":"wrong-account","cause":"The resource is in another account.","fix":"Use an aliased provider with the correct credentials.","confirm":""},{"id":"too-many-matches","cause":"More than one match.","fix":"Add a filter, or use most_recent where the provider supports it.","confirm":""},{"id":"not-yet-created","cause":"The resource is created in this same apply.","fix":"Reference the resource directly instead of looking it up, or add depends_on to the data source.","confirm":""},{"id":"deleted","cause":"The resource was removed.","fix":"The lookup is correct and the resource is gone. Find out who removed it.","confirm":""}],"verify":["The plan resolves the data source.","The same query returns one result via the CLI.","The account and region are correct."],"escalate":["The data source error","Result of the equivalent CLI query","Which account and region the provider targets"]},{"id":"tf-partial-apply","tier":"guide","technology":"Terraform","category":"Apply","title":"Apply failed partway through","summary":"Some resources were created and some were not. State may not reflect reality.","aliases":["apply failed","partial apply","some resources created","apply interrupted","error applying plan","resources left behind"],"source":"https://developer.hashicorp.com/terraform/cli/commands/apply","inputs":[],"steps":[{"title":"Read which resources completed before the failure","cmd":"terraform apply 2>&1 | findstr /C:\"Creation complete\" /C:\"Error\"","risk":"safe","look":"Everything up to the error was created and recorded. Terraform writes state as it goes, so completed resources are tracked.","signals":[{"match":"(?i)Error: .*timeout","means":"A timeout. The resource may have been created anyway despite the error.","goto":"cause:timeout-created"},{"match":"(?i)Error: .*quota|limit","means":"A service limit was reached mid-apply.","goto":"cause:quota"}]},{"title":"Compare state against reality","cmd":"terraform plan -refresh-only","risk":"safe","look":"Whether anything was created without being recorded. This is the real risk after a timeout, and it produces orphans nobody notices until the bill arrives."},{"title":"List what state currently holds","cmd":"terraform state list","risk":"safe","look":"The resources Terraform knows about. Anything created but absent here is an orphan needing import or manual deletion."},{"title":"Re-run apply to complete the remainder","cmd":"terraform apply","risk":"state","look":"The plan shows only the remaining resources. Read it before confirming rather than accepting by reflex.","note":"Creates only what is missing, since completed resources are already in state. If a resource was created but not recorded, this attempts to create a duplicate and may fail with an already-exists error. Run the refresh-only plan first and resolve any orphans before retrying."}],"causes":[{"id":"timeout-created","cause":"A timeout occurred but the resource was created.","fix":"Import it, then re-apply. This is the most common source of orphaned infrastructure.","confirm":""},{"id":"quota","cause":"A service quota was reached.","fix":"Raise the quota, then re-apply. Completed resources stay.","confirm":""},{"id":"dependency-failed","cause":"An early failure blocked everything after it.","fix":"Fix the root failure and re-apply. The ordering was correct.","confirm":""},{"id":"state-not-written","cause":"The process died before writing state.","fix":"Compare with refresh-only and import anything orphaned.","confirm":""},{"id":"lock-left","cause":"The lock was left behind.","fix":"Follow the state lock runbook before doing anything else.","confirm":""}],"verify":["A full apply completes with no errors.","A subsequent plan shows no changes.","Nothing was orphaned outside state."],"escalate":["Which resources completed before the error","The error verbatim","Output of terraform plan -refresh-only"]},{"id":"tf-module-not-found","tier":"guide","technology":"Terraform","category":"Modules","title":"Module not found or not installed","summary":"init cannot fetch a module, or plan says the module is not installed.","aliases":["module not installed","failed to download module","module source","could not download module","module not found","run terraform init"],"source":"https://developer.hashicorp.com/terraform/language/modules/sources","inputs":[{"key":"module","label":"Module name","example":"vpc"}],"steps":[{"title":"Read the module error","cmd":"terraform init","risk":"safe","look":"Whether it is the source, credentials or a version constraint. Each has a different fix and the wording distinguishes them.","signals":[{"match":"(?i)Module not installed","means":"The module was added but init has not run since.","goto":"cause:init-needed"},{"match":"(?i)Could not download module|failed to download","means":"The source is unreachable or needs authentication.","goto":"cause:source-unreachable"},{"match":"(?i)Unreadable module directory|no such file","means":"A local path that does not exist.","goto":"cause:bad-local-path"}]},{"title":"Check the source declaration","cmd":"findstr /S /C:\"source\" *.tf","risk":"safe","look":"Local paths must start with ./ or ../ or Terraform treats them as registry addresses. Registry sources need a version argument."},{"title":"Check what is actually installed","cmd":"type .terraform\\modules\\modules.json","risk":"safe","look":"The resolved module directories. A stale entry after changing a source causes confusing errors."},{"title":"Reinstall modules from scratch","cmd":"rmdir /s /q .terraform\\modules && terraform init","risk":"destructive","look":"init reports each module downloaded. modules.json is rebuilt.","note":"Deletes the local module cache and re-downloads everything. Safe for state, but any local edits you made inside .terraform/modules are lost — those edits were never a good idea, since they are overwritten by every init anyway. Requires network access to all module sources."}],"causes":[{"id":"init-needed","cause":"A module was added without running init.","fix":"terraform init. Required after any module source change.","confirm":""},{"id":"source-unreachable","cause":"The source cannot be reached.","fix":"Check network and credentials. Private registries and private Git both need auth configured for Terraform, not just for you.","confirm":""},{"id":"bad-local-path","cause":"A local path is wrong.","fix":"Local sources must begin with ./ or ../ and are relative to the file declaring them.","confirm":""},{"id":"version-constraint","cause":"No module version satisfies the constraint.","fix":"Check available versions in the registry.","confirm":""},{"id":"git-auth","cause":"A Git module source needs credentials.","fix":"Configure a credential helper, or use an insteadOf rule to rewrite the URL scheme.","confirm":""},{"id":"stale-cache","cause":"The module cache is inconsistent.","fix":"Remove .terraform/modules and init again.","confirm":""}],"verify":["init installs every module.","plan runs without module errors.","It works from a clean clone in CI."],"escalate":["The module error verbatim","The source declaration","Contents of modules.json"]},{"id":"tf-sensitive-output","tier":"guide","technology":"Terraform","category":"Outputs","title":"Output is redacted or a secret leaked into state","summary":"You cannot read a value you need, or you realise a secret is stored in plain text in state.","aliases":["sensitive value","output redacted","secret in state","cannot read output","sensitive = true","state contains secrets"],"source":"https://developer.hashicorp.com/terraform/language/values/outputs#sensitive","inputs":[{"key":"output","label":"Output name","example":"db_password"}],"steps":[{"title":"Read the output value explicitly","cmd":"terraform output -raw {output}","risk":"safe","look":"-raw prints a sensitive value directly. It is not a bypass; sensitive only suppresses incidental display in logs.","signals":[{"match":"(?i)Unsupported value for raw output","means":"The value is not a simple string. Use -json instead.","goto":"cause:not-string"}]},{"title":"Check whether the value is in state in plain text","cmd":"terraform state pull | findstr /I \"password secret token key\"","risk":"safe","look":"State holds every attribute in plain text, including sensitive ones. sensitive controls display only, never storage. This surprises most people."},{"title":"Check where state is stored and who can read it","cmd":"terraform show -json | python -c \"import json,sys;d=json.load(sys.stdin);print(d.get('values',{}).keys())\"","risk":"safe","look":"Anyone with read access to the state backend can read every secret in it. That is the real exposure, not the console output."},{"title":"Check the backend is encrypted and access-controlled","cmd":"aws s3api get-bucket-encryption --bucket <state-bucket>","risk":"safe","look":"Encryption at rest plus a tight bucket policy is the actual control. Without both, state is a plaintext secret store."}],"causes":[{"id":"not-string","cause":"The output is not a plain string.","fix":"Use terraform output -json and parse it.","confirm":""},{"id":"secret-in-state","cause":"A secret is stored in state in plain text.","fix":"Unavoidable for resources that manage secrets. Protect the backend: encrypt at rest, restrict read access, enable versioning and audit logging.","confirm":""},{"id":"should-not-output","cause":"The secret does not need to be an output at all.","fix":"Have the consuming system read it from the secret store directly instead.","confirm":""},{"id":"committed-state","cause":"State was committed to Git.","fix":"Treat every secret in it as leaked. Rotate them all, then move state to a remote backend.","confirm":""},{"id":"logged-in-ci","cause":"A sensitive value appeared in CI logs.","fix":"Mark it sensitive so Terraform suppresses it, and rotate what leaked.","confirm":""}],"verify":["You can read the value you need.","State is encrypted with restricted read access.","Nothing sensitive is in version control."],"escalate":["Whether the output is marked sensitive","Where state is stored and who can read it","Whether encryption and versioning are enabled"]},{"id":"tf-workspace-confusion","tier":"guide","technology":"Terraform","category":"State","title":"Applied against the wrong environment","summary":"Changes landed in the wrong environment, or plan shows everything being created in one that should exist.","aliases":["wrong workspace","wrong environment","plan wants to create everything","workspace confusion","applied to prod","empty state"],"source":"https://developer.hashicorp.com/terraform/language/state/workspaces","inputs":[],"steps":[{"title":"Confirm the current workspace and state contents","cmd":"terraform workspace show && terraform state list","risk":"safe","look":"An empty state list with a non-empty configuration is the warning sign. It means Terraform sees nothing and will propose creating everything.","signals":[{"match":"(?i)default","means":"The default workspace. If your team uses named workspaces, this is probably wrong.","goto":"cause:default-workspace"}]},{"title":"List every workspace and see which hold state","cmd":"terraform workspace list","risk":"safe","look":"The asterisk marks the current one. Workspace names rarely match environment names exactly, which is where mistakes come from."},{"title":"Check which backend key is in use","cmd":"type .terraform\\terraform.tfstate","risk":"safe","look":"The bucket and key. Workspaces append the workspace name to the key path, so the same configuration reads different state per workspace."},{"title":"Check which credentials are active","cmd":"aws sts get-caller-identity","risk":"safe","look":"Right workspace with production credentials is just as dangerous as the reverse. Both must match before you apply."}],"causes":[{"id":"default-workspace","cause":"You are in default when you meant a named one.","fix":"terraform workspace select <name>. Make the prompt show it so it is always visible.","confirm":""},{"id":"wrong-backend-key","cause":"The backend key points at different state.","fix":"Check the key. A per-environment directory is clearer than workspaces for many teams.","confirm":""},{"id":"wrong-credentials","cause":"Credentials target a different account.","fix":"Confirm with sts get-caller-identity before every apply against anything important.","confirm":""},{"id":"already-applied","cause":"You already applied to the wrong environment.","fix":"Do not immediately destroy. Work out what changed, then reverse it deliberately.","confirm":""},{"id":"no-guardrail","cause":"Nothing prevents this happening.","fix":"Require applies to go through CI with the environment fixed per pipeline. Human workspace selection is the weak point.","confirm":""}],"verify":["Workspace, backend key and credentials all agree.","plan shows only intended changes.","A guardrail exists so it cannot silently happen again."],"escalate":["Current workspace and state list","The backend key","Which account the credentials target"]},{"id":"tf-resource-recreated-unexpectedly","tier":"guide","technology":"Terraform","category":"Plan","title":"Plan wants to destroy and recreate a resource","summary":"An apparently small change forces replacement, which for a stateful resource means data loss.","aliases":["forces replacement","must be replaced","destroy and recreate","replacement required","why is it recreating"],"source":"https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle","inputs":[{"key":"address","label":"Resource","example":"aws_db_instance.main"}],"steps":[{"title":"Find which attribute forces it","cmd":"terraform plan -target={address}","risk":"safe","look":"Terraform marks the specific attribute with 'forces replacement'. That one line is the entire answer.","signals":[{"match":"forces replacement","means":"An immutable attribute changed. In-place update is impossible.","goto":"cause:immutable-attr"},{"match":"must be replaced","means":"Replacement is planned. Understand the impact before applying.","goto":"cause:immutable-attr"}]},{"title":"Check what the current value is","cmd":"terraform state show {address}","risk":"safe","look":"The stored value against your configuration. Sometimes the difference is formatting rather than a real change."},{"title":"Check whether a provider upgrade changed defaults","cmd":"terraform providers","risk":"safe","look":"A provider version bump can change a default and force replacement on resources nobody touched."},{"title":"Protect the resource while you decide","cmd":"terraform plan","risk":"safe","look":"Add a prevent_destroy lifecycle block to the resource in code, then re-plan. Terraform will refuse to plan a destroy for it, which turns an accident into an explicit decision."}],"causes":[{"id":"immutable-attr","cause":"An immutable attribute changed.","fix":"Some attributes cannot change in place. For a database that means data loss unless you plan a migration.","confirm":""},{"id":"provider-default","cause":"A provider upgrade changed a default.","fix":"Read the changelog. Pin the value explicitly to match reality.","confirm":""},{"id":"formatting-only","cause":"The value differs only in formatting.","fix":"Match the provider's normalised form, or use ignore_changes.","confirm":""},{"id":"name-change","cause":"A name or identifier changed.","fix":"Most providers cannot rename in place. Plan a migration deliberately.","confirm":""},{"id":"moved-block","cause":"The resource address changed in code.","fix":"Use a moved block so Terraform tracks the rename instead of recreating.","confirm":""}],"verify":["The plan shows no unintended replacement.","Any genuine replacement is planned with a migration.","Stateful resources carry prevent_destroy."],"escalate":["The attribute marked forces replacement","Current value from state","Whether the provider version changed"]},{"id":"tf-output-not-updating","tier":"guide","technology":"Terraform","category":"Outputs","title":"Outputs are stale or missing after apply","summary":"terraform output shows old values or nothing at all.","aliases":["output not updating","no outputs","stale output","output empty","outputs missing"],"source":"https://developer.hashicorp.com/terraform/language/values/outputs","inputs":[{"key":"output","label":"Output name","example":"cluster_endpoint"}],"steps":[{"title":"Check what state holds","cmd":"terraform output -json","risk":"safe","look":"Outputs come from state, not from the configuration. Empty here means the last apply did not record them.","signals":[{"match":"\\{\\s*\\}","means":"No outputs in state at all.","goto":"cause:not-applied"},{"match":"\"sensitive\": true","means":"Present but redacted. Use -raw to read it.","goto":"cause:sensitive"}]},{"title":"Check the output is declared and reachable","cmd":"findstr /S /C:\"output \\\"{output}\\\"\" *.tf","risk":"safe","look":"An output inside a module is not exposed at the root unless the root also declares one that references it."},{"title":"Refresh state from reality","cmd":"terraform refresh 2>nul || terraform apply -refresh-only","risk":"state","look":"Outputs repopulate from current reality.","note":"Updates state to match the real infrastructure without changing anything. It rewrites the state file, so a concurrent apply elsewhere could conflict. It does not modify infrastructure, but it can reveal drift you were not expecting in the next plan."},{"title":"Check you are in the right workspace","cmd":"terraform workspace show","risk":"safe","look":"Outputs are per workspace. Reading from the wrong one returns different values or nothing, with no error."}],"causes":[{"id":"not-applied","cause":"Apply has not run since the outputs were added.","fix":"Run apply. Outputs are written to state at apply time.","confirm":""},{"id":"module-not-exposed","cause":"The output lives in a module.","fix":"Declare a root-level output referencing module.<name>.<output>.","confirm":""},{"id":"sensitive","cause":"The output is marked sensitive.","fix":"terraform output -raw <name>.","confirm":""},{"id":"wrong-workspace","cause":"Reading from a different workspace.","fix":"Select the right one.","confirm":""},{"id":"depends-on-unknown","cause":"The value was unknown at apply time.","fix":"Check the resource actually produced the attribute.","confirm":""}],"verify":["terraform output returns current values.","Values match reality.","The right workspace is selected."],"escalate":["Output of terraform output -json","Where the output is declared","Current workspace"]},{"id":"tf-plan-slow","tier":"guide","technology":"Terraform","category":"Performance","title":"Plan takes many minutes","summary":"Every plan is slow, which makes the whole workflow painful and discourages small changes.","aliases":["terraform slow","plan takes forever","slow refresh","performance terraform","plan timeout"],"source":"https://developer.hashicorp.com/terraform/cli/commands/plan","inputs":[],"steps":[{"title":"Count what is in state","cmd":"terraform state list | measure-object -line","risk":"safe","look":"Plan refreshes every resource by default. Several hundred resources in one state is the most common cause of a slow plan."},{"title":"Time a plan without refresh","cmd":"terraform plan -refresh=false","risk":"safe","look":"Much faster here means refresh is the cost, not evaluation. That points at API round trips rather than your configuration.","signals":[{"match":"No changes","means":"Fast without refresh. The API calls are the bottleneck.","goto":"cause:refresh-cost"}]},{"title":"Check provider parallelism","cmd":"terraform plan -parallelism=20","risk":"safe","look":"The default is ten concurrent operations. Raising it helps when the provider API is the limit, though rate limits apply."},{"title":"Check for large data sources","cmd":"findstr /S /C:\"data \\\"\" *.tf","risk":"safe","look":"A data source listing every object in an account runs on every plan. Those are frequently the real cost."}],"causes":[{"id":"refresh-cost","cause":"Refreshing every resource is slow.","fix":"Split the configuration into smaller states. One state per component is the usual answer.","confirm":""},{"id":"too-many-resources","cause":"Hundreds of resources in one state.","fix":"Split by lifecycle. Things that change together belong together.","confirm":""},{"id":"broad-data-source","cause":"A data source enumerates everything.","fix":"Filter it, or replace it with a variable.","confirm":""},{"id":"low-parallelism","cause":"Default parallelism limits throughput.","fix":"Raise it, watching for provider rate limits.","confirm":""},{"id":"remote-state-chain","cause":"Many remote state data sources.","fix":"Each is a fetch. Reduce the chain.","confirm":""}],"verify":["Plan completes in a reasonable time.","State size is manageable.","Data sources are filtered."],"escalate":["Resource count in state","Plan timing with and without refresh","Which data sources are used"]}]</script>
+<script id="data" type="application/json">[{"id":"tf-state-lock","tier":"guide","technology":"Terraform","category":"State","title":"Error acquiring the state lock","summary":"Terraform will not run because another operation holds the lock, or a crashed run left it behind.","aliases":["state lock","error acquiring the state lock","lock id","conditionalcheckfailedexception","terraform locked","force-unlock"],"source":"https://developer.hashicorp.com/terraform/language/state/locking","inputs":[{"key":"lockid","label":"Lock ID from the error","example":"a1b2c3d4-0000-0000-0000-000000000000"}],"steps":[{"title":"Read the lock's own metadata","cmd":"terraform plan","risk":"safe","look":"The error block names Who, Created and Operation. Who and Created together tell you whether this is a live run or an abandoned lock.","signals":[{"match":"(?i)Who:.*@","means":"A named person or CI runner holds it. Check with them before doing anything.","goto":"cause:someone-running"},{"match":"(?i)Operation:\\s*OperationTypeApply","means":"An apply held this lock. If it crashed, state may be partially written.","goto":"cause:crashed-apply"}]},{"title":"Check whether a CI job is actually running","cmd":"echo 'Check your CI pipeline for a running plan or apply on this workspace'","risk":"safe","look":"Do this before force-unlocking. Breaking a live apply's lock is how state gets corrupted."},{"title":"Confirm the timestamp is genuinely stale","cmd":"terraform plan 2>&1 | findstr Created","risk":"safe","look":"A lock minutes old is probably live. Hours old with no running job is abandoned."},{"title":"Force-unlock the stale lock","cmd":"terraform force-unlock {lockid}","risk":"destructive","look":"Terraform confirms the lock was released. Run terraform plan immediately afterwards to check state consistency.","note":"Removes the lock without the holder's knowledge. If another apply is genuinely running, both processes will then write state concurrently and can corrupt it, which is far worse than waiting. Only run this once you have confirmed no job is active."}],"causes":[{"id":"someone-running","cause":"Another engineer or CI job holds the lock legitimately.","fix":"Wait. Do not force-unlock a live operation.","confirm":""},{"id":"crashed-apply","cause":"A previous apply died and left the lock.","fix":"Force-unlock, then plan carefully. Resources may have been created without being recorded.","confirm":""},{"id":"network-interrupt","cause":"A local run lost connectivity mid-operation.","fix":"Force-unlock, then plan to reconcile.","confirm":""},{"id":"permissions","cause":"The backend cannot write the lock at all.","fix":"Check IAM on the lock table or blob. This looks like a lock problem but is an access problem.","confirm":""}],"verify":["terraform plan runs without a lock error.","The plan shows no unexpected drift from a partial apply.","No concurrent operation was interrupted."],"escalate":["The full lock error including Who and Created","Whether any CI job was running","The plan output after unlocking"]},{"id":"tf-already-exists","tier":"guide","technology":"Terraform","category":"State","title":"Resource already exists in the provider","summary":"Apply fails because the real resource exists but Terraform's state does not know about it.","aliases":["already exists","entityalreadyexists","resource exists","import resource","alreadyexists","duplicate resource"],"source":"https://developer.hashicorp.com/terraform/cli/import","inputs":[{"key":"address","label":"Terraform address","example":"aws_s3_bucket.logs"},{"key":"realid","label":"Real resource ID","example":"my-logs-bucket"}],"steps":[{"title":"Confirm Terraform does not have it in state","cmd":"terraform state list | findstr {address}","risk":"safe","look":"No output means it is genuinely absent from state, and import is the right move. Output means state has it and the problem is different.","signals":[{"match":"\\w","means":"It is in state already. This is a naming collision or a second resource, not a missing import.","goto":"cause:name-collision"},{"match":"^\\s*$","means":"Absent from state. Import is appropriate.","goto":"cause:not-in-state"}]},{"title":"Check you are in the workspace you think","cmd":"terraform workspace show && terraform state list | measure-object -line","risk":"safe","look":"Applying against the wrong workspace produces exactly this error and is a common cause, especially in CI."},{"title":"Import the existing resource into state","cmd":"terraform import {address} {realid}","risk":"state","look":"Terraform confirms the import. Nothing in the real infrastructure has changed yet.","note":"Writes the real resource into state but does not generate configuration for you. If your .tf block does not match reality, the very next plan will propose changes to the live resource. Always plan immediately afterwards and read it carefully before applying."},{"title":"Check what Terraform now wants to change","cmd":"terraform plan","risk":"safe","look":"An empty plan means your configuration matches reality. Any proposed change is a real difference you must reconcile in the .tf file, not apply blindly.","signals":[{"match":"(?i)0 to add, 0 to change, 0 to destroy","means":"Configuration matches reality. The import is complete.","goto":""},{"match":"(?i)to destroy","means":"Stop. Your configuration would destroy something. Fix the .tf before applying.","goto":"cause:config-mismatch"}]}],"causes":[{"id":"not-in-state","cause":"The resource was created outside Terraform, or state was lost.","fix":"Import it, then reconcile the configuration until plan is empty.","confirm":""},{"id":"wrong-workspace","cause":"Applying against the wrong workspace or state file.","fix":"Check terraform workspace show. Confirm the backend key too.","confirm":""},{"id":"name-collision","cause":"A different resource already uses that name in the provider.","fix":"Rename one of them. Names are globally unique for some resource types.","confirm":""},{"id":"config-mismatch","cause":"Imported, but the configuration does not match reality.","fix":"Adjust the .tf until plan is empty. Never apply a plan that proposes destroying something you just imported.","confirm":""}],"verify":["terraform plan reports no changes.","The resource appears in terraform state list.","The configuration reflects the real resource accurately."],"escalate":["The exact already-exists error","Output of terraform workspace show","The plan output after import"]},{"id":"tf-unexpected-drift","tier":"guide","technology":"Terraform","category":"Plan","title":"Plan shows changes nobody made","summary":"A plan proposes changes to resources you did not touch. Distinguish real drift from provider noise.","aliases":["unexpected changes","drift","plan shows changes","forces replacement","perpetual diff","always shows changes"],"source":"https://developer.hashicorp.com/terraform/cli/commands/plan","inputs":[{"key":"address","label":"Resource address","example":"aws_ecs_service.api"}],"steps":[{"title":"Refresh state and see what actually drifted","cmd":"terraform plan -refresh-only","risk":"safe","look":"Differences between state and reality only. This separates genuine outside changes from configuration differences, which the normal plan blends together.","signals":[{"match":"(?i)No changes","means":"State matches reality. The diff comes from your configuration, not from drift.","goto":"cause:config-diff"},{"match":"(?i)has changed outside of Terraform","means":"Something modified the resource outside Terraform.","goto":"cause:manual-change"}]},{"title":"Read what specifically would change","cmd":"terraform plan -target={address}","risk":"safe","look":"The attribute-level diff. Watch for 'forces replacement' — that means destroy and recreate, not an in-place update."},{"title":"Check whether it is the same diff every time","cmd":"terraform plan -detailed-exitcode","risk":"safe","look":"Exit code 2 means changes are pending. The same diff reappearing after a successful apply is a perpetual diff, which is a provider or configuration issue rather than drift.","signals":[{"match":"(?i)forces replacement","means":"This would destroy and recreate the resource. Understand the downtime before proceeding.","goto":"cause:replacement"}]},{"title":"Inspect the stored state for the attribute","cmd":"terraform state show {address}","risk":"safe","look":"What Terraform believes. Comparing this against the provider console usually makes the source of the difference obvious."}],"causes":[{"id":"manual-change","cause":"Someone changed the resource in the console.","fix":"Either import the change into configuration, or apply to restore. Decide which is the intended source of truth.","confirm":""},{"id":"config-diff","cause":"The configuration differs from reality and always has.","fix":"A variable or default changed. Compare against the last applied configuration.","confirm":""},{"id":"perpetual-diff","cause":"The same diff returns after every apply.","fix":"Usually a provider normalising a value differently from how it is written. Match the provider's format, or use ignore_changes deliberately.","confirm":""},{"id":"provider-upgrade","cause":"A provider version change altered defaults.","fix":"Read the provider changelog. Pin the version so this does not happen unannounced.","confirm":""},{"id":"replacement","cause":"The change forces destroy and recreate.","fix":"Check which attribute is immutable. For stateful resources this may mean data loss, so plan the change properly.","confirm":""}],"verify":["A plan immediately after apply reports no changes.","Any drift was resolved deliberately, not by blind apply.","No resource was replaced without that being intended."],"escalate":["Output of terraform plan -refresh-only","The attribute-level diff","Provider version and whether it recently changed"]},{"id":"tf-provider-auth","tier":"guide","technology":"Terraform","category":"Providers","title":"Provider authentication fails","summary":"Terraform cannot authenticate to the cloud. The credential chain is layered and the error rarely says which layer.","aliases":["no valid credential","provider auth","invalidclienttokenid","unable to locate credentials","expiredtoken","terraform credentials"],"source":"https://developer.hashicorp.com/terraform/language/providers/configuration","inputs":[],"steps":[{"title":"Read which provider and which stage failed","cmd":"terraform plan","risk":"safe","look":"The provider name and the specific credential error. Expired and missing are completely different problems.","signals":[{"match":"(?i)ExpiredToken|expired","means":"The session token expired. Re-authenticate.","goto":"cause:expired"},{"match":"(?i)unable to locate credentials|no valid credential","means":"No credentials found anywhere in the chain.","goto":"cause:none-found"},{"match":"(?i)InvalidClientTokenId|SignatureDoesNotMatch","means":"Credentials exist but are wrong or from another account.","goto":"cause:wrong-creds"},{"match":"(?i)AccessDenied|not authorized","means":"Authenticated successfully, but lacking permission for the action.","goto":"cause:no-permission"}]},{"title":"See which identity is actually in use","cmd":"aws sts get-caller-identity","risk":"safe","look":"The account and ARN Terraform will use. Confirm it is the account you intend before anything else."},{"title":"Check what the environment is providing","cmd":"echo $env:AWS_PROFILE $env:AWS_REGION && terraform version","risk":"safe","look":"Environment variables override the shared config file. A leftover AWS_PROFILE in the shell is a very common cause."},{"title":"Check whether the provider block pins an assumed role","cmd":"findstr /S /C:\"assume_role\" *.tf","risk":"safe","look":"An assume_role block means your base credentials must be permitted to assume that role. The failure may be at the assume step rather than the base credentials."}],"causes":[{"id":"expired","cause":"The session token has expired.","fix":"Re-authenticate. SSO sessions are typically short-lived by design.","confirm":""},{"id":"none-found","cause":"No credentials in environment, shared config or instance metadata.","fix":"Set the profile or environment variables. Confirm with sts get-caller-identity before running Terraform.","confirm":""},{"id":"wrong-creds","cause":"Credentials belong to a different account.","fix":"Check AWS_PROFILE. A stale exported variable overrides the config file silently.","confirm":""},{"id":"no-permission","cause":"Authenticated but not authorized for the action.","fix":"Read the denied action in the error. It names the exact permission needed.","confirm":""},{"id":"assume-role-fail","cause":"The assume_role step failed.","fix":"Check the trust policy on the target role and whether your base identity is allowed to assume it.","confirm":""}],"verify":["terraform plan runs without a credential error.","sts get-caller-identity shows the intended account.","The credential source is explicit rather than accidental."],"escalate":["The provider error verbatim","Output of aws sts get-caller-identity","Which environment variables are set"]},{"id":"tf-destroy-blocked","tier":"guide","technology":"Terraform","category":"Plan","title":"Destroy fails on a dependency","summary":"Terraform cannot remove a resource because something still references it, or the provider refuses.","aliases":["destroy failed","dependency violation","resource in use","cannot delete","deleteconflict","has dependent objects"],"source":"https://developer.hashicorp.com/terraform/cli/commands/destroy","inputs":[{"key":"address","label":"Resource that will not destroy","example":"aws_security_group.api"}],"steps":[{"title":"Read which dependency is blocking","cmd":"terraform destroy","risk":"safe","look":"The provider names the dependent object. That object often lives outside this Terraform configuration entirely, which is why Terraform cannot see it.","signals":[{"match":"(?i)DependencyViolation|has dependent objects","means":"Something still references this resource.","goto":"cause:external-dependency"},{"match":"(?i)deletion protection|DeletionProtection","means":"Deletion protection is enabled on the resource.","goto":"cause:deletion-protection"},{"match":"(?i)timeout|context deadline","means":"The provider timed out rather than refused.","goto":"cause:timeout"}]},{"title":"See what Terraform itself knows depends on it","cmd":"terraform graph | findstr {address}","risk":"safe","look":"In-configuration dependencies only. If this shows nothing, the blocker is outside Terraform's knowledge."},{"title":"Inspect the resource's current state","cmd":"terraform state show {address}","risk":"safe","look":"Attributes that may indicate protection flags or attachments recorded at the last refresh."},{"title":"Remove it from state without destroying it","cmd":"terraform state rm {address}","risk":"destructive","look":"The address disappears from terraform state list. The real resource is untouched.","note":"Terraform forgets the resource but the real infrastructure keeps running and keeps costing money. It becomes unmanaged, and a future apply may try to create a duplicate. Only do this when you have deliberately decided to hand ownership elsewhere, and record where it went."}],"causes":[{"id":"external-dependency","cause":"Something outside this configuration references the resource.","fix":"Find and remove the dependent object first. Security group rules referencing each other are a classic case.","confirm":""},{"id":"deletion-protection","cause":"The provider has deletion protection enabled.","fix":"Disable it and apply that change, then destroy. Two steps, deliberately.","confirm":""},{"id":"timeout","cause":"The provider timed out during deletion.","fix":"Some resources take a long time to delete. Raise the timeout and retry before assuming failure.","confirm":""},{"id":"orphaned-state","cause":"The real resource is already gone but state still lists it.","fix":"terraform state rm to reconcile.","confirm":""}],"verify":["terraform destroy completes.","The provider console confirms the resource is gone.","Nothing was orphaned into an unmanaged state by accident."],"escalate":["The destroy error including the dependent object","terraform state show for the resource","Whether the dependency is inside or outside this configuration"]},{"id":"tf-for-each-error","tier":"guide","technology":"Terraform","category":"Language","title":"for_each or count fails on unknown values","summary":"The plan cannot proceed because the number of instances depends on something not yet created.","aliases":["invalid for_each argument","count cannot be determined","depends on resource attributes","unknown values","for_each error","cannot be determined until apply"],"source":"https://developer.hashicorp.com/terraform/language/meta-arguments/for_each","inputs":[{"key":"address","label":"Resource address","example":"aws_iam_policy.app"}],"steps":[{"title":"Read which value is unknown","cmd":"terraform plan","risk":"safe","look":"The error names the argument and why it cannot be resolved. for_each keys must be known before any resource is created.","signals":[{"match":"(?i)depends on resource attributes that cannot be determined","means":"The keys derive from something not yet created.","goto":"cause:unknown-keys"},{"match":"(?i)map or set of strings","means":"for_each received the wrong type, often a list of objects.","goto":"cause:wrong-type"},{"match":"(?i)duplicate.*key","means":"Two elements produce the same key.","goto":"cause:duplicate-keys"}]},{"title":"Inspect the expression producing the keys","cmd":"terraform console","risk":"safe","look":"Evaluate the expression interactively. Being able to see the actual value usually makes the problem obvious in seconds."},{"title":"Check whether it depends on an unbuilt resource","cmd":"terraform graph | findstr {address}","risk":"safe","look":"What this resource depends on. Any dependency on an attribute of an uncreated resource makes the keys unknown at plan time."},{"title":"Apply the dependency first as a targeted step","cmd":"terraform apply -target=<dependency-address>","risk":"state","look":"The dependency is created. The full plan can now resolve the keys.","note":"Applies only part of the configuration, deliberately leaving the rest inconsistent. HashiCorp recommends this only for recovery, not routine use. Follow it immediately with a full apply, and never leave a stack in a partially applied state."}],"causes":[{"id":"unknown-keys","cause":"for_each keys derive from an uncreated resource.","fix":"Base keys on static input such as a variable or a local, not on a computed attribute.","confirm":""},{"id":"wrong-type","cause":"for_each needs a map or a set of strings.","fix":"Convert with toset, or build a map keyed by a stable identifier.","confirm":""},{"id":"duplicate-keys","cause":"Two elements produce the same key.","fix":"Choose a genuinely unique key. Names collide more often than IDs.","confirm":""},{"id":"count-vs-foreach","cause":"Using count on a list that changes order.","fix":"count keys by index, so inserting an element shifts everything after it and forces recreation. for_each keyed by name avoids this entirely.","confirm":""}],"verify":["terraform plan resolves without unknown-value errors.","Keys are stable across runs.","Adding an element does not recreate unrelated resources."],"escalate":["The error naming the unknown value","The expression producing the keys","What the resource depends on"]},{"id":"tf-init-backend-error","tier":"guide","technology":"Terraform","category":"Backend","title":"terraform init fails on the backend","summary":"Initialisation cannot reach or configure remote state, so nothing else can run.","aliases":["backend initialization required","init failed","backend configuration changed","error loading state","cannot access backend","reconfigure"],"source":"https://developer.hashicorp.com/terraform/language/backend","inputs":[],"steps":[{"title":"Read the initialisation error","cmd":"terraform init","risk":"safe","look":"Whether it is access, a configuration change, or a missing resource. These are three different problems with similar wording.","signals":[{"match":"(?i)Backend configuration changed","means":"The backend block differs from what was initialised previously.","goto":"cause:config-changed"},{"match":"(?i)AccessDenied|403|Forbidden","means":"Credentials cannot reach the state store.","goto":"cause:no-access"},{"match":"(?i)NoSuchBucket|does not exist","means":"The state store itself is absent.","goto":"cause:missing-bucket"},{"match":"(?i)Failed to get existing workspaces","means":"Cannot list state, usually a permissions problem.","goto":"cause:no-access"}]},{"title":"Check which backend is recorded locally","cmd":"type .terraform\\terraform.tfstate","risk":"safe","look":"The backend configuration from the last successful init. Comparing it against your current backend block explains most of these errors."},{"title":"Confirm credentials reach the state store","cmd":"aws sts get-caller-identity && aws s3 ls s3://<state-bucket>","risk":"safe","look":"Whether this identity can actually list the bucket. Terraform needs read and write on the state object and on the lock table."},{"title":"Reinitialise with the new backend configuration","cmd":"terraform init -reconfigure","risk":"state","look":"Initialisation succeeds. Run terraform state list immediately and confirm your resources are there.","note":"Discards the local record of the previous backend and initialises the new one without copying state across. If you intended to move existing state, use -migrate-state instead; -reconfigure on a populated backend leaves Terraform pointing at empty state and the next plan will propose creating everything."}],"causes":[{"id":"config-changed","cause":"The backend block changed since the last init.","fix":"Use -migrate-state to move state, or -reconfigure only when the new backend already holds the correct state.","confirm":""},{"id":"no-access","cause":"Credentials cannot reach the state store.","fix":"Check IAM on both the bucket and the lock table. Read alone is not enough.","confirm":""},{"id":"missing-bucket","cause":"The state store does not exist.","fix":"Create it, in a separate configuration from the one that uses it.","confirm":""},{"id":"wrong-key","cause":"The state key points somewhere empty.","fix":"Check the key. A typo produces empty state and a plan proposing to create everything.","confirm":""},{"id":"partial-config","cause":"Backend values come from -backend-config and were not supplied.","fix":"Pass the same values, or commit a backend config file.","confirm":""}],"verify":["init completes.","terraform state list shows the expected resources.","A plan proposes no unexpected creation."],"escalate":["The init error verbatim","The recorded backend from .terraform","Whether credentials can list the state store"]},{"id":"tf-version-constraint","tier":"guide","technology":"Terraform","category":"Providers","title":"Version constraint conflict on init","summary":"Terraform cannot find a provider or module version satisfying all constraints at once.","aliases":["no available releases match","version constraint","provider version conflict","required_version","incompatible provider","constraint not satisfied"],"source":"https://developer.hashicorp.com/terraform/language/providers/requirements","inputs":[{"key":"provider","label":"Provider","example":"hashicorp/aws"}],"steps":[{"title":"Read which constraints conflict","cmd":"terraform init","risk":"safe","look":"The error lists every constraint and where each comes from. A module you did not write often carries the restrictive one.","signals":[{"match":"(?i)no available releases match","means":"No single version satisfies all constraints.","goto":"cause:impossible-constraint"},{"match":"(?i)locked provider.*does not match","means":"The lock file pins a version outside the constraints.","goto":"cause:lock-mismatch"},{"match":"(?i)Unsupported Terraform Core version","means":"The CLI version itself is outside required_version.","goto":"cause:core-version"}]},{"title":"See what is currently pinned","cmd":"terraform providers","risk":"safe","look":"The dependency tree with each module's constraint. This is the clearest view of who is asking for what."},{"title":"Check the lock file","cmd":"type .terraform.lock.hcl","risk":"safe","look":"The exact versions and hashes recorded. This file is meant to be committed, and a stale one causes exactly this error after a module upgrade."},{"title":"Upgrade within the constraints","cmd":"terraform init -upgrade","risk":"state","look":"init succeeds and the lock file updates. Run a plan and read it before applying.","note":"Rewrites .terraform.lock.hcl with the newest versions the constraints permit. A provider minor upgrade can change resource defaults and produce a plan with unexpected diffs. Review the plan carefully before applying, and commit the updated lock file so CI matches."}],"causes":[{"id":"impossible-constraint","cause":"Two modules require incompatible versions.","fix":"Upgrade the restrictive module. A single provider version is used for the whole configuration.","confirm":""},{"id":"lock-mismatch","cause":"The lock file pins a version outside the constraints.","fix":"terraform init -upgrade. Commit the result.","confirm":""},{"id":"core-version","cause":"The CLI version is outside required_version.","fix":"Install a matching version. tfenv or similar makes this manageable across projects.","confirm":""},{"id":"pessimistic-pin","cause":"A ~> constraint is narrower than intended.","fix":"~> 4.1 allows 4.x but not 5.0. Confirm that is what you meant.","confirm":""},{"id":"platform-hashes","cause":"The lock file lacks hashes for this platform.","fix":"terraform providers lock with the platforms your team and CI use.","confirm":""}],"verify":["init completes.","The lock file is committed and CI uses the same versions.","A plan after the upgrade shows no surprises."],"escalate":["The constraint error listing all sources","Output of terraform providers","The lock file contents"]},{"id":"tf-cycle-error","tier":"guide","technology":"Terraform","category":"Language","title":"Cycle error in the dependency graph","summary":"Two or more resources depend on each other, so Terraform cannot order them.","aliases":["cycle","dependency cycle","circular dependency","error cycle","graph cycle","resources depend on each other"],"source":"https://developer.hashicorp.com/terraform/internals/graph","inputs":[],"steps":[{"title":"Read the cycle Terraform reports","cmd":"terraform plan","risk":"safe","look":"The error lists every node in the cycle. Each arrow is a reference in your configuration, so the cycle is always findable by reading them."},{"title":"Render the graph around the cycle","cmd":"terraform graph | findstr /C:\"->\"","risk":"safe","look":"The edges. Following the chain from any node in the reported cycle back to itself locates the reference to break."},{"title":"Find the explicit depends_on entries","cmd":"findstr /S /C:\"depends_on\" *.tf","risk":"safe","look":"Manually added dependencies are the most common cause. Terraform infers dependencies from references already, so most depends_on entries are unnecessary and some are harmful."},{"title":"Find where the resources reference each other","cmd":"findstr /S /C:\"<resource-name>\" *.tf","risk":"safe","look":"Two resources naming each other in their arguments. Security groups referencing each other's IDs is the textbook case."}],"causes":[{"id":"mutual-reference","cause":"Two resources reference each other's attributes.","fix":"Break it with a separate association resource. For security groups, use standalone rule resources rather than inline rules.","confirm":""},{"id":"unnecessary-depends-on","cause":"A manual depends_on creates the cycle.","fix":"Remove it. Terraform infers ordering from references and usually gets it right.","confirm":""},{"id":"module-cycle","cause":"Two modules pass outputs to each other.","fix":"Restructure so data flows one way. Extract the shared piece into a third module.","confirm":""},{"id":"self-reference","cause":"A resource references its own attribute.","fix":"Use a local or a variable instead of referring to itself.","confirm":""},{"id":"destroy-cycle","cause":"The cycle only appears on destroy.","fix":"Destroy-time ordering is the reverse. A create_before_destroy lifecycle combined with depends_on frequently produces this.","confirm":""}],"verify":["terraform plan produces a graph with no cycle.","Ordering is inferred from references rather than forced.","Destroy also plans cleanly."],"escalate":["The cycle error listing every node","The relevant graph edges","Any depends_on entries involved"]},{"id":"tf-data-source-not-found","tier":"guide","technology":"Terraform","category":"Data Sources","title":"Data source finds no matching resource","summary":"A lookup returns nothing, so everything depending on it fails.","aliases":["no matching","data source not found","query returned no results","your query returned no results","data lookup failed","not found data"],"source":"https://developer.hashicorp.com/terraform/language/data-sources","inputs":[{"key":"address","label":"Data source address","example":"data.aws_vpc.main"}],"steps":[{"title":"Read which filter matched nothing","cmd":"terraform plan","risk":"safe","look":"The data source and its filters. The provider is usually explicit about which criteria produced no results.","signals":[{"match":"(?i)no matching.*found|returned no results","means":"The filters match nothing in the target account and region.","goto":"cause:filter-too-narrow"},{"match":"(?i)multiple.*found","means":"Too many matches. The data source needs exactly one.","goto":"cause:too-many-matches"}]},{"title":"Run the equivalent query with the CLI","cmd":"aws ec2 describe-vpcs --filters Name=tag:Name,Values=<value>","risk":"safe","look":"Whether the resource exists at all with those filters. This separates a wrong filter from a wrong account or region immediately."},{"title":"Confirm which account and region are in use","cmd":"terraform providers && aws sts get-caller-identity","risk":"safe","look":"A data source searches only the configured region. A resource in another region is invisible to it and the error looks identical."},{"title":"Check the resource is created before the lookup","cmd":"terraform graph | findstr {address}","risk":"safe","look":"A data source reading something created in the same apply resolves before it exists. That needs an explicit dependency or a direct reference instead."}],"causes":[{"id":"filter-too-narrow","cause":"The filters match nothing.","fix":"Verify with the CLI first. Tag values are case-sensitive.","confirm":""},{"id":"wrong-region","cause":"The resource is in a different region.","fix":"Data sources are region-scoped. Use a provider alias for cross-region lookups.","confirm":""},{"id":"wrong-account","cause":"The resource is in another account.","fix":"Use an aliased provider with the correct credentials.","confirm":""},{"id":"too-many-matches","cause":"More than one match.","fix":"Add a filter, or use most_recent where the provider supports it.","confirm":""},{"id":"not-yet-created","cause":"The resource is created in this same apply.","fix":"Reference the resource directly instead of looking it up, or add depends_on to the data source.","confirm":""},{"id":"deleted","cause":"The resource was removed.","fix":"The lookup is correct and the resource is gone. Find out who removed it.","confirm":""}],"verify":["The plan resolves the data source.","The same query returns one result via the CLI.","The account and region are correct."],"escalate":["The data source error","Result of the equivalent CLI query","Which account and region the provider targets"]},{"id":"tf-partial-apply","tier":"guide","technology":"Terraform","category":"Apply","title":"Apply failed partway through","summary":"Some resources were created and some were not. State may not reflect reality.","aliases":["apply failed","partial apply","some resources created","apply interrupted","error applying plan","resources left behind"],"source":"https://developer.hashicorp.com/terraform/cli/commands/apply","inputs":[],"steps":[{"title":"Read which resources completed before the failure","cmd":"terraform apply 2>&1 | findstr /C:\"Creation complete\" /C:\"Error\"","risk":"safe","look":"Everything up to the error was created and recorded. Terraform writes state as it goes, so completed resources are tracked.","signals":[{"match":"(?i)Error: .*timeout","means":"A timeout. The resource may have been created anyway despite the error.","goto":"cause:timeout-created"},{"match":"(?i)Error: .*quota|limit","means":"A service limit was reached mid-apply.","goto":"cause:quota"}]},{"title":"Compare state against reality","cmd":"terraform plan -refresh-only","risk":"safe","look":"Whether anything was created without being recorded. This is the real risk after a timeout, and it produces orphans nobody notices until the bill arrives."},{"title":"List what state currently holds","cmd":"terraform state list","risk":"safe","look":"The resources Terraform knows about. Anything created but absent here is an orphan needing import or manual deletion."},{"title":"Re-run apply to complete the remainder","cmd":"terraform apply","risk":"state","look":"The plan shows only the remaining resources. Read it before confirming rather than accepting by reflex.","note":"Creates only what is missing, since completed resources are already in state. If a resource was created but not recorded, this attempts to create a duplicate and may fail with an already-exists error. Run the refresh-only plan first and resolve any orphans before retrying."}],"causes":[{"id":"timeout-created","cause":"A timeout occurred but the resource was created.","fix":"Import it, then re-apply. This is the most common source of orphaned infrastructure.","confirm":""},{"id":"quota","cause":"A service quota was reached.","fix":"Raise the quota, then re-apply. Completed resources stay.","confirm":""},{"id":"dependency-failed","cause":"An early failure blocked everything after it.","fix":"Fix the root failure and re-apply. The ordering was correct.","confirm":""},{"id":"state-not-written","cause":"The process died before writing state.","fix":"Compare with refresh-only and import anything orphaned.","confirm":""},{"id":"lock-left","cause":"The lock was left behind.","fix":"Follow the state lock runbook before doing anything else.","confirm":""}],"verify":["A full apply completes with no errors.","A subsequent plan shows no changes.","Nothing was orphaned outside state."],"escalate":["Which resources completed before the error","The error verbatim","Output of terraform plan -refresh-only"]},{"id":"tf-module-not-found","tier":"guide","technology":"Terraform","category":"Modules","title":"Module not found or not installed","summary":"init cannot fetch a module, or plan says the module is not installed.","aliases":["module not installed","failed to download module","module source","could not download module","module not found","run terraform init"],"source":"https://developer.hashicorp.com/terraform/language/modules/sources","inputs":[{"key":"module","label":"Module name","example":"vpc"}],"steps":[{"title":"Read the module error","cmd":"terraform init","risk":"safe","look":"Whether it is the source, credentials or a version constraint. Each has a different fix and the wording distinguishes them.","signals":[{"match":"(?i)Module not installed","means":"The module was added but init has not run since.","goto":"cause:init-needed"},{"match":"(?i)Could not download module|failed to download","means":"The source is unreachable or needs authentication.","goto":"cause:source-unreachable"},{"match":"(?i)Unreadable module directory|no such file","means":"A local path that does not exist.","goto":"cause:bad-local-path"}]},{"title":"Check the source declaration","cmd":"findstr /S /C:\"source\" *.tf","risk":"safe","look":"Local paths must start with ./ or ../ or Terraform treats them as registry addresses. Registry sources need a version argument."},{"title":"Check what is actually installed","cmd":"type .terraform\\modules\\modules.json","risk":"safe","look":"The resolved module directories. A stale entry after changing a source causes confusing errors."},{"title":"Reinstall modules from scratch","cmd":"rmdir /s /q .terraform\\modules && terraform init","risk":"destructive","look":"init reports each module downloaded. modules.json is rebuilt.","note":"Deletes the local module cache and re-downloads everything. Safe for state, but any local edits you made inside .terraform/modules are lost — those edits were never a good idea, since they are overwritten by every init anyway. Requires network access to all module sources."}],"causes":[{"id":"init-needed","cause":"A module was added without running init.","fix":"terraform init. Required after any module source change.","confirm":""},{"id":"source-unreachable","cause":"The source cannot be reached.","fix":"Check network and credentials. Private registries and private Git both need auth configured for Terraform, not just for you.","confirm":""},{"id":"bad-local-path","cause":"A local path is wrong.","fix":"Local sources must begin with ./ or ../ and are relative to the file declaring them.","confirm":""},{"id":"version-constraint","cause":"No module version satisfies the constraint.","fix":"Check available versions in the registry.","confirm":""},{"id":"git-auth","cause":"A Git module source needs credentials.","fix":"Configure a credential helper, or use an insteadOf rule to rewrite the URL scheme.","confirm":""},{"id":"stale-cache","cause":"The module cache is inconsistent.","fix":"Remove .terraform/modules and init again.","confirm":""}],"verify":["init installs every module.","plan runs without module errors.","It works from a clean clone in CI."],"escalate":["The module error verbatim","The source declaration","Contents of modules.json"]},{"id":"tf-sensitive-output","tier":"guide","technology":"Terraform","category":"Outputs","title":"Output is redacted or a secret leaked into state","summary":"You cannot read a value you need, or you realise a secret is stored in plain text in state.","aliases":["sensitive value","output redacted","secret in state","cannot read output","sensitive = true","state contains secrets"],"source":"https://developer.hashicorp.com/terraform/language/values/outputs#sensitive","inputs":[{"key":"output","label":"Output name","example":"db_password"}],"steps":[{"title":"Read the output value explicitly","cmd":"terraform output -raw {output}","risk":"safe","look":"-raw prints a sensitive value directly. It is not a bypass; sensitive only suppresses incidental display in logs.","signals":[{"match":"(?i)Unsupported value for raw output","means":"The value is not a simple string. Use -json instead.","goto":"cause:not-string"}]},{"title":"Check whether the value is in state in plain text","cmd":"terraform state pull | findstr /I \"password secret token key\"","risk":"safe","look":"State holds every attribute in plain text, including sensitive ones. sensitive controls display only, never storage. This surprises most people."},{"title":"Check where state is stored and who can read it","cmd":"terraform show -json | python -c \"import json,sys;d=json.load(sys.stdin);print(d.get('values',{}).keys())\"","risk":"safe","look":"Anyone with read access to the state backend can read every secret in it. That is the real exposure, not the console output."},{"title":"Check the backend is encrypted and access-controlled","cmd":"aws s3api get-bucket-encryption --bucket <state-bucket>","risk":"safe","look":"Encryption at rest plus a tight bucket policy is the actual control. Without both, state is a plaintext secret store."}],"causes":[{"id":"not-string","cause":"The output is not a plain string.","fix":"Use terraform output -json and parse it.","confirm":""},{"id":"secret-in-state","cause":"A secret is stored in state in plain text.","fix":"Unavoidable for resources that manage secrets. Protect the backend: encrypt at rest, restrict read access, enable versioning and audit logging.","confirm":""},{"id":"should-not-output","cause":"The secret does not need to be an output at all.","fix":"Have the consuming system read it from the secret store directly instead.","confirm":""},{"id":"committed-state","cause":"State was committed to Git.","fix":"Treat every secret in it as leaked. Rotate them all, then move state to a remote backend.","confirm":""},{"id":"logged-in-ci","cause":"A sensitive value appeared in CI logs.","fix":"Mark it sensitive so Terraform suppresses it, and rotate what leaked.","confirm":""}],"verify":["You can read the value you need.","State is encrypted with restricted read access.","Nothing sensitive is in version control."],"escalate":["Whether the output is marked sensitive","Where state is stored and who can read it","Whether encryption and versioning are enabled"]},{"id":"tf-workspace-confusion","tier":"guide","technology":"Terraform","category":"State","title":"Applied against the wrong environment","summary":"Changes landed in the wrong environment, or plan shows everything being created in one that should exist.","aliases":["wrong workspace","wrong environment","plan wants to create everything","workspace confusion","applied to prod","empty state"],"source":"https://developer.hashicorp.com/terraform/language/state/workspaces","inputs":[],"steps":[{"title":"Confirm the current workspace and state contents","cmd":"terraform workspace show && terraform state list","risk":"safe","look":"An empty state list with a non-empty configuration is the warning sign. It means Terraform sees nothing and will propose creating everything.","signals":[{"match":"(?i)default","means":"The default workspace. If your team uses named workspaces, this is probably wrong.","goto":"cause:default-workspace"}]},{"title":"List every workspace and see which hold state","cmd":"terraform workspace list","risk":"safe","look":"The asterisk marks the current one. Workspace names rarely match environment names exactly, which is where mistakes come from."},{"title":"Check which backend key is in use","cmd":"type .terraform\\terraform.tfstate","risk":"safe","look":"The bucket and key. Workspaces append the workspace name to the key path, so the same configuration reads different state per workspace."},{"title":"Check which credentials are active","cmd":"aws sts get-caller-identity","risk":"safe","look":"Right workspace with production credentials is just as dangerous as the reverse. Both must match before you apply."}],"causes":[{"id":"default-workspace","cause":"You are in default when you meant a named one.","fix":"terraform workspace select <name>. Make the prompt show it so it is always visible.","confirm":""},{"id":"wrong-backend-key","cause":"The backend key points at different state.","fix":"Check the key. A per-environment directory is clearer than workspaces for many teams.","confirm":""},{"id":"wrong-credentials","cause":"Credentials target a different account.","fix":"Confirm with sts get-caller-identity before every apply against anything important.","confirm":""},{"id":"already-applied","cause":"You already applied to the wrong environment.","fix":"Do not immediately destroy. Work out what changed, then reverse it deliberately.","confirm":""},{"id":"no-guardrail","cause":"Nothing prevents this happening.","fix":"Require applies to go through CI with the environment fixed per pipeline. Human workspace selection is the weak point.","confirm":""}],"verify":["Workspace, backend key and credentials all agree.","plan shows only intended changes.","A guardrail exists so it cannot silently happen again."],"escalate":["Current workspace and state list","The backend key","Which account the credentials target"]},{"id":"tf-resource-recreated-unexpectedly","tier":"guide","technology":"Terraform","category":"Plan","title":"Plan wants to destroy and recreate a resource","summary":"An apparently small change forces replacement, which for a stateful resource means data loss.","aliases":["forces replacement","must be replaced","destroy and recreate","replacement required","why is it recreating"],"source":"https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle","inputs":[{"key":"address","label":"Resource","example":"aws_db_instance.main"}],"steps":[{"title":"Find which attribute forces it","cmd":"terraform plan -target={address}","risk":"safe","look":"Terraform marks the specific attribute with 'forces replacement'. That one line is the entire answer.","signals":[{"match":"forces replacement","means":"An immutable attribute changed. In-place update is impossible.","goto":"cause:immutable-attr"},{"match":"must be replaced","means":"Replacement is planned. Understand the impact before applying.","goto":"cause:immutable-attr"}]},{"title":"Check what the current value is","cmd":"terraform state show {address}","risk":"safe","look":"The stored value against your configuration. Sometimes the difference is formatting rather than a real change."},{"title":"Check whether a provider upgrade changed defaults","cmd":"terraform providers","risk":"safe","look":"A provider version bump can change a default and force replacement on resources nobody touched."},{"title":"Protect the resource while you decide","cmd":"terraform plan","risk":"safe","look":"Add a prevent_destroy lifecycle block to the resource in code, then re-plan. Terraform will refuse to plan a destroy for it, which turns an accident into an explicit decision."}],"causes":[{"id":"immutable-attr","cause":"An immutable attribute changed.","fix":"Some attributes cannot change in place. For a database that means data loss unless you plan a migration.","confirm":""},{"id":"provider-default","cause":"A provider upgrade changed a default.","fix":"Read the changelog. Pin the value explicitly to match reality.","confirm":""},{"id":"formatting-only","cause":"The value differs only in formatting.","fix":"Match the provider's normalised form, or use ignore_changes.","confirm":""},{"id":"name-change","cause":"A name or identifier changed.","fix":"Most providers cannot rename in place. Plan a migration deliberately.","confirm":""},{"id":"moved-block","cause":"The resource address changed in code.","fix":"Use a moved block so Terraform tracks the rename instead of recreating.","confirm":""}],"verify":["The plan shows no unintended replacement.","Any genuine replacement is planned with a migration.","Stateful resources carry prevent_destroy."],"escalate":["The attribute marked forces replacement","Current value from state","Whether the provider version changed"]},{"id":"tf-output-not-updating","tier":"guide","technology":"Terraform","category":"Outputs","title":"Outputs are stale or missing after apply","summary":"terraform output shows old values or nothing at all.","aliases":["output not updating","no outputs","stale output","output empty","outputs missing"],"source":"https://developer.hashicorp.com/terraform/language/values/outputs","inputs":[{"key":"output","label":"Output name","example":"cluster_endpoint"}],"steps":[{"title":"Check what state holds","cmd":"terraform output -json","risk":"safe","look":"Outputs come from state, not from the configuration. Empty here means the last apply did not record them.","signals":[{"match":"\\{\\s*\\}","means":"No outputs in state at all.","goto":"cause:not-applied"},{"match":"\"sensitive\": true","means":"Present but redacted. Use -raw to read it.","goto":"cause:sensitive"}]},{"title":"Check the output is declared and reachable","cmd":"findstr /S /C:\"output \\\"{output}\\\"\" *.tf","risk":"safe","look":"An output inside a module is not exposed at the root unless the root also declares one that references it."},{"title":"Refresh state from reality","cmd":"terraform refresh 2>nul || terraform apply -refresh-only","risk":"state","look":"Outputs repopulate from current reality.","note":"Updates state to match the real infrastructure without changing anything. It rewrites the state file, so a concurrent apply elsewhere could conflict. It does not modify infrastructure, but it can reveal drift you were not expecting in the next plan."},{"title":"Check you are in the right workspace","cmd":"terraform workspace show","risk":"safe","look":"Outputs are per workspace. Reading from the wrong one returns different values or nothing, with no error."}],"causes":[{"id":"not-applied","cause":"Apply has not run since the outputs were added.","fix":"Run apply. Outputs are written to state at apply time.","confirm":""},{"id":"module-not-exposed","cause":"The output lives in a module.","fix":"Declare a root-level output referencing module.<name>.<output>.","confirm":""},{"id":"sensitive","cause":"The output is marked sensitive.","fix":"terraform output -raw <name>.","confirm":""},{"id":"wrong-workspace","cause":"Reading from a different workspace.","fix":"Select the right one.","confirm":""},{"id":"depends-on-unknown","cause":"The value was unknown at apply time.","fix":"Check the resource actually produced the attribute.","confirm":""}],"verify":["terraform output returns current values.","Values match reality.","The right workspace is selected."],"escalate":["Output of terraform output -json","Where the output is declared","Current workspace"]},{"id":"tf-plan-slow","tier":"guide","technology":"Terraform","category":"Performance","title":"Plan takes many minutes","summary":"Every plan is slow, which makes the whole workflow painful and discourages small changes.","aliases":["terraform slow","plan takes forever","slow refresh","performance terraform","plan timeout"],"source":"https://developer.hashicorp.com/terraform/cli/commands/plan","inputs":[],"steps":[{"title":"Count what is in state","cmd":"terraform state list | measure-object -line","risk":"safe","look":"Plan refreshes every resource by default. Several hundred resources in one state is the most common cause of a slow plan."},{"title":"Time a plan without refresh","cmd":"terraform plan -refresh=false","risk":"safe","look":"Much faster here means refresh is the cost, not evaluation. That points at API round trips rather than your configuration.","signals":[{"match":"No changes","means":"Fast without refresh. The API calls are the bottleneck.","goto":"cause:refresh-cost"}]},{"title":"Check provider parallelism","cmd":"terraform plan -parallelism=20","risk":"safe","look":"The default is ten concurrent operations. Raising it helps when the provider API is the limit, though rate limits apply."},{"title":"Check for large data sources","cmd":"findstr /S /C:\"data \\\"\" *.tf","risk":"safe","look":"A data source listing every object in an account runs on every plan. Those are frequently the real cost."}],"causes":[{"id":"refresh-cost","cause":"Refreshing every resource is slow.","fix":"Split the configuration into smaller states. One state per component is the usual answer.","confirm":""},{"id":"too-many-resources","cause":"Hundreds of resources in one state.","fix":"Split by lifecycle. Things that change together belong together.","confirm":""},{"id":"broad-data-source","cause":"A data source enumerates everything.","fix":"Filter it, or replace it with a variable.","confirm":""},{"id":"low-parallelism","cause":"Default parallelism limits throughput.","fix":"Raise it, watching for provider rate limits.","confirm":""},{"id":"remote-state-chain","cause":"Many remote state data sources.","fix":"Each is a fetch. Reduce the chain.","confirm":""}],"verify":["Plan completes in a reasonable time.","State size is manageable.","Data sources are filtered."],"escalate":["Resource count in state","Plan timing with and without refresh","Which data sources are used"]},{"id":"tf-state-drift-detection","tier":"guide","technology":"Terraform","category":"State","title":"State does not match reality","summary":"Someone changed infrastructure outside Terraform and you need to know what.","aliases":["drift detection","state mismatch","changed outside terraform","manual change","reconcile state","refresh drift"],"source":"https://developer.hashicorp.com/terraform/cli/commands/plan","inputs":[],"steps":[{"title":"Detect drift without proposing changes","cmd":"terraform plan -refresh-only","risk":"safe","look":"Differences between state and reality only. This separates outside changes from configuration changes, which a normal plan blends together.","signals":[{"match":"has changed outside of Terraform","means":"Real drift. Something modified the infrastructure directly.","goto":"cause:manual-change"},{"match":"No changes","means":"State matches reality. Any diff in a normal plan comes from your configuration.","goto":""}]},{"title":"See exactly which attributes drifted","cmd":"terraform show -json | findstr /C:\"drift\"","risk":"safe","look":"The attribute level. A tag added by a policy engine is very different from a security group rule someone opened."},{"title":"Check who changed it","cmd":"aws cloudtrail lookup-events --lookup-attributes AttributeKey=ResourceName,AttributeValue=<name> --max-items 5","risk":"safe","look":"The audit trail names the principal and the time. That matters more than the change itself, because it tells you whether the process failed."},{"title":"Accept the drift into state","cmd":"terraform apply -refresh-only","risk":"state","look":"A subsequent refresh-only plan shows no drift.","note":"Updates state to match reality without changing infrastructure. This makes Terraform accept the outside change as correct, which is right only if the change was intended. If it was not, you want a normal apply to revert it instead."}],"causes":[{"id":"manual-change","cause":"Someone changed it directly.","fix":"Decide which is the source of truth: accept with refresh-only, or revert with a normal apply.","confirm":""},{"id":"policy-engine","cause":"An automated policy added tags or rules.","fix":"Add them to configuration, or use ignore_changes for that attribute.","confirm":""},{"id":"provider-normalisation","cause":"The provider stores a value differently.","fix":"Not real drift. Match the provider's format.","confirm":""},{"id":"emergency-change","cause":"An incident fix was applied directly.","fix":"Bring it into code now. Undocumented emergency changes are how configurations diverge permanently.","confirm":""},{"id":"no-guardrail","cause":"Direct changes are possible at all.","fix":"Restrict console write access in environments Terraform manages.","confirm":""}],"verify":["refresh-only reports no drift.","Any accepted change is reflected in code.","The cause of the direct change was addressed."],"escalate":["The refresh-only plan output","Which attributes drifted","Who made the change and when"]},{"id":"tf-secrets-in-plan-output","tier":"guide","technology":"Terraform","category":"Outputs","title":"Sensitive values appear in plan output or CI logs","summary":"A password or key is printed where anyone with log access can read it.","aliases":["secret in plan","sensitive in logs","password in output","ci logs secret","plan shows password"],"source":"https://developer.hashicorp.com/terraform/language/values/variables#suppressing-values-in-cli-output","inputs":[],"steps":[{"title":"Find which values are shown","cmd":"terraform plan -no-color | findstr /I \"password secret token key\"","risk":"safe","look":"Anything readable here is readable in CI logs, which are usually retained and widely accessible."},{"title":"Check which variables are marked sensitive","cmd":"findstr /S /C:\"sensitive\" *.tf","risk":"safe","look":"Variables and outputs both support sensitive. Unmarked ones are printed in full."},{"title":"Check whether the value is in state too","cmd":"terraform state pull | findstr /I \"password\"","risk":"safe","look":"State always holds values in plain text regardless of the sensitive flag. Marking a value sensitive changes display, never storage."},{"title":"Check CI log retention","cmd":"echo 'Check your CI settings for log retention and who can read build logs'","risk":"safe","look":"A secret printed once in a log retained for months is exposed for months. Rotation is the only real remedy."}],"causes":[{"id":"not-marked","cause":"The variable or output is not marked sensitive.","fix":"Mark it. Terraform then redacts it in plan and apply output.","confirm":""},{"id":"already-logged","cause":"The value appeared in a CI log.","fix":"Rotate it. Marking it sensitive now does not unpublish the log.","confirm":""},{"id":"in-state","cause":"It is in state regardless.","fix":"Encrypt the backend and restrict read access. That is the real control.","confirm":""},{"id":"should-not-be-in-tf","cause":"Terraform should not hold this secret at all.","fix":"Generate it in a secret manager and have the application read it directly.","confirm":""},{"id":"output-unnecessary","cause":"The output exists but nothing consumes it.","fix":"Remove it. The safest secret is one that is never printed.","confirm":""}],"verify":["Plan output shows redacted values.","Anything previously logged has been rotated.","State is encrypted with restricted access."],"escalate":["What appeared in the output","Which variables are marked sensitive","Whether CI logs retained it"]}]</script>
 <script>
 "use strict";
-const BANK = JSON.parse(document.getElementById("data").textContent);
-const $ = s => document.querySelector(s);
-const readable = p => String(p || "")
-  .replace(/^\(\?[imsx]+\)/, "")
-  .replace(/\\[sdwSDW]\+?/g, " ")
-  .replace(/[\^$]/g, "")
-  .replace(/\\/g, "")
-  .replace(/\.\*|\.\+|\?/g, "")
-  .replace(/\(([^)]*)\)/g, "$1")
-  .replace(/\[[^\]]*\]/g, "")
-  .replace(/\{\d+,?\d*\}/g, "")
-  .replace(/\|/g, "  /  ")
-  .replace(/\s{2,}/g, "  ")
-  .trim();
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const BANK=JSON.parse(document.getElementById("data").textContent);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const plain=p=>String(p||"").replace(/^\(\?[imsx]+\)/,"").replace(/\\[sdwSDW]\+?/g," ")
+  .replace(/[\^$]/g,"").replace(/\\/g,"").replace(/\.\*|\.\+|\?/g,"")
+  .replace(/\(([^)]*)\)/g,"$1").replace(/\[[^\]]*\]/g,"").replace(/\{\d+,?\d*\}/g,"")
+  .replace(/\|/g,"  /  ").replace(/\s{2,}/g,"  ").trim();
 
-/* ---------- session state (in memory only; nothing is persisted) ---------- */
-const CTX = {};                 // placeholder key -> value
-let CUR = null;                 // open runbook
-let LOG = [];                   // [{t, step, cmd, note}]
-let CURSOR = -1;                // keyboard cursor in results
+const CTX={}; let CUR=null;
+const RISK={safe:["READ ONLY","c-safe"],state:["CHANGES STATE","c-state"],destructive:["DESTRUCTIVE","c-destructive"]};
 
-/* ---------- search ---------- */
-const flat = s => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-function score(r, q) {
-  if (!q.trim()) return 1;
-  const qq = flat(q), qt = qq.split(" ").filter(t => t.length > 1);
-  const title = flat(r.title), al = (r.aliases || []).map(flat);
-  let s = 0;
-  if (title.includes(qq)) s += 100;
-  if (al.some(a => a.includes(qq) || qq.includes(a))) s += 80;
-  const hay = [title, flat(r.summary), al.join(" "), flat(r.category)].join(" ");
-  for (const t of qt) {
-    if (title.includes(t)) s += 18;
-    else if (al.some(a => a.includes(t))) s += 14;
-    else if (hay.includes(t)) s += 4;
-  }
-  return s;
+const flat=s=>String(s??"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+function score(r,q){if(!q.trim())return 1;const Q=flat(q),T=flat(r.title),A=(r.aliases||[]).map(flat);
+  let s=0; if(T.includes(Q))s+=100; if(A.some(a=>a.includes(Q)||Q.includes(a)))s+=80;
+  const hay=[T,flat(r.summary),A.join(" "),flat(r.category)].join(" ");
+  for(const t of Q.split(" ").filter(x=>x.length>1)){
+    if(T.includes(t))s+=18; else if(A.some(a=>a.includes(t)))s+=14; else if(hay.includes(t))s+=4;}
+  return s;}
+
+function tree(){
+  const q=$("#q").value;
+  const hits=BANK.map(r=>({r,s:score(r,q)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+  if(!hits.length){$("#nav").innerHTML='<div class="nohit">Nothing matched. Try the exact error text, or a plainer phrase.</div>';return;}
+  const byT={};
+  hits.forEach(({r})=>{if(!byT[r.technology])byT[r.technology]={};
+    const c=r.category||"General"; if(!byT[r.technology][c])byT[r.technology][c]=[];
+    byT[r.technology][c].push(r);});
+  const searching=q.trim().length>0;
+  $("#nav").innerHTML=Object.keys(byT).sort().map(t=>{
+    const n=Object.values(byT[t]).reduce((a,b)=>a+b.length,0);
+    const open=searching||(CUR&&CUR.technology===t);
+    return '<div class="tgroup'+(open?" open":"")+'" data-t="'+esc(t)+'">'+
+      '<button class="thead"><span class="car">'+(open?"\u25BE":"\u25B8")+'</span>'+esc(t)+
+      '<span class="ct">'+n+'</span></button><div class="tbody">'+
+      Object.keys(byT[t]).sort().map(c=>'<div class="chead">'+esc(c).toUpperCase()+'</div>'+
+        byT[t][c].map(r=>'<button class="item'+(CUR&&CUR.id===r.id?" sel":"")+'" data-id="'+esc(r.id)+'">'+
+          esc(r.title)+'</button>').join("")).join("")+'</div></div>';}).join("");
+  document.querySelectorAll(".thead").forEach(b=>b.onclick=()=>{
+    const g=b.closest(".tgroup"); g.classList.toggle("open");
+    g.querySelector(".car").textContent=g.classList.contains("open")?"\u25BE":"\u25B8";});
+  document.querySelectorAll(".item").forEach(b=>b.onclick=()=>{
+    open(b.dataset.id);document.body.classList.remove("nav");});
 }
 
-let TECH = "All", CAT = "All";
-
-function renderChips() {
-  const techs = [...new Set(BANK.map(r => r.technology))].sort();
-  $("#techchips").innerHTML = ["All", ...techs].map(t => {
-    const n = t === "All" ? BANK.length : BANK.filter(r => r.technology === t).length;
-    return `<button class="tab${t === TECH ? " on" : ""}" data-t="${esc(t)}">${esc(t)}<span class="n">${n}</span></button>`;
-  }).join("");
-  document.querySelectorAll("#techchips .tab").forEach(b => b.onclick = () => {
-    TECH = b.dataset.t; CAT = "All"; renderChips(); renderResults();
-  });
-
-  const pool = TECH === "All" ? BANK : BANK.filter(r => r.technology === TECH);
-  const cats = [...new Set(pool.map(r => r.category).filter(Boolean))].sort();
-  $("#catchips").innerHTML = cats.length > 1
-    ? ["All", ...cats].map(c =>
-        `<button class="tab${c === CAT ? " on" : ""}" data-c="${esc(c)}">${esc(c)}</button>`).join("")
-    : "";
-  document.querySelectorAll("#catchips .tab").forEach(b => b.onclick = () => {
-    CAT = b.dataset.c; renderChips(); renderResults();
-  });
+function fill(cmd,html){return cmd.replace(/\{([a-z0-9_]+)\}/g,(m,k)=>{const v=CTX[k];
+  return !html?(v||m):(v?'<span class="fill">'+esc(v)+'</span>':'<span class="un">'+esc(m)+'</span>');});}
+function repaint(){document.querySelectorAll("[data-cmd]").forEach(e=>e.innerHTML=fill(e.dataset.cmd,true));}
+function fields(){
+  $("#fields").innerHTML=((CUR&&CUR.inputs)||[]).map(i=>
+    '<label>'+esc(i.label)+'<input data-k="'+esc(i.key)+'" placeholder="'+esc(i.example||"")+
+    '" value="'+esc(CTX[i.key]||"")+'"></label>').join("");
+  document.querySelectorAll("#fields input").forEach(x=>x.oninput=()=>{
+    CTX[x.dataset.k]=x.value.trim();repaint();});
 }
 
-function renderResults() {
-  const q = $("#q").value;
-  let pool = BANK;
-  if (TECH !== "All") pool = pool.filter(r => r.technology === TECH);
-  if (CAT !== "All") pool = pool.filter(r => r.category === CAT);
-  const arr = pool.map(r => ({ r, s: score(r, q) })).filter(x => x.s > 0)
-                  .sort((a, b) => b.s - a.s).slice(0, 60);
-  CURSOR = arr.length ? 0 : -1;
-  $("#results").innerHTML = arr.length ? arr.map((x, i) => {
-    const r = x.r;
-    return `<li><button class="hit${i === 0 ? " cur" : ""}" data-id="${esc(r.id)}">
-      <h3>${esc(r.title)}</h3><p>${esc(r.summary)}</p>
-      <span class="meta">
-        <span>${esc(r.technology)}</span>
-        <span>${esc(r.category || "")}</span>
-        <span>${(r.steps || []).length} steps</span>
-        <span>${(r.causes || []).length} causes</span>
-      </span></button></li>`;
-  }).join("") : `<li class="empty">Nothing matched. Try the exact error string from your terminal,
-    or a plainer phrase like "pod won't start".</li>`;
-  document.querySelectorAll(".hit").forEach(b => b.onclick = () => open(b.dataset.id));
+function open(id){
+  CUR=BANK.find(r=>r.id===id); if(!CUR)return;
+  (CUR.inputs||[]).forEach(i=>{if(!(i.key in CTX))CTX[i.key]="";});
+  fields();
+  $("#crumb").innerHTML=esc(CUR.technology)+' &nbsp;\u203A&nbsp; '+esc(CUR.category||"")+
+    ' &nbsp;\u203A&nbsp; <b>'+esc(CUR.title)+'</b>';
+
+  const steps=(CUR.steps||[]).map((s,i)=>{
+    const R=RISK[s.risk]||RISK.safe, dz=s.risk==="destructive";
+    const body=dz?'<div class="veil" data-rv="'+i+'">\u25B8 Command hidden. Read the warning, then tap to reveal.</div>'
+      :'<pre data-cmd="'+esc(s.cmd)+'"></pre><button class="cp" data-cp="'+i+'">Copy</button>';
+    const br=(s.signals||[]).length?'<div class="br"><div class="brh">WHAT YOU MIGHT SEE</div>'+
+      s.signals.map(g=>{const t=g.goto||"";let nx="";
+        if(t.indexOf("cause:")===0){const k=(CUR.causes||[]).findIndex(x=>x.id===t.slice(6));
+          if(k>=0)nx='<span class="goto">\u2192 cause '+(k+1)+'</span>';}
+        else if(t.indexOf("step:")===0)nx='<span class="goto">\u2192 step '+t.slice(5)+'</span>';
+        return '<div class="brow"><div class="bif"><b>IF YOU SEE</b><code>'+esc(plain(g.match))+
+          '</code></div><div class="bthen">'+esc(g.means)+' '+nx+'</div></div>';}).join("")+'</div>':"";
+    return '<li class="step'+(dz?" d":"")+'" data-step="'+i+'"><div class="num">'+(i+1)+'</div>'+
+      '<div class="sh"><span class="st">'+esc(s.title)+'</span><span class="chip '+R[1]+'">'+R[0]+'</span></div>'+
+      (s.note?'<p class="note'+(s.risk==="state"?" s":"")+'">'+esc(s.note)+'</p>':"")+
+      '<div class="cmd">'+body+'</div><p class="look">'+esc(s.look)+'</p>'+br+'</li>';}).join("");
+
+  const cz=(CUR.causes||[]).map((c,i)=>'<div class="cz"><div class="rk">'+(i+1)+'</div><div>'+
+    '<div class="w">'+esc(c.cause)+'</div><div class="fx"><b>Fix.</b> '+esc(c.fix)+'</div></div></div>').join("");
+
+  $("#pane").innerHTML='<div class="rb"><h2>'+esc(CUR.title)+'</h2>'+
+    '<p class="sum">'+esc(CUR.summary)+'</p>'+
+    '<div class="tags">'+(CUR.aliases||[]).slice(0,7).map(a=>'<span class="tag">'+esc(a)+'</span>').join("")+'</div>'+
+    '<p class="src">Commands vary by version and environment \u2014 read each one before you run it.'+
+    (CUR.source?' <a href="'+esc(CUR.source)+'" target="_blank" rel="noopener">Official documentation \u2197</a>':"")+'</p>'+
+    '<ol class="steps">'+steps+'</ol>'+
+    (cz?'<div class="sec"><h3>LIKELY CAUSES \u2014 MOST COMMON FIRST</h3>'+cz+'</div>':"")+
+    ((CUR.verify||[]).length?'<div class="sec"><h3>YOU ARE DONE WHEN</h3><ul class="pl">'+
+      CUR.verify.map(v=>'<li>'+esc(fill(v,false))+'</li>').join("")+'</ul></div>':"")+
+    ((CUR.escalate||[]).length?'<div class="sec"><h3>IF YOU HAND THIS OVER, INCLUDE</h3><ul class="pl">'+
+      CUR.escalate.map(v=>'<li>'+esc(fill(v,false))+'</li>').join("")+'</ul></div>':"")+'</div>';
+  window.scrollTo(0,0); repaint(); wire(); tree();
 }
 
-/* ---------- placeholder substitution ---------- */
-function fill(cmd, asHtml) {
-  return cmd.replace(/\{([a-z0-9_]+)\}/g, (m, k) => {
-    const v = CTX[k];
-    if (!asHtml) return v || m;
-    return v ? `<span class="fill">${esc(v)}</span>`
-             : `<span class="unfilled">${esc(m)}</span>`;
-  });
+function wire(){
+  document.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>{
+    const t=fill(CUR.steps[+b.dataset.cp].cmd,false);
+    navigator.clipboard.writeText(t).then(()=>{const e=$("#toast");e.textContent="Command copied";
+      e.style.display="block";setTimeout(()=>e.style.display="none",1500);},()=>prompt("Copy:",t));});
+  document.querySelectorAll("[data-rv]").forEach(v=>v.onclick=()=>{
+    const i=+v.dataset.rv,s=CUR.steps[i];
+    v.outerHTML='<pre data-cmd="'+esc(s.cmd)+'"></pre><button class="cp" data-cp="'+i+'">Copy</button>';
+    repaint();wire();});
 }
 
-function ctxBar() {
-  const keys = (CUR && CUR.inputs) || [];
-  $("#ctxfields").innerHTML = keys.map(i =>
-    `<label>${esc(i.label)}<input data-k="${esc(i.key)}" placeholder="${esc(i.example || "")}"
-      value="${esc(CTX[i.key] || "")}" size="${Math.max(8, (i.example || "").length)}"></label>`).join("");
-  document.querySelectorAll("#ctxfields input").forEach(inp => {
-    inp.oninput = () => { CTX[inp.dataset.k] = inp.value.trim(); repaintCmds(); };
-  });
+function home(){
+  CUR=null; $("#fields").innerHTML=""; $("#crumb").innerHTML="";
+  const T=[...new Set(BANK.map(r=>r.technology))].sort();
+  const st=BANK.reduce((a,r)=>a+r.steps.length,0);
+  const br=BANK.reduce((a,r)=>a+r.steps.reduce((b,s)=>b+(s.signals||[]).length,0),0);
+  const cz=BANK.reduce((a,r)=>a+r.causes.length,0);
+  $("#pane").innerHTML='<div class="hero"><h2>What is broken?</h2>'+
+    '<p>Search the symptom, the error string, or what you were doing when it failed. Every runbook gives '+
+    'the checks in order, what each output means, and where to go next.</p>'+
+    '<div class="stats">'+
+    '<div class="stat"><b>'+BANK.length+'</b><span>runbooks</span></div>'+
+    '<div class="stat"><b>'+st+'</b><span>diagnostic steps</span></div>'+
+    '<div class="stat"><b>'+br+'</b><span>decision branches</span></div>'+
+    '<div class="stat"><b>'+cz+'</b><span>ranked causes</span></div>'+
+    '<div class="stat"><b>'+T.length+'</b><span>technologies</span></div></div>'+
+    '<div class="cards">'+T.map(t=>{const n=BANK.filter(r=>r.technology===t).length;
+      const c=[...new Set(BANK.filter(r=>r.technology===t).map(r=>r.category))].length;
+      return '<button class="card" data-tech="'+esc(t)+'"><h3>'+esc(t)+'</h3><p>'+n+
+        ' runbooks across '+c+' categories</p></button>';}).join("")+'</div>'+
+    '<p class="src" style="margin-top:30px">Runs entirely in this one file. Nothing is sent anywhere, '+
+    'nothing is executed for you, and nothing is saved when you close the tab.</p></div>';
+  document.querySelectorAll(".card").forEach(b=>b.onclick=()=>{
+    const g=[...document.querySelectorAll(".tgroup")].find(x=>x.dataset.t===b.dataset.tech);
+    if(g){g.classList.add("open");g.querySelector(".car").textContent="\u25BE";
+      g.scrollIntoView({block:"nearest"});}
+    document.body.classList.add("nav");});
+  tree();
 }
 
-function repaintCmds() {
-  document.querySelectorAll("[data-cmd]").forEach(el => {
-    el.innerHTML = fill(el.dataset.cmd, true);
-  });
-}
-
-/* ---------- runbook view ---------- */
-function open(id) {
-  CUR = BANK.find(r => r.id === id);
-  if (!CUR) return;
-  LOG = [];
-  (CUR.inputs || []).forEach(i => { if (!(i.key in CTX)) CTX[i.key] = ""; });
-  ctxBar();
-
-  const RISK = { safe: ["Read only", "c-safe"], state: ["Changes state", "c-state"],
-                 destructive: ["Destructive", "c-destructive"] };
-
-  const steps = (CUR.steps || []).map((s, i) => {
-    const [label, cls] = RISK[s.risk] || RISK.safe;
-    const danger = s.risk === "destructive";
-    const body = danger
-      ? `<div class="veil" data-reveal="${i}">Command hidden. Read the warning, then tap to reveal.</div>`
-      : `<pre data-cmd="${esc(s.cmd)}"></pre><button class="copy" data-copy="${i}">Copy</button>`;
-    const note = s.note ? `<p class="note${s.risk === "state" ? " note-state" : ""}">${esc(s.note)}</p>` : "";
-    const sig = (s.signals || []).length
-      ? `<div class="branch"><div class="bhead">What you might see</div>` +
-        s.signals.map(g => {
-          const t = g.goto || "";
-          let next = "";
-          if (t.startsWith("cause:")) {
-            const cz = (CUR.causes || []).findIndex(x => x.id === t.slice(6));
-            if (cz >= 0) next = `<span class="goto">&rarr; cause ${cz + 1} below</span>`;
-          } else if (t.startsWith("step:")) {
-            next = `<span class="goto">&rarr; go to step ${t.slice(5)}</span>`;
-          }
-          return `<div class="brow">
-            <div class="bif"><b>If you see</b> <code>${esc(readable(g.match))}</code></div>
-            <div class="bthen">${esc(g.means)} ${next}</div>
-          </div>`;
-        }).join("") + `</div>` : "";
-    return `<li class="step${danger ? " danger" : ""}" data-step="${i}">
-      <button class="mark" data-done="${i}" aria-label="Mark step ${i + 1} done">${i + 1}</button>
-      <div class="shead"><span class="stitle">${esc(s.title)}</span>
-        <span class="chip ${cls}">${label}</span></div>
-      ${note}
-      <div class="cmd">${body}</div>
-      <p class="look">${esc(s.look)}</p>
-      ${sig}</li>`;
-  }).join("");
-
-  const causes = (CUR.causes || []).map((c, i) =>
-    `<div class="cause" data-cause="${esc(c.id)}">
-       <div><span class="rank">${i + 1}</span><span class="what">${esc(c.cause)}</span></div>
-       <div class="fix"><b>Fix.</b> ${esc(c.fix)}</div></div>`).join("");
-
-  const prov = `Commands vary by version and environment — read each one before you run it.`
-    + (CUR.source ? ` <a href="${esc(CUR.source)}" target="_blank" rel="noopener">Official documentation</a>` : "");
-
-  $("#rbview").innerHTML = `
-    <button class="back" id="back">&larr; All runbooks</button>
-    <h2>${esc(CUR.title)}</h2>
-    <p class="sum">${esc(CUR.summary)}</p>
-    <p class="prov">${prov}</p>
-    <ol class="steps">${steps}</ol>
-    ${causes ? `<div class="sec"><h3>Likely causes, most common first</h3>${causes}</div>` : ""}
-    ${(CUR.verify || []).length ? `<div class="sec"><h3>You are done when</h3>
-       <ul class="plain">${CUR.verify.map(v => `<li>${esc(fill(v, false))}</li>`).join("")}</ul></div>` : ""}`;
-
-  $("#searchview").style.display = "none";
-  $("#results").style.display = "none";
-  $("#rbview").style.display = "block";
-  $("#bar").style.display = "block";
-  $("#foot").textContent = "";
-  window.scrollTo(0, 0);
-  repaintCmds(); wire(); progress();
-}
-
-function wire() {
-  $("#back").onclick = home;
-
-  document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
-    const s = CUR.steps[+b.dataset.copy];
-    copy(fill(s.cmd, false), "Command copied");
-  });
-
-  document.querySelectorAll("[data-reveal]").forEach(v => v.onclick = () => {
-    const i = +v.dataset.reveal, s = CUR.steps[i];
-    v.outerHTML = `<pre data-cmd="${esc(s.cmd)}"></pre><button class="copy" data-copy="${i}">Copy</button>`;
-    repaintCmds(); wire();
-  });
-
-  document.querySelectorAll("[data-done]").forEach(b => b.onclick = () => {
-    const i = +b.dataset.done, li = b.closest(".step"), s = CUR.steps[i];
-    li.classList.toggle("done");
-    if (li.classList.contains("done")) {
-      LOG.push({ t: new Date().toISOString().slice(11, 19), step: s.title, cmd: fill(s.cmd, false) });
-    } else {
-      LOG = LOG.filter(e => e.step !== s.title);
-    }
-    progress();
-  });
-
-}
-
-function progress() {
-  const total = (CUR.steps || []).length;
-  const done = document.querySelectorAll(".step.done").length;
-  $("#prog").textContent = `${done} of ${total} checks done`;
-}
-
-/* ---------- exports ---------- */
-function copy(t, msg) {
-  navigator.clipboard.writeText(t).then(() => {
-    const el = $("#toast"); el.textContent = msg; el.style.display = "block";
-    setTimeout(() => el.style.display = "none", 1600);
-  }, () => prompt("Copy manually:", t));
-}
-
-
-$("#a-esc").onclick = () => {
-  const L = [`## ${CUR.title}`, "", "**What I checked**"];
-  LOG.forEach(e => { L.push(`- ${e.step} — \`${e.cmd}\``); if (e.note) L.push(`  - saw: ${e.note}`); });
-  if (!LOG.length) L.push("- (nothing recorded yet)");
-  L.push("", "**Still needed**");
-  (CUR.escalate || []).forEach(x => L.push(`- ${fill(x, false)}`));
-  copy(L.join("\n"), "Handoff notes copied");
-};
-
-
-/* ---------- navigation ---------- */
-function home() {
-  CUR = null; LOG = [];
-  $("#searchview").style.display = "block";
-  $("#results").style.display = "block";
-  $("#rbview").style.display = "none";
-  $("#bar").style.display = "none";
-  $("#ctxfields").innerHTML = "";
-  $("#foot").textContent = FOOT;
-  $("#q").focus(); $("#q").select();
-}
-
-$("#q").oninput = renderResults;
-
-document.addEventListener("keydown", e => {
-  if (e.key === "/" && document.activeElement !== $("#q")) { e.preventDefault(); $("#q").focus(); $("#q").select(); return; }
-  if (e.key === "Escape" && CUR) { home(); return; }
-  if (CUR || !["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) return;
-  const hits = [...document.querySelectorAll(".hit")];
-  if (!hits.length) return;
-  if (e.key === "Enter") { e.preventDefault(); hits[Math.max(0, CURSOR)].click(); return; }
-  e.preventDefault();
-  hits[CURSOR]?.classList.remove("cur");
-  CURSOR = (CURSOR + (e.key === "ArrowDown" ? 1 : -1) + hits.length) % hits.length;
-  hits[CURSOR].classList.add("cur");
-  hits[CURSOR].scrollIntoView({ block: "nearest" });
-});
-
-const techs = [...new Set(BANK.map(r => r.technology))].sort();
-const FOOT = `${BANK.length} runbooks across ${techs.length} technologies: ${techs.join(", ")}. `
-  + `Runs entirely in this file — nothing is sent anywhere, nothing is executed for you, `
-  + `and nothing is saved when you close the tab. Every command is yours to run.\n\n`
-  + `Designed and built by Dinesh Ilangovan.`;
-$("#foot").textContent = FOOT;
-renderChips();
-renderResults();
+$("#q").oninput=tree;
+$("#burger").onclick=()=>document.body.classList.toggle("nav");
+document.addEventListener("keydown",e=>{
+  if(e.key==="/"&&document.activeElement!==$("#q")){e.preventDefault();$("#q").focus();$("#q").select();}
+  if(e.key==="Escape"){if(CUR)home();else{$("#q").value="";tree();}}});
+home();
 </script>
 </body>
 </html>

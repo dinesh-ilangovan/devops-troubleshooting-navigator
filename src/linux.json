@@ -2159,5 +2159,395 @@
       "free -h",
       "Per-process swap usage"
     ]
+  },
+  {
+    "id": "linux-cannot-bind-privileged-port",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Networking",
+    "title": "Cannot bind to a port below 1024",
+    "summary": "A service fails to start on port 80 or 443 as a non-root user.",
+    "aliases": [
+      "permission denied port 80",
+      "cannot bind privileged port",
+      "port 443 permission",
+      "bind capability",
+      "low port"
+    ],
+    "source": "https://man7.org/linux/man-pages/man7/capabilities.7.html",
+    "inputs": [
+      {
+        "key": "port",
+        "label": "Port",
+        "example": "80"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the error is a permission problem",
+        "cmd": "ss -tlnp 'sport = :{port}'",
+        "risk": "safe",
+        "look": "Nothing listening plus a permission denied on start means the privileged port restriction, not a conflict.",
+        "signals": [
+          {
+            "match": "users:\\(\\(",
+            "means": "Something already holds it. That is a conflict, not a permission problem.",
+            "goto": "cause:already-bound"
+          }
+        ]
+      },
+      {
+        "title": "Check what user the service runs as",
+        "cmd": "systemctl show <unit> -p User -p AmbientCapabilities",
+        "risk": "safe",
+        "look": "A non-root user needs CAP_NET_BIND_SERVICE to bind below 1024. Without it the bind always fails."
+      },
+      {
+        "title": "Check the kernel's unprivileged port floor",
+        "cmd": "sysctl net.ipv4.ip_unprivileged_port_start",
+        "risk": "safe",
+        "look": "The default is 1024. Lowering it is possible but weakens a long-standing security boundary."
+      },
+      {
+        "title": "Grant the capability to the unit",
+        "cmd": "sudo systemctl edit <unit>",
+        "risk": "state",
+        "look": "The service starts and ss shows it listening on the port.",
+        "note": "Adds AmbientCapabilities=CAP_NET_BIND_SERVICE to the unit. This is far narrower than running as root, but it does grant the process the ability to bind any low port for its lifetime. Requires a daemon-reload and a restart, so the service goes down briefly."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-capability",
+        "cause": "The process lacks CAP_NET_BIND_SERVICE.",
+        "fix": "Add it to the unit. Much safer than running the whole service as root.",
+        "confirm": ""
+      },
+      {
+        "id": "already-bound",
+        "cause": "Another process holds the port.",
+        "fix": "Follow the port-in-use runbook.",
+        "confirm": ""
+      },
+      {
+        "id": "should-proxy",
+        "cause": "The application binds low ports directly.",
+        "fix": "Put a reverse proxy in front and let the app use a high port.",
+        "confirm": ""
+      },
+      {
+        "id": "container-context",
+        "cause": "Running in a container without the capability.",
+        "fix": "Add the capability to the container, or publish a high port and map it.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The service binds the port.",
+      "It runs as a non-root user.",
+      "The grant is the narrowest that works."
+    ],
+    "escalate": [
+      "The bind error",
+      "Unit User and capabilities",
+      "Whether anything else holds the port"
+    ]
+  },
+  {
+    "id": "linux-nfs-hang",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Storage",
+    "title": "Commands hang on an NFS mount",
+    "summary": "ls or df hangs forever and cannot be interrupted.",
+    "aliases": [
+      "nfs hang",
+      "df hangs",
+      "stale file handle",
+      "nfs server not responding",
+      "mount hangs",
+      "uninterruptible nfs"
+    ],
+    "source": "https://man7.org/linux/man-pages/man5/nfs.5.html",
+    "inputs": [
+      {
+        "key": "mount",
+        "label": "Mount point",
+        "example": "/mnt/shared"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check which mounts exist without touching them",
+        "cmd": "cat /proc/mounts | grep nfs",
+        "risk": "safe",
+        "look": "Reading /proc/mounts does not touch the server, so it will not hang the way df does."
+      },
+      {
+        "title": "Check the kernel log",
+        "cmd": "sudo dmesg -T | grep -i nfs | tail -15",
+        "risk": "safe",
+        "look": "The kernel reports server timeouts here. 'server not responding' confirms the server rather than the client.",
+        "signals": [
+          {
+            "match": "not responding",
+            "means": "The NFS server is unreachable. The client is behaving correctly by waiting.",
+            "goto": "cause:server-down"
+          },
+          {
+            "match": "Stale file handle",
+            "means": "The exported object changed on the server.",
+            "goto": "cause:stale-handle"
+          }
+        ]
+      },
+      {
+        "title": "Test whether the server answers at all",
+        "cmd": "rpcinfo -t <server> nfs 2>&1 | head -3",
+        "risk": "safe",
+        "look": "Whether the server responds. This does not touch the hung mount, so it is safe to run."
+      },
+      {
+        "title": "Force-unmount the dead mount",
+        "cmd": "sudo umount -f -l {mount}",
+        "risk": "destructive",
+        "look": "The mount is gone from /proc/mounts and commands stop hanging.",
+        "note": "Detaches the mount forcibly and lazily. Any process with an open file there gets an I/O error, and unwritten data is lost. Processes already stuck in uninterruptible sleep may not recover until reboot. Identify what is using the mount with lsof first if you can."
+      }
+    ],
+    "causes": [
+      {
+        "id": "server-down",
+        "cause": "The NFS server is unreachable.",
+        "fix": "Restore it. A hard mount waits indefinitely by design, which is why nothing times out.",
+        "confirm": ""
+      },
+      {
+        "id": "hard-mount",
+        "cause": "Mounted hard with no timeout.",
+        "fix": "Consider soft with a timeout for non-critical mounts. Hard is safer for data but hangs on failure.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-handle",
+        "cause": "The exported filesystem changed on the server.",
+        "fix": "Unmount and remount. The handle no longer refers to anything.",
+        "confirm": ""
+      },
+      {
+        "id": "network-partition",
+        "cause": "The path to the server is broken.",
+        "fix": "Check routing and firewall rather than the NFS configuration.",
+        "confirm": ""
+      },
+      {
+        "id": "processes-stuck",
+        "cause": "Processes are in uninterruptible sleep.",
+        "fix": "They cannot be killed. They exit once the I/O completes or errors.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Commands on the mount return.",
+      "No processes remain in D state.",
+      "The mount options suit how critical the data is."
+    ],
+    "escalate": [
+      "Relevant dmesg lines",
+      "Whether the server responds to rpcinfo",
+      "Which processes were stuck"
+    ]
+  },
+  {
+    "id": "linux-locale-errors",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Configuration",
+    "title": "Locale warnings on every command",
+    "summary": "Constant setlocale warnings, and sometimes commands producing wrong sort order or encoding.",
+    "aliases": [
+      "setlocale",
+      "cannot set locale",
+      "LC_ALL",
+      "locale not supported",
+      "perl locale warning",
+      "encoding wrong"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/locale.1.html",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "See the current locale settings",
+        "cmd": "locale",
+        "risk": "safe",
+        "look": "Any variable set to a locale not generated on the system produces the warning on every command.",
+        "signals": [
+          {
+            "match": "Cannot set LC_",
+            "means": "A requested locale is not available on this machine.",
+            "goto": "cause:not-generated"
+          }
+        ]
+      },
+      {
+        "title": "List what is actually available",
+        "cmd": "locale -a | head -20",
+        "risk": "safe",
+        "look": "Only these can be used. Minimal container images often ship with C and POSIX only."
+      },
+      {
+        "title": "Check whether SSH is forwarding your local settings",
+        "cmd": "grep -i sendenv /etc/ssh/ssh_config",
+        "risk": "safe",
+        "look": "SSH forwards LANG and LC_* by default, so your laptop's locale is sent to a server that may not have it. That is the most common cause."
+      },
+      {
+        "title": "Generate the missing locale",
+        "cmd": "sudo locale-gen en_US.UTF-8 && sudo update-locale LANG=en_US.UTF-8",
+        "risk": "state",
+        "look": "locale runs without warnings and the variables show the new value.",
+        "note": "Generates the locale and changes the system-wide default. Existing sessions keep their old settings until they reconnect. Changing the default locale can alter sort order and number formatting for scripts that relied on the previous value."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-generated",
+        "cause": "The requested locale is not generated.",
+        "fix": "Generate it, or set LANG to something available such as C.UTF-8.",
+        "confirm": ""
+      },
+      {
+        "id": "ssh-forwarded",
+        "cause": "SSH forwards your client locale.",
+        "fix": "Generate it on the server, or stop forwarding LC_* in your client config.",
+        "confirm": ""
+      },
+      {
+        "id": "minimal-image",
+        "cause": "The container image has no locales.",
+        "fix": "Install locales and generate one, or use C.UTF-8 which needs no generation.",
+        "confirm": ""
+      },
+      {
+        "id": "affects-sorting",
+        "cause": "Scripts depend on sort order.",
+        "fix": "Set LC_ALL=C explicitly in scripts so behaviour does not vary by environment.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "No locale warnings.",
+      "Encoding and sort order behave as expected.",
+      "Scripts pin LC_ALL where it matters."
+    ],
+    "escalate": [
+      "Output of locale",
+      "Which locales are available",
+      "Whether SSH forwards the setting"
+    ]
+  },
+  {
+    "id": "linux-cannot-resolve-after-vpn",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Networking",
+    "title": "DNS breaks after connecting a VPN",
+    "summary": "Internal names fail, or everything fails, once the VPN comes up.",
+    "aliases": [
+      "vpn dns broken",
+      "cannot resolve after vpn",
+      "split dns",
+      "resolvectl",
+      "vpn breaks internet",
+      "internal dns vpn"
+    ],
+    "source": "https://www.freedesktop.org/software/systemd/man/resolvectl.html",
+    "inputs": [
+      {
+        "key": "host",
+        "label": "Hostname",
+        "example": "api.internal.example.com"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See which resolver handles which domain",
+        "cmd": "resolvectl status",
+        "risk": "safe",
+        "look": "Per-interface DNS servers and domain routing. Split DNS means different domains resolve through different links.",
+        "signals": [
+          {
+            "match": "DNS Domain: ~",
+            "means": "Split DNS is configured. Only listed domains go through the VPN.",
+            "goto": "cause:split-dns"
+          },
+          {
+            "match": "Current DNS Server:",
+            "means": "One resolver handles everything. Internal names may not be reachable through it.",
+            "goto": "cause:no-split"
+          }
+        ]
+      },
+      {
+        "title": "Test which link answers",
+        "cmd": "resolvectl query {host}",
+        "risk": "safe",
+        "look": "Names the interface that answered. That tells you whether the query went through the VPN or around it."
+      },
+      {
+        "title": "Check the VPN interface has a domain route",
+        "cmd": "resolvectl domain",
+        "risk": "safe",
+        "look": "The VPN link needs the internal domain listed, or queries for it never reach the internal resolver."
+      },
+      {
+        "title": "Check for a stale resolv.conf",
+        "cmd": "ls -la /etc/resolv.conf",
+        "risk": "safe",
+        "look": "It should be a symlink to the stub resolver. A plain file means something overwrote it and systemd-resolved is being bypassed."
+      }
+    ],
+    "causes": [
+      {
+        "id": "split-dns",
+        "cause": "Split DNS routes only some domains via the VPN.",
+        "fix": "Add the internal domain to the VPN link with resolvectl domain.",
+        "confirm": ""
+      },
+      {
+        "id": "no-split",
+        "cause": "All queries go to one resolver.",
+        "fix": "If it is the VPN resolver, external names may fail; if it is the local one, internal names fail.",
+        "confirm": ""
+      },
+      {
+        "id": "resolv-overwritten",
+        "cause": "resolv.conf was replaced by a plain file.",
+        "fix": "Restore the symlink to the stub resolver.",
+        "confirm": ""
+      },
+      {
+        "id": "vpn-client-config",
+        "cause": "The VPN client does not push DNS settings.",
+        "fix": "Configure them in the client, not by editing resolv.conf which gets rewritten.",
+        "confirm": ""
+      },
+      {
+        "id": "dns-leak-protection",
+        "cause": "The VPN blocks outside resolvers.",
+        "fix": "Intentional. Use the VPN's own resolver for everything.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Both internal and external names resolve.",
+      "It survives a VPN reconnect.",
+      "The configuration is in the VPN client, not a hand-edited file."
+    ],
+    "escalate": [
+      "Output of resolvectl status",
+      "Which link answered the query",
+      "Whether resolv.conf is the expected symlink"
+    ]
   }
 ]

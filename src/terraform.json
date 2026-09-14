@@ -1761,5 +1761,189 @@
       "Plan timing with and without refresh",
       "Which data sources are used"
     ]
+  },
+  {
+    "id": "tf-state-drift-detection",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "State",
+    "title": "State does not match reality",
+    "summary": "Someone changed infrastructure outside Terraform and you need to know what.",
+    "aliases": [
+      "drift detection",
+      "state mismatch",
+      "changed outside terraform",
+      "manual change",
+      "reconcile state",
+      "refresh drift"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Detect drift without proposing changes",
+        "cmd": "terraform plan -refresh-only",
+        "risk": "safe",
+        "look": "Differences between state and reality only. This separates outside changes from configuration changes, which a normal plan blends together.",
+        "signals": [
+          {
+            "match": "has changed outside of Terraform",
+            "means": "Real drift. Something modified the infrastructure directly.",
+            "goto": "cause:manual-change"
+          },
+          {
+            "match": "No changes",
+            "means": "State matches reality. Any diff in a normal plan comes from your configuration.",
+            "goto": ""
+          }
+        ]
+      },
+      {
+        "title": "See exactly which attributes drifted",
+        "cmd": "terraform show -json | findstr /C:\"drift\"",
+        "risk": "safe",
+        "look": "The attribute level. A tag added by a policy engine is very different from a security group rule someone opened."
+      },
+      {
+        "title": "Check who changed it",
+        "cmd": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=ResourceName,AttributeValue=<name> --max-items 5",
+        "risk": "safe",
+        "look": "The audit trail names the principal and the time. That matters more than the change itself, because it tells you whether the process failed."
+      },
+      {
+        "title": "Accept the drift into state",
+        "cmd": "terraform apply -refresh-only",
+        "risk": "state",
+        "look": "A subsequent refresh-only plan shows no drift.",
+        "note": "Updates state to match reality without changing infrastructure. This makes Terraform accept the outside change as correct, which is right only if the change was intended. If it was not, you want a normal apply to revert it instead."
+      }
+    ],
+    "causes": [
+      {
+        "id": "manual-change",
+        "cause": "Someone changed it directly.",
+        "fix": "Decide which is the source of truth: accept with refresh-only, or revert with a normal apply.",
+        "confirm": ""
+      },
+      {
+        "id": "policy-engine",
+        "cause": "An automated policy added tags or rules.",
+        "fix": "Add them to configuration, or use ignore_changes for that attribute.",
+        "confirm": ""
+      },
+      {
+        "id": "provider-normalisation",
+        "cause": "The provider stores a value differently.",
+        "fix": "Not real drift. Match the provider's format.",
+        "confirm": ""
+      },
+      {
+        "id": "emergency-change",
+        "cause": "An incident fix was applied directly.",
+        "fix": "Bring it into code now. Undocumented emergency changes are how configurations diverge permanently.",
+        "confirm": ""
+      },
+      {
+        "id": "no-guardrail",
+        "cause": "Direct changes are possible at all.",
+        "fix": "Restrict console write access in environments Terraform manages.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "refresh-only reports no drift.",
+      "Any accepted change is reflected in code.",
+      "The cause of the direct change was addressed."
+    ],
+    "escalate": [
+      "The refresh-only plan output",
+      "Which attributes drifted",
+      "Who made the change and when"
+    ]
+  },
+  {
+    "id": "tf-secrets-in-plan-output",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "Outputs",
+    "title": "Sensitive values appear in plan output or CI logs",
+    "summary": "A password or key is printed where anyone with log access can read it.",
+    "aliases": [
+      "secret in plan",
+      "sensitive in logs",
+      "password in output",
+      "ci logs secret",
+      "plan shows password"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/values/variables#suppressing-values-in-cli-output",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Find which values are shown",
+        "cmd": "terraform plan -no-color | findstr /I \"password secret token key\"",
+        "risk": "safe",
+        "look": "Anything readable here is readable in CI logs, which are usually retained and widely accessible."
+      },
+      {
+        "title": "Check which variables are marked sensitive",
+        "cmd": "findstr /S /C:\"sensitive\" *.tf",
+        "risk": "safe",
+        "look": "Variables and outputs both support sensitive. Unmarked ones are printed in full."
+      },
+      {
+        "title": "Check whether the value is in state too",
+        "cmd": "terraform state pull | findstr /I \"password\"",
+        "risk": "safe",
+        "look": "State always holds values in plain text regardless of the sensitive flag. Marking a value sensitive changes display, never storage."
+      },
+      {
+        "title": "Check CI log retention",
+        "cmd": "echo 'Check your CI settings for log retention and who can read build logs'",
+        "risk": "safe",
+        "look": "A secret printed once in a log retained for months is exposed for months. Rotation is the only real remedy."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-marked",
+        "cause": "The variable or output is not marked sensitive.",
+        "fix": "Mark it. Terraform then redacts it in plan and apply output.",
+        "confirm": ""
+      },
+      {
+        "id": "already-logged",
+        "cause": "The value appeared in a CI log.",
+        "fix": "Rotate it. Marking it sensitive now does not unpublish the log.",
+        "confirm": ""
+      },
+      {
+        "id": "in-state",
+        "cause": "It is in state regardless.",
+        "fix": "Encrypt the backend and restrict read access. That is the real control.",
+        "confirm": ""
+      },
+      {
+        "id": "should-not-be-in-tf",
+        "cause": "Terraform should not hold this secret at all.",
+        "fix": "Generate it in a secret manager and have the application read it directly.",
+        "confirm": ""
+      },
+      {
+        "id": "output-unnecessary",
+        "cause": "The output exists but nothing consumes it.",
+        "fix": "Remove it. The safest secret is one that is never printed.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Plan output shows redacted values.",
+      "Anything previously logged has been rotated.",
+      "State is encrypted with restricted access."
+    ],
+    "escalate": [
+      "What appeared in the output",
+      "Which variables are marked sensitive",
+      "Whether CI logs retained it"
+    ]
   }
 ]

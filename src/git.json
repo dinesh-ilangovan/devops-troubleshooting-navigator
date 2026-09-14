@@ -1954,5 +1954,369 @@
       "Reflog around the rebase",
       "What the branch looked like before"
     ]
+  },
+  {
+    "id": "git-large-clone-slow",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Performance",
+    "title": "Cloning the repository takes forever",
+    "summary": "A fresh clone takes many minutes, which slows onboarding and every CI run.",
+    "aliases": [
+      "clone slow",
+      "large repo clone",
+      "shallow clone",
+      "partial clone",
+      "clone takes forever",
+      "ci clone slow"
+    ],
+    "source": "https://git-scm.com/docs/git-clone",
+    "inputs": [
+      {
+        "key": "repo",
+        "label": "Repository",
+        "example": "https://github.com/org/infra.git"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check what makes it large",
+        "cmd": "git clone --filter=blob:none --no-checkout {repo} probe && cd probe && git count-objects -vH",
+        "risk": "safe",
+        "look": "Clones metadata only, so it is fast. size-pack tells you whether history or the working tree dominates."
+      },
+      {
+        "title": "Check history depth",
+        "cmd": "git rev-list --count HEAD",
+        "risk": "safe",
+        "look": "Commit count. Tens of thousands with large blobs is what makes clones slow, not the current file count."
+      },
+      {
+        "title": "Use a shallow clone for CI",
+        "cmd": "git clone --depth 1 {repo}",
+        "risk": "safe",
+        "look": "Only the latest commit. Dramatically faster, and sufficient for almost every build. Note that it cannot do history-dependent operations."
+      },
+      {
+        "title": "Use a partial clone for development",
+        "cmd": "git clone --filter=blob:none {repo}",
+        "risk": "safe",
+        "look": "Full history without file contents; blobs are fetched on demand. Better than shallow when you still need to browse history."
+      }
+    ],
+    "causes": [
+      {
+        "id": "deep-history",
+        "cause": "Many commits with large objects.",
+        "fix": "Use --depth 1 in CI and --filter=blob:none locally.",
+        "confirm": ""
+      },
+      {
+        "id": "large-binaries",
+        "cause": "Binaries are in history.",
+        "fix": "They cost every clone permanently. Move future ones to LFS.",
+        "confirm": ""
+      },
+      {
+        "id": "no-ci-optimisation",
+        "cause": "CI does a full clone every run.",
+        "fix": "Most CI systems support shallow fetch. Enable it.",
+        "confirm": ""
+      },
+      {
+        "id": "many-refs",
+        "cause": "Thousands of branches and tags.",
+        "fix": "Prune merged branches. Every ref is negotiated on clone.",
+        "confirm": ""
+      },
+      {
+        "id": "network",
+        "cause": "The network is the bottleneck.",
+        "fix": "Use a mirror closer to the runners.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Clone time is acceptable.",
+      "CI uses shallow fetch.",
+      "New large binaries go to LFS."
+    ],
+    "escalate": [
+      "Output of count-objects",
+      "Commit count",
+      "Whether CI clones shallow"
+    ]
+  },
+  {
+    "id": "git-hooks-not-running",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Working Tree",
+    "title": "Git hooks do not run",
+    "summary": "A pre-commit hook is configured but commits go through unchecked.",
+    "aliases": [
+      "hooks not running",
+      "pre-commit not working",
+      "husky not working",
+      "hook ignored",
+      "core.hookspath",
+      "git hook skipped"
+    ],
+    "source": "https://git-scm.com/docs/githooks",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check where Git looks for hooks",
+        "cmd": "git config core.hooksPath && dir .git\\hooks",
+        "risk": "safe",
+        "look": "If core.hooksPath is set, .git/hooks is ignored entirely. Tools like husky set this and it surprises people."
+      },
+      {
+        "title": "Check the hook is executable",
+        "cmd": "git ls-files -s .githooks/pre-commit 2>nul || dir .git\\hooks\\pre-commit",
+        "risk": "safe",
+        "look": "A hook without the execute bit is silently skipped with no error at all."
+      },
+      {
+        "title": "Check the shebang",
+        "cmd": "type .git\\hooks\\pre-commit | findstr /B \"#!\"",
+        "risk": "safe",
+        "look": "A missing or CRLF-terminated shebang makes the hook unrunnable. Nothing is reported."
+      },
+      {
+        "title": "Check whether commits bypass hooks",
+        "cmd": "git config core.hooksPath",
+        "risk": "safe",
+        "look": "Also confirm nobody is using --no-verify. Hooks are a convenience, not a control; CI is where enforcement belongs."
+      }
+    ],
+    "causes": [
+      {
+        "id": "hookspath-set",
+        "cause": "core.hooksPath points elsewhere.",
+        "fix": "Check what it points at. A tool may have set it and then been uninstalled.",
+        "confirm": ""
+      },
+      {
+        "id": "not-executable",
+        "cause": "The hook lacks the execute bit.",
+        "fix": "chmod +x, and commit the mode so it survives a fresh clone.",
+        "confirm": ""
+      },
+      {
+        "id": "crlf-shebang",
+        "cause": "The shebang has a Windows line ending.",
+        "fix": "Convert to LF. Add the hooks directory to .gitattributes.",
+        "confirm": ""
+      },
+      {
+        "id": "not-installed",
+        "cause": "Hooks are in the repository but never installed.",
+        "fix": ".git/hooks is not versioned. Use core.hooksPath pointing at a tracked directory.",
+        "confirm": ""
+      },
+      {
+        "id": "no-verify",
+        "cause": "Commits use --no-verify.",
+        "fix": "Hooks can always be bypassed. Enforce in CI if it matters.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The hook runs on commit.",
+      "It runs after a fresh clone.",
+      "The real check also exists in CI."
+    ],
+    "escalate": [
+      "Value of core.hooksPath",
+      "Hook file permissions",
+      "The shebang line"
+    ]
+  },
+  {
+    "id": "git-tag-wrong-commit",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "History & Undo",
+    "title": "A tag points at the wrong commit",
+    "summary": "A release tag was created on the wrong commit and may already have been pushed.",
+    "aliases": [
+      "wrong tag",
+      "move tag",
+      "retag",
+      "tag wrong commit",
+      "delete tag remote",
+      "release tag mistake"
+    ],
+    "source": "https://git-scm.com/docs/git-tag",
+    "inputs": [
+      {
+        "key": "tag",
+        "label": "Tag",
+        "example": "v1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See where the tag points",
+        "cmd": "git show --no-patch --format='%H %s' {tag}",
+        "risk": "safe",
+        "look": "The commit and its subject. Confirm it is genuinely wrong before touching anything."
+      },
+      {
+        "title": "Check whether it is on the remote",
+        "cmd": "git ls-remote --tags origin | findstr {tag}",
+        "risk": "safe",
+        "look": "Present on the remote means others may have fetched it, and moving it will not update their copies.",
+        "signals": [
+          {
+            "match": "refs/tags",
+            "means": "The tag exists on the remote. Moving it is a rewrite others will not see.",
+            "goto": "cause:already-pushed"
+          }
+        ]
+      },
+      {
+        "title": "Delete the local tag",
+        "cmd": "git tag -d {tag}",
+        "risk": "safe",
+        "look": "Removes it locally only. The remote is untouched and nothing is lost, since the commit itself remains."
+      },
+      {
+        "title": "Delete the remote tag",
+        "cmd": "git push origin :refs/tags/{tag}",
+        "risk": "destructive",
+        "look": "git ls-remote no longer lists it. Then push the corrected tag.",
+        "note": "Removes the tag from the remote. Anyone who already fetched it keeps their copy pointing at the old commit, and release artifacts built from that tag remain published. If the tag was used for a release, prefer a new version number over moving this one."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-pushed",
+        "cause": "The tag is local only.",
+        "fix": "Delete and recreate. Nobody else is affected.",
+        "confirm": ""
+      },
+      {
+        "id": "already-pushed",
+        "cause": "The tag is on the remote.",
+        "fix": "Prefer publishing a new version. Moving a released tag breaks reproducibility for anyone who already fetched it.",
+        "confirm": ""
+      },
+      {
+        "id": "lightweight",
+        "cause": "A lightweight tag was used for a release.",
+        "fix": "Use annotated tags for releases. They carry an author, date and message.",
+        "confirm": ""
+      },
+      {
+        "id": "ci-triggered",
+        "cause": "CI already built from the tag.",
+        "fix": "Artifacts exist for the wrong commit. Yank them and publish a new version.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The tag points at the intended commit.",
+      "Or a corrected version was published instead.",
+      "CI artifacts match the tag."
+    ],
+    "escalate": [
+      "Where the tag currently points",
+      "Whether it is on the remote",
+      "Whether CI built from it"
+    ]
+  },
+  {
+    "id": "git-untracked-blocking-checkout",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Working Tree",
+    "title": "Checkout refuses because of untracked files",
+    "summary": "Switching branches fails because incoming files would overwrite local untracked ones.",
+    "aliases": [
+      "untracked working tree files would be overwritten",
+      "cannot checkout",
+      "would be overwritten by checkout",
+      "switch branch blocked"
+    ],
+    "source": "https://git-scm.com/docs/git-checkout",
+    "inputs": [
+      {
+        "key": "branch",
+        "label": "Branch",
+        "example": "main"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See which files block the switch",
+        "cmd": "git switch {branch}",
+        "risk": "safe",
+        "look": "Git lists every blocking path. These are files you have locally that the target branch also wants to create.",
+        "signals": [
+          {
+            "match": "would be overwritten by checkout",
+            "means": "Untracked local files collide with incoming ones.",
+            "goto": "cause:untracked-collision"
+          }
+        ]
+      },
+      {
+        "title": "Check whether they matter",
+        "cmd": "git status --short | findstr /B \"??\"",
+        "risk": "safe",
+        "look": "Untracked files. Build output and local config are usually safe to remove; anything you wrote is not."
+      },
+      {
+        "title": "Check what the target branch has at those paths",
+        "cmd": "git show {branch}:<path>",
+        "risk": "safe",
+        "look": "The incoming version. Comparing tells you whether yours is worth keeping at all."
+      },
+      {
+        "title": "Remove untracked files that are not needed",
+        "cmd": "git clean -nd",
+        "risk": "destructive",
+        "look": "The list of what would be removed. Only then decide whether to run it for real.",
+        "note": "Run exactly as shown with -n first: that only lists what would be deleted. Removing the -n makes it delete permanently, and files never added to Git are not recoverable by any means. Read the list line by line before you change the flag."
+      }
+    ],
+    "causes": [
+      {
+        "id": "untracked-collision",
+        "cause": "Local untracked files collide with incoming ones.",
+        "fix": "Move or remove yours. Git refuses rather than silently overwriting.",
+        "confirm": ""
+      },
+      {
+        "id": "build-output",
+        "cause": "Build artifacts are untracked.",
+        "fix": "Add them to .gitignore so they stop causing this.",
+        "confirm": ""
+      },
+      {
+        "id": "should-keep",
+        "cause": "The files are real work.",
+        "fix": "Move them aside, or commit them on a branch first.",
+        "confirm": ""
+      },
+      {
+        "id": "ignored-but-present",
+        "cause": "The file is ignored but exists.",
+        "fix": "Ignored files still block checkout when the target branch tracks that path.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The branch switch succeeds.",
+      "Nothing you needed was deleted.",
+      ".gitignore covers the generated files."
+    ],
+    "escalate": [
+      "The blocking paths",
+      "Whether they are generated or authored",
+      "What the target branch has there"
+    ]
   }
 ]

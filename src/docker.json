@@ -2664,5 +2664,493 @@
       "Config.Env from inspect",
       "How the variable was passed"
     ]
+  },
+  {
+    "id": "docker-volume-data-lost",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Storage & Disk",
+    "title": "Data disappeared after recreating a container",
+    "summary": "Restarting or recreating lost everything the application had written.",
+    "aliases": [
+      "data lost",
+      "volume gone",
+      "data not persisting",
+      "database empty after restart",
+      "anonymous volume",
+      "lost data container"
+    ],
+    "source": "https://docs.docker.com/engine/storage/volumes/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check what the container had mounted",
+        "cmd": "docker inspect {container} --format '{{json .Mounts}}'",
+        "risk": "safe",
+        "look": "Type volume with a long hex Name is an anonymous volume. Those are easy to orphan and are the usual cause.",
+        "signals": [
+          {
+            "match": "\"Type\":\"volume\".*\"Name\":\"[0-9a-f]{32,}",
+            "means": "An anonymous volume. A new container gets a fresh empty one.",
+            "goto": "cause:anonymous-volume"
+          },
+          {
+            "match": "\"Mounts\":\\[\\]",
+            "means": "No volumes at all. Everything lived in the writable layer and is gone.",
+            "goto": "cause:no-volume"
+          }
+        ]
+      },
+      {
+        "title": "Look for orphaned volumes holding the data",
+        "cmd": "docker volume ls -f dangling=true",
+        "risk": "safe",
+        "look": "Dangling volumes are not attached to any container. Your data may well still be in one of them."
+      },
+      {
+        "title": "Inspect a candidate volume",
+        "cmd": "docker run --rm -v <volume-name>:/data alpine ls -la /data",
+        "risk": "safe",
+        "look": "Mounts the volume read-write into a throwaway container just to list it. If you recognise the contents, the data survived."
+      },
+      {
+        "title": "Check the compose file declares named volumes",
+        "cmd": "findstr /C:\"volumes:\" docker-compose.yml",
+        "risk": "safe",
+        "look": "Named volumes persist across recreation. Anonymous ones are replaced, and a missing volumes section means nothing persists at all."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-volume",
+        "cause": "No volume was mounted.",
+        "fix": "The writable layer dies with the container. Declare a named volume for anything that matters.",
+        "confirm": ""
+      },
+      {
+        "id": "anonymous-volume",
+        "cause": "An anonymous volume was used.",
+        "fix": "Name it. Anonymous volumes are orphaned on recreation and quietly replaced.",
+        "confirm": ""
+      },
+      {
+        "id": "volume-pruned",
+        "cause": "A prune removed it.",
+        "fix": "docker volume prune deletes unattached volumes. Check whether it ran.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-path",
+        "cause": "The volume is mounted at the wrong path.",
+        "fix": "It must cover where the app actually writes. Check the image's documentation.",
+        "confirm": ""
+      },
+      {
+        "id": "compose-down-v",
+        "cause": "docker compose down -v was run.",
+        "fix": "-v deletes the project's volumes. It is not the same as down.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Data survives a full recreate.",
+      "Volumes are named and declared in the compose file.",
+      "A backup exists for anything irreplaceable."
+    ],
+    "escalate": [
+      "The Mounts block",
+      "Whether dangling volumes hold the data",
+      "The compose volumes section"
+    ]
+  },
+  {
+    "id": "docker-slow-bind-mount",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Storage & Disk",
+    "title": "Bind-mounted files are very slow",
+    "summary": "Builds and file watching crawl when the source is bind-mounted from Windows.",
+    "aliases": [
+      "slow bind mount",
+      "slow volume windows",
+      "file watching slow",
+      "hot reload slow",
+      "docker desktop slow files",
+      "wsl performance"
+    ],
+    "source": "https://docs.docker.com/desktop/features/wsl/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check where the mount comes from",
+        "cmd": "docker inspect {container} --format '{{json .Mounts}}'",
+        "risk": "safe",
+        "look": "A Source under /c/ or C:\\ crosses the Windows to Linux filesystem boundary on every operation. That crossing is the cost.",
+        "signals": [
+          {
+            "match": "/mnt/c/|C:\\\\\\\\|/host_mnt/",
+            "means": "Mounted from the Windows filesystem, which is slow through the VM boundary.",
+            "goto": "cause:cross-fs"
+          }
+        ]
+      },
+      {
+        "title": "Measure the difference",
+        "cmd": "docker exec {container} sh -c \"time ls -R /app | wc -l\"",
+        "risk": "safe",
+        "look": "Compare against the same command on a path inside the container. An order of magnitude difference confirms it."
+      },
+      {
+        "title": "Check whether the project is inside WSL",
+        "cmd": "wsl -l -v",
+        "risk": "safe",
+        "look": "Files stored in the WSL filesystem rather than on C: avoid the boundary entirely and are dramatically faster."
+      },
+      {
+        "title": "Check what is being watched",
+        "cmd": "docker exec {container} sh -c \"cat /proc/sys/fs/inotify/max_user_watches\"",
+        "risk": "safe",
+        "look": "File watchers across the boundary are especially slow because inotify events do not propagate natively."
+      }
+    ],
+    "causes": [
+      {
+        "id": "cross-fs",
+        "cause": "Files live on the Windows filesystem.",
+        "fix": "Move the project into the WSL filesystem. This is the single biggest improvement available.",
+        "confirm": ""
+      },
+      {
+        "id": "too-many-files",
+        "cause": "node_modules or similar is bind-mounted.",
+        "fix": "Keep dependencies in a named volume so they never cross the boundary.",
+        "confirm": ""
+      },
+      {
+        "id": "watcher-polling",
+        "cause": "The watcher polls because inotify does not work.",
+        "fix": "Enable polling explicitly with a sensible interval, or move to WSL.",
+        "confirm": ""
+      },
+      {
+        "id": "antivirus",
+        "cause": "Windows Defender scans every file access.",
+        "fix": "Exclude the project directory.",
+        "confirm": ""
+      },
+      {
+        "id": "should-copy",
+        "cause": "Development bind mount used in production.",
+        "fix": "Copy files into the image for production. Bind mounts are a development convenience.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "File operations are fast.",
+      "Hot reload responds promptly.",
+      "The project location is documented for the team."
+    ],
+    "escalate": [
+      "The mount source path",
+      "Timing comparison inside and outside the mount",
+      "Whether the project is on WSL or C:"
+    ]
+  },
+  {
+    "id": "docker-context-wrong",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Daemon",
+    "title": "Commands hit the wrong Docker engine",
+    "summary": "Containers you created are invisible, or commands affect a remote host unexpectedly.",
+    "aliases": [
+      "wrong docker context",
+      "containers missing",
+      "docker context",
+      "remote docker",
+      "cannot see containers",
+      "context switch"
+    ],
+    "source": "https://docs.docker.com/engine/manage-resources/contexts/",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Show which context is active",
+        "cmd": "docker context ls",
+        "risk": "safe",
+        "look": "The asterisk marks the active one, with its endpoint. A remote endpoint means your commands leave this machine.",
+        "signals": [
+          {
+            "match": "\\*.*ssh://|\\*.*tcp://",
+            "means": "The active context points at a remote engine.",
+            "goto": "cause:remote-context"
+          },
+          {
+            "match": "\\*.*desktop-linux",
+            "means": "Docker Desktop's own context, which is normal on Windows.",
+            "goto": ""
+          }
+        ]
+      },
+      {
+        "title": "Check for an overriding environment variable",
+        "cmd": "echo $env:DOCKER_HOST $env:DOCKER_CONTEXT",
+        "risk": "safe",
+        "look": "DOCKER_HOST overrides the context entirely and silently. A leftover value in a shell profile causes exactly this."
+      },
+      {
+        "title": "Confirm which engine answered",
+        "cmd": "docker info --format '{{.Name}} {{.OperatingSystem}}'",
+        "risk": "safe",
+        "look": "The engine's own identity. If that is not the machine you expect, you are talking to something else."
+      },
+      {
+        "title": "Switch back to the default",
+        "cmd": "docker context use default",
+        "risk": "state",
+        "look": "docker context ls shows the asterisk on default, and docker ps shows what you expect.",
+        "note": "Changes the target engine for every subsequent docker command from this user account. Containers on the previous engine keep running but become invisible here until you switch back. On a remote engine, anything you started there is still running and still costing money."
+      }
+    ],
+    "causes": [
+      {
+        "id": "remote-context",
+        "cause": "The active context targets a remote engine.",
+        "fix": "Switch to default. Check what you may have created on the remote host.",
+        "confirm": ""
+      },
+      {
+        "id": "docker-host-set",
+        "cause": "DOCKER_HOST is set in the environment.",
+        "fix": "Unset it. It overrides the context with no warning.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-os",
+        "cause": "Windows containers mode instead of Linux.",
+        "fix": "Switch modes in Docker Desktop. Linux images cannot run in Windows mode.",
+        "confirm": ""
+      },
+      {
+        "id": "multiple-desktops",
+        "cause": "Several engines on the machine.",
+        "fix": "Name the contexts clearly so the active one is obvious.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "docker ps shows the containers you expect.",
+      "The active context is intentional.",
+      "Nothing was left running on a remote engine."
+    ],
+    "escalate": [
+      "Output of docker context ls",
+      "Whether DOCKER_HOST is set",
+      "Which engine docker info reports"
+    ]
+  },
+  {
+    "id": "docker-layer-secret-leak",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Images",
+    "title": "Secrets are baked into the image",
+    "summary": "Credentials used during build remain recoverable from the image layers.",
+    "aliases": [
+      "secret in image",
+      "credentials in layer",
+      "token in image",
+      "build secret",
+      "leaked credentials docker",
+      "remove secret layer"
+    ],
+    "source": "https://docs.docker.com/build/building/secrets/",
+    "inputs": [
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Search the layer history for secrets",
+        "cmd": "docker history --no-trunc {image} | findstr /I \"token password secret key\"",
+        "risk": "safe",
+        "look": "Build arguments and RUN commands are recorded in the history in plain text. Anyone with the image can read them.",
+        "signals": [
+          {
+            "match": "ARG|ENV.*(?:TOKEN|PASSWORD|SECRET)",
+            "means": "A secret was passed as a build argument and is in the metadata.",
+            "goto": "cause:build-arg"
+          }
+        ]
+      },
+      {
+        "title": "Search the filesystem in the image",
+        "cmd": "docker run --rm --entrypoint sh {image} -c \"ls -la /root/.npmrc /root/.docker /root/.aws 2>/dev/null; echo done\"",
+        "risk": "safe",
+        "look": "Credential files copied during build. Deleting them in a later layer does not remove them from the earlier one."
+      },
+      {
+        "title": "Check for a secret deleted in a later layer",
+        "cmd": "docker history {image} | findstr /C:\"rm \"",
+        "risk": "safe",
+        "look": "An rm in a later instruction does not remove data from an earlier layer. The file is still extractable from the image."
+      },
+      {
+        "title": "Confirm the image was pushed",
+        "cmd": "docker image inspect {image} --format '{{.RepoDigests}}'",
+        "risk": "safe",
+        "look": "A digest means it was pushed to a registry. Anyone with pull access has the secret and rotation is not optional."
+      }
+    ],
+    "causes": [
+      {
+        "id": "build-arg",
+        "cause": "A secret was passed via ARG.",
+        "fix": "Build arguments are stored in image metadata. Use BuildKit secret mounts instead.",
+        "confirm": ""
+      },
+      {
+        "id": "copied-credentials",
+        "cause": "A credentials file was copied in.",
+        "fix": "Use a secret mount, which is never persisted to a layer.",
+        "confirm": ""
+      },
+      {
+        "id": "deleted-later",
+        "cause": "The secret was deleted in a later layer.",
+        "fix": "It remains in the earlier layer. Multi-stage builds avoid this properly.",
+        "confirm": ""
+      },
+      {
+        "id": "must-rotate",
+        "cause": "The image was pushed.",
+        "fix": "Treat the secret as leaked and rotate it. Removing the image does not undo distribution.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "No secret appears in history or in the filesystem.",
+      "Build secrets use mounts.",
+      "Anything exposed has been rotated."
+    ],
+    "escalate": [
+      "What the history search found",
+      "Whether the image was pushed",
+      "Which secrets need rotation"
+    ]
+  },
+  {
+    "id": "docker-container-high-cpu",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Performance",
+    "title": "Container consuming excessive CPU",
+    "summary": "One container dominates the host and everything else slows down.",
+    "aliases": [
+      "container high cpu",
+      "docker cpu 100",
+      "container slow host",
+      "cpu limit docker",
+      "throttling container"
+    ],
+    "source": "https://docs.docker.com/engine/containers/resource_constraints/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Watch live resource usage",
+        "cmd": "docker stats --no-stream",
+        "risk": "safe",
+        "look": "CPU percentage per container. Over 100% means multiple cores. Compare against the limit, not against 100.",
+        "signals": [
+          {
+            "match": "\\d{3,}\\.\\d+%",
+            "means": "Using more than one core. Check whether a limit is set at all.",
+            "goto": "cause:no-limit"
+          }
+        ]
+      },
+      {
+        "title": "Check what limits are configured",
+        "cmd": "docker inspect {container} --format 'cpus={{.HostConfig.NanoCpus}} quota={{.HostConfig.CpuQuota}}'",
+        "risk": "safe",
+        "look": "Zero means unlimited, so the container can take the whole host. That is the default and it is rarely what you want."
+      },
+      {
+        "title": "Look at what is running inside",
+        "cmd": "docker top {container}",
+        "risk": "safe",
+        "look": "The processes. A runaway worker or a busy loop is usually obvious from the process list alone."
+      },
+      {
+        "title": "Apply a CPU limit",
+        "cmd": "docker update --cpus=2 {container}",
+        "risk": "state",
+        "look": "docker stats shows usage capped near the new limit.",
+        "note": "Changes the limit on the running container immediately. If the application genuinely needs more, throttling it will make it slower and may cause timeouts or failed health checks. Measure the real requirement before choosing a number."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-limit",
+        "cause": "No CPU limit is set.",
+        "fix": "Set --cpus. An unlimited container can starve everything else on the host.",
+        "confirm": ""
+      },
+      {
+        "id": "runaway-process",
+        "cause": "A process inside is looping.",
+        "fix": "Identify it from docker top and fix the application.",
+        "confirm": ""
+      },
+      {
+        "id": "gc-pressure",
+        "cause": "Garbage collection dominates.",
+        "fix": "The runtime may be sized against the host rather than the container. Set explicit heap limits.",
+        "confirm": ""
+      },
+      {
+        "id": "too-many-workers",
+        "cause": "The worker count was derived from host cores.",
+        "fix": "Configure it explicitly. Many runtimes read host core count, not the cgroup limit.",
+        "confirm": ""
+      },
+      {
+        "id": "genuinely-busy",
+        "cause": "The work really needs that much CPU.",
+        "fix": "Scale out rather than throttling a single container.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "CPU usage is proportional to the work.",
+      "A limit exists.",
+      "Other containers are unaffected."
+    ],
+    "escalate": [
+      "docker stats output",
+      "Configured limits",
+      "Process list inside the container"
+    ]
   }
 ]
