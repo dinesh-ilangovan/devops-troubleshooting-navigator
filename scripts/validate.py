@@ -11,7 +11,7 @@ import json, re, sys, collections
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
 
-TIERS = {"verified", "documented", "reference"}
+TIERS = {"guide", "reference", "verified", "documented"}
 RISKS = {"safe", "state", "destructive"}
 PLACEHOLDER = re.compile(r"\{([a-z0-9_]+)\}")
 
@@ -44,16 +44,7 @@ def check_runbook(r, seen_ids):
         err(rid, f"tier must be one of {sorted(TIERS)}, got {tier!r}")
         return
 
-    # --- provenance, by tier -------------------------------------------------
-    if tier == "verified":
-        for f in ("verified_on", "verified_against", "verified_by"):
-            if not r.get(f):
-                err(rid, f"tier 'verified' requires {f}")
-        d = r.get("verified_on", "")
-        if d and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
-            err(rid, f"verified_on must be YYYY-MM-DD, got {d!r}")
-    if tier == "documented" and not r.get("source"):
-        err(rid, "tier 'documented' requires a source URL")
+    # --- provenance ----------------------------------------------------------
     if tier == "reference":
         for f in ("import_source", "license", "attribution"):
             if not r.get(f):
@@ -63,6 +54,8 @@ def check_runbook(r, seen_ids):
                 err(rid, f"tier 'reference' must not carry {f} - it is a lookup card, "
                          "not guidance")
         return
+    if not r.get("source"):
+        err(rid, "every runbook needs a source URL to official documentation")
 
     if not r.get("aliases"):
         warn(rid, "no aliases - it will only be findable by its exact title")
@@ -158,15 +151,11 @@ def main():
                 f"({', '.join(map(str, ids[:5]))}{'...' if len(ids) > 5 else ''}) - "
                 "merge them, or give each a step whose output differs")
 
-    tiers = collections.Counter(r.get("tier") for r in all_rb)
-    stale = [r.get("id") for r in all_rb if r.get("tier") == "verified"
-             and r.get("verified_on", "9999") < "2026-03-01"]
+    techs = collections.Counter(r.get("technology") for r in all_rb)
 
     print(f"files      {len(files)}")
-    print(f"runbooks   {len(all_rb)}  " +
-          "  ".join(f"{k}={v}" for k, v in sorted(tiers.items()) if k))
-    if stale:
-        print(f"stale      {len(stale)} verified runbooks older than 6 months")
+    print(f"runbooks   {len(all_rb)}")
+    print("           " + "  ".join(f"{k}={v}" for k, v in sorted(techs.items()) if k))
     for w in warnings[:25]:
         print(f"  warn  {w}")
     if len(warnings) > 25:

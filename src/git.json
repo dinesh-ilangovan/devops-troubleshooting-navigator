@@ -1,7 +1,7 @@
 [
   {
     "id": "git-committed-to-main",
-    "tier": "verified",
+    "tier": "guide",
     "technology": "Git",
     "category": "History & Undo",
     "title": "I committed to main by mistake",
@@ -15,9 +15,6 @@
       "move commit to branch",
       "oops committed"
     ],
-    "verified_on": "2026-09-11",
-    "verified_against": "git 2.45",
-    "verified_by": "dinesh",
     "source": "https://git-scm.com/docs/git-reset",
     "inputs": [
       {
@@ -104,7 +101,7 @@
   },
   {
     "id": "git-force-push-safely",
-    "tier": "verified",
+    "tier": "guide",
     "technology": "Git",
     "category": "Remotes",
     "title": "I need to force-push a rebased branch",
@@ -117,9 +114,6 @@
       "non-fast-forward",
       "rejected push"
     ],
-    "verified_on": "2026-09-11",
-    "verified_against": "git 2.45",
-    "verified_by": "dinesh",
     "source": "https://git-scm.com/docs/git-push",
     "inputs": [
       {
@@ -200,7 +194,7 @@
   },
   {
     "id": "git-merge-conflict",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Git",
     "category": "Merging",
     "title": "Merge or rebase stopped with conflicts",
@@ -293,7 +287,7 @@
   },
   {
     "id": "git-detached-head",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Git",
     "category": "Branches",
     "title": "You are in detached HEAD state",
@@ -380,7 +374,7 @@
   },
   {
     "id": "git-large-file-rejected",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Git",
     "category": "Remotes",
     "title": "Push rejected for file size",
@@ -462,7 +456,7 @@
   },
   {
     "id": "git-wrong-author",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Git",
     "category": "History & Undo",
     "title": "Commits show the wrong author or email",
@@ -545,6 +539,1024 @@
       "git log with author format",
       "Output of git config --show-origin for user.email",
       "Whether the affected commits are pushed"
+    ]
+  },
+  {
+    "id": "git-non-fast-forward",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Remotes",
+    "title": "Push rejected as non-fast-forward",
+    "summary": "The remote has commits you do not have locally. Fetch and integrate before pushing.",
+    "aliases": [
+      "non-fast-forward",
+      "push rejected",
+      "updates were rejected",
+      "fetch first",
+      "remote contains work",
+      "rejected behind"
+    ],
+    "source": "https://git-scm.com/docs/git-push",
+    "inputs": [
+      {
+        "key": "branch",
+        "label": "Branch",
+        "example": "main"
+      },
+      {
+        "key": "remote",
+        "label": "Remote",
+        "example": "origin"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See how far the branches have diverged",
+        "cmd": "git fetch {remote} && git status -sb",
+        "risk": "safe",
+        "look": "The ahead and behind counts. Behind only means a simple pull; both ahead and behind means real divergence that needs a decision.",
+        "signals": [
+          {
+            "match": "behind \\d+\\] *$",
+            "means": "Only behind. A pull will fast-forward cleanly.",
+            "goto": "cause:simply-behind"
+          },
+          {
+            "match": "ahead \\d+, behind \\d+",
+            "means": "Diverged. You must choose merge or rebase.",
+            "goto": "cause:diverged"
+          }
+        ]
+      },
+      {
+        "title": "See exactly which commits are on each side",
+        "cmd": "git log --oneline --left-right {remote}/{branch}...HEAD",
+        "risk": "safe",
+        "look": "Arrows point to which side each commit is on. Read the remote-side commits before deciding; someone else wrote them."
+      },
+      {
+        "title": "Bring the remote work in beneath yours",
+        "cmd": "git pull --rebase {remote} {branch}",
+        "risk": "state",
+        "look": "git status shows ahead only. Conflicts may pause the rebase; resolve then continue.",
+        "note": "Replays your local commits on top of the remote ones, which rewrites their SHAs. Safe for commits you have not pushed. If any of your local commits are already public elsewhere, use a merge instead so their identity does not change."
+      },
+      {
+        "title": "Push once it is a fast-forward",
+        "cmd": "git push {remote} {branch}",
+        "risk": "safe",
+        "look": "The push is accepted. If it is rejected again, someone pushed while you were rebasing; fetch and repeat."
+      }
+    ],
+    "causes": [
+      {
+        "id": "simply-behind",
+        "cause": "You are only behind.",
+        "fix": "git pull. Nothing of yours is at risk.",
+        "confirm": ""
+      },
+      {
+        "id": "diverged",
+        "cause": "Both sides have commits.",
+        "fix": "Rebase for a linear history, merge to preserve exact commit identity. Team convention decides.",
+        "confirm": ""
+      },
+      {
+        "id": "force-temptation",
+        "cause": "Tempted to force-push past it.",
+        "fix": "Do not. Those remote commits are someone's work and force-push deletes them silently.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-branch",
+        "cause": "Pushing to a branch you did not intend.",
+        "fix": "Check git status -sb. The upstream may not be what you assume.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The push is accepted.",
+      "git log shows both sets of commits.",
+      "Nothing from the remote disappeared."
+    ],
+    "escalate": [
+      "Output of git status -sb",
+      "The left-right log",
+      "Whether you rebased or merged"
+    ]
+  },
+  {
+    "id": "git-cannot-pull-local-changes",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Working Tree",
+    "title": "Pull refuses because of local changes",
+    "summary": "Git will not overwrite uncommitted work. It is protecting you, not blocking you.",
+    "aliases": [
+      "your local changes would be overwritten",
+      "cannot pull",
+      "commit your changes or stash",
+      "please commit",
+      "pull blocked",
+      "unstaged changes pull"
+    ],
+    "source": "https://git-scm.com/docs/git-stash",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "See exactly what is uncommitted",
+        "cmd": "git status --short && git diff --stat",
+        "risk": "safe",
+        "look": "Which files are modified. Git names the conflicting ones in the error, and those are the only ones that matter.",
+        "signals": [
+          {
+            "match": "^\\?\\?",
+            "means": "Untracked files. These only block if the incoming change adds the same path.",
+            "goto": "cause:untracked-collision"
+          },
+          {
+            "match": "^ M|^M ",
+            "means": "Modified tracked files that the pull would overwrite.",
+            "goto": "cause:modified-tracked"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the changes are worth keeping",
+        "cmd": "git diff",
+        "risk": "safe",
+        "look": "The actual content. Often this is debug output or a local config tweak you do not want anyway."
+      },
+      {
+        "title": "Set the work aside and pull",
+        "cmd": "git stash push -m \"before pull\" && git pull",
+        "risk": "state",
+        "look": "The pull succeeds. Your changes are listed in git stash list.",
+        "note": "Moves your uncommitted changes onto the stash and restores a clean tree. The work is recoverable with git stash pop, but untracked files are not stashed by default and can still block the pull. Add -u if you need them included."
+      },
+      {
+        "title": "Bring your work back on top",
+        "cmd": "git stash pop",
+        "risk": "state",
+        "look": "Your changes reappear. Resolve any conflicts as with a normal merge.",
+        "note": "Reapplies the stashed changes and removes the entry from the stash. If it conflicts with what you just pulled, the entry is kept rather than dropped, so nothing is lost. Use git stash apply instead if you want to keep the entry regardless."
+      }
+    ],
+    "causes": [
+      {
+        "id": "modified-tracked",
+        "cause": "Tracked files differ from the incoming version.",
+        "fix": "Stash, pull, pop. Or commit them on a branch if they are real work.",
+        "confirm": ""
+      },
+      {
+        "id": "untracked-collision",
+        "cause": "An untracked file has the same path as an incoming one.",
+        "fix": "Move or delete yours. Git will not silently overwrite it.",
+        "confirm": ""
+      },
+      {
+        "id": "not-worth-keeping",
+        "cause": "The changes are local noise.",
+        "fix": "git checkout -- <file> discards them. Confirm with git diff first; this cannot be undone.",
+        "confirm": ""
+      },
+      {
+        "id": "should-be-committed",
+        "cause": "The changes are real work.",
+        "fix": "Commit them on a branch, then pull. The stash is for short-lived interruptions, not storage.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The pull completes.",
+      "Your changes are back and intact.",
+      "The stash list is empty or intentionally populated."
+    ],
+    "escalate": [
+      "Output of git status --short",
+      "The diff of the blocking files",
+      "Whether the work was stashed or discarded"
+    ]
+  },
+  {
+    "id": "git-crlf-issues",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Working Tree",
+    "title": "Every file shows as modified with no real change",
+    "summary": "git diff reports whole-file changes you did not make. Line ending conversion.",
+    "aliases": [
+      "whole file changed",
+      "crlf",
+      "line endings",
+      "warning lf will be replaced",
+      "everything modified",
+      "diff shows every line"
+    ],
+    "source": "https://git-scm.com/docs/gitattributes",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "A file showing as changed",
+        "example": "scripts/deploy.sh"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the change is only line endings",
+        "cmd": "git diff --stat && git diff --ignore-all-space --stat",
+        "risk": "safe",
+        "look": "If the second command shows nothing, the difference is purely whitespace and line endings. That is definitive.",
+        "signals": [
+          {
+            "match": "(?i)0 files changed|^\\s*$",
+            "means": "Only line endings differ. No real content changed.",
+            "goto": "cause:autocrlf"
+          }
+        ]
+      },
+      {
+        "title": "Check the current conversion setting",
+        "cmd": "git config --show-origin core.autocrlf",
+        "risk": "safe",
+        "look": "On Windows true converts to CRLF on checkout and back to LF on commit. A value of false or an inconsistent one across the team produces exactly this."
+      },
+      {
+        "title": "Check what Git thinks each file should be",
+        "cmd": "git check-attr text eol -- {file}",
+        "risk": "safe",
+        "look": "What .gitattributes declares. Unspecified means Git guesses per machine, which is why it differs between teammates."
+      },
+      {
+        "title": "Normalise the repository",
+        "cmd": "git add --renormalize .",
+        "risk": "state",
+        "look": "git status shows the normalised files staged. Commit them as a single dedicated change.",
+        "note": "Rewrites the index using the current .gitattributes rules, producing one large commit touching many files. Coordinate it with the team: anyone with in-flight branches will hit conflicts across every touched file. Commit it alone, with nothing else in the change."
+      }
+    ],
+    "causes": [
+      {
+        "id": "autocrlf",
+        "cause": "core.autocrlf differs between machines.",
+        "fix": "Stop relying on it. Commit a .gitattributes file so behaviour is defined by the repository, not by each laptop.",
+        "confirm": ""
+      },
+      {
+        "id": "no-gitattributes",
+        "cause": "No .gitattributes, so Git guesses.",
+        "fix": "Add one. At minimum * text=auto, with eol=lf pinned for shell scripts.",
+        "confirm": ""
+      },
+      {
+        "id": "script-broken",
+        "cause": "A shell script has CRLF and fails at runtime.",
+        "fix": "Pin *.sh text eol=lf. CRLF in a shebang produces exec format errors in containers.",
+        "confirm": ""
+      },
+      {
+        "id": "editor-converts",
+        "cause": "The editor saves with different endings.",
+        "fix": "Configure it to respect .gitattributes. VS Code does by default.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "git status is clean after a fresh checkout.",
+      "Shell scripts run in containers.",
+      ".gitattributes is committed so it applies to everyone."
+    ],
+    "escalate": [
+      "git diff with and without --ignore-all-space",
+      "The core.autocrlf value and its origin",
+      "Whether .gitattributes exists"
+    ]
+  },
+  {
+    "id": "git-gitignore-not-working",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Working Tree",
+    "title": "gitignore is ignored for a file",
+    "summary": "You added a pattern but Git keeps tracking the file.",
+    "aliases": [
+      "gitignore not working",
+      "file still tracked",
+      "ignore not applied",
+      "still showing in status",
+      "gitignore ignored",
+      "cannot ignore file"
+    ],
+    "source": "https://git-scm.com/docs/gitignore",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "File",
+        "example": "config/local.env"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Ask Git which rule applies",
+        "cmd": "git check-ignore -v {file}",
+        "risk": "safe",
+        "look": "The file and line of the matching rule. No output means no rule matches, which is a pattern problem rather than a caching one.",
+        "signals": [
+          {
+            "match": ":\\d+:",
+            "means": "A rule does match. If the file is still tracked, the cache is the reason.",
+            "goto": "cause:already-tracked"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "No rule matches this path.",
+            "goto": "cause:pattern-wrong"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the file is already tracked",
+        "cmd": "git ls-files --error-unmatch {file}",
+        "risk": "safe",
+        "look": "gitignore only affects untracked files. Once a file is tracked, no pattern will ever make Git stop following it."
+      },
+      {
+        "title": "Check for a negation rule later in the file",
+        "cmd": "type .gitignore",
+        "risk": "safe",
+        "look": "Rules are applied in order and a later negation wins. Also note that a directory excluded by an earlier rule cannot have its contents re-included."
+      },
+      {
+        "title": "Stop tracking it without deleting it",
+        "cmd": "git rm --cached {file}",
+        "risk": "state",
+        "look": "git status shows the deletion staged and the file no longer tracked. Commit, and it will then be ignored.",
+        "note": "Removes the file from Git's index while leaving it on disk. On the next pull, anyone else's checkout will have this file deleted from their working tree, so tell the team. If it holds secrets, removing it now does not remove it from history."
+      }
+    ],
+    "causes": [
+      {
+        "id": "already-tracked",
+        "cause": "The file is already tracked.",
+        "fix": "git rm --cached, then commit. gitignore has no effect on tracked files.",
+        "confirm": ""
+      },
+      {
+        "id": "pattern-wrong",
+        "cause": "No rule matches the path.",
+        "fix": "Check for a leading slash, which anchors to the repository root. Patterns are relative to the .gitignore file's own location.",
+        "confirm": ""
+      },
+      {
+        "id": "negation",
+        "cause": "A later rule re-includes it.",
+        "fix": "Rules apply in order. Reorder them.",
+        "confirm": ""
+      },
+      {
+        "id": "parent-excluded",
+        "cause": "A parent directory is excluded.",
+        "fix": "Git does not descend into excluded directories, so a negation inside one never applies. Unexclude the directory first.",
+        "confirm": ""
+      },
+      {
+        "id": "secrets-in-history",
+        "cause": "The file contains secrets and was committed.",
+        "fix": "Ignoring it now does not remove it from history. Rotate the secret; treat it as leaked.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "git status no longer lists the file.",
+      "check-ignore names the intended rule.",
+      "Any leaked secret has been rotated."
+    ],
+    "escalate": [
+      "Output of git check-ignore -v",
+      "Whether the file is tracked",
+      "The .gitignore contents"
+    ]
+  },
+  {
+    "id": "git-recover-deleted-branch",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "History & Undo",
+    "title": "I deleted a branch that had work on it",
+    "summary": "The branch is gone but the commits almost certainly still exist.",
+    "aliases": [
+      "deleted branch",
+      "lost branch",
+      "recover branch",
+      "branch gone",
+      "deleted by mistake",
+      "restore branch"
+    ],
+    "source": "https://git-scm.com/docs/git-reflog",
+    "inputs": [
+      {
+        "key": "branch",
+        "label": "Branch that was deleted",
+        "example": "feature/checkout-retry"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Find the branch's last position in the reflog",
+        "cmd": "git reflog --all | findstr {branch}",
+        "risk": "safe",
+        "look": "Deletion is recorded with the SHA the branch pointed at. That SHA is everything you need.",
+        "signals": [
+          {
+            "match": "[0-9a-f]{7,}",
+            "means": "The commit is recorded. Recovery is straightforward.",
+            "goto": "cause:in-reflog"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "Nothing in this clone's reflog. It may have been deleted elsewhere.",
+            "goto": "cause:not-in-reflog"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the commits are unreachable but present",
+        "cmd": "git fsck --lost-found --no-reflogs 2>&1 | findstr commit",
+        "risk": "safe",
+        "look": "Dangling commits still in the object store. This finds work the reflog missed, such as after a clone or a reflog expiry."
+      },
+      {
+        "title": "Look at a candidate before acting on it",
+        "cmd": "git show --stat <sha>",
+        "risk": "safe",
+        "look": "Confirm it is the right work. Branching from the wrong SHA wastes time and creates confusion."
+      },
+      {
+        "title": "Recreate the branch at that commit",
+        "cmd": "git branch {branch} <sha>",
+        "risk": "safe",
+        "look": "The branch exists again, pointing at the same commit. Nothing else is modified. Verify with git log before continuing."
+      }
+    ],
+    "causes": [
+      {
+        "id": "in-reflog",
+        "cause": "The commit is in the reflog.",
+        "fix": "git branch <name> <sha>. Reflog entries last about ninety days by default.",
+        "confirm": ""
+      },
+      {
+        "id": "not-in-reflog",
+        "cause": "Not in this clone's reflog.",
+        "fix": "Check the remote, or another teammate's clone. Reflogs are strictly local and are not shared.",
+        "confirm": ""
+      },
+      {
+        "id": "was-pushed",
+        "cause": "The branch existed on the remote.",
+        "fix": "git fetch origin <branch>:<branch> restores it directly. Far simpler than reflog archaeology.",
+        "confirm": ""
+      },
+      {
+        "id": "gc-collected",
+        "cause": "Garbage collection removed the objects.",
+        "fix": "If fsck finds nothing and no remote has it, the work is gone. This is rare within the reflog window.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The branch exists with the expected commits.",
+      "git log matches what you remember.",
+      "It is pushed so it cannot be lost locally again."
+    ],
+    "escalate": [
+      "Reflog entries mentioning the branch",
+      "Output of git fsck --lost-found",
+      "Whether the branch was ever pushed"
+    ]
+  },
+  {
+    "id": "git-submodule-empty",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Submodules",
+    "title": "Submodule directory is empty after clone",
+    "summary": "The folder exists but contains nothing. Submodules are not fetched by default.",
+    "aliases": [
+      "submodule empty",
+      "submodule not cloned",
+      "empty directory clone",
+      "submodule init",
+      "missing submodule",
+      "submodule not updating"
+    ],
+    "source": "https://git-scm.com/docs/git-submodule",
+    "inputs": [
+      {
+        "key": "submodule",
+        "label": "Submodule path",
+        "example": "vendor/shared-lib"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the submodule's recorded state",
+        "cmd": "git submodule status",
+        "risk": "safe",
+        "look": "A leading minus means not initialised. A plus means it is at a different commit than the parent records. A space means it is correct.",
+        "signals": [
+          {
+            "match": "^-",
+            "means": "Not initialised. Nothing has been fetched.",
+            "goto": "cause:not-initialised"
+          },
+          {
+            "match": "^\\+",
+            "means": "Checked out at a different commit than the parent expects.",
+            "goto": "cause:wrong-commit"
+          }
+        ]
+      },
+      {
+        "title": "Initialise and fetch everything",
+        "cmd": "git submodule update --init --recursive",
+        "risk": "safe",
+        "look": "Populates every submodule at the commit the parent records. Recursive matters when submodules contain their own."
+      },
+      {
+        "title": "Check the submodule URL is reachable",
+        "cmd": "git config --file .gitmodules --get-regexp url",
+        "risk": "safe",
+        "look": "An SSH URL fails in CI that only has HTTPS credentials. This is a very common cause of submodules working locally and not in a pipeline."
+      },
+      {
+        "title": "Check the parent records a commit that still exists",
+        "cmd": "git ls-tree HEAD {submodule}",
+        "risk": "safe",
+        "look": "The recorded SHA. If that commit was force-pushed away in the submodule repository, the checkout can never succeed."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-initialised",
+        "cause": "Submodules were not fetched on clone.",
+        "fix": "git submodule update --init --recursive, or clone with --recurse-submodules.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-commit",
+        "cause": "The submodule is at a different commit.",
+        "fix": "update restores the recorded one. If you intended the new commit, commit that pointer in the parent.",
+        "confirm": ""
+      },
+      {
+        "id": "url-unreachable",
+        "cause": "The submodule URL cannot be reached.",
+        "fix": "Use a URL scheme the environment can authenticate to. Add an insteadOf rule for CI.",
+        "confirm": ""
+      },
+      {
+        "id": "commit-gone",
+        "cause": "The recorded commit no longer exists upstream.",
+        "fix": "Someone force-pushed the submodule repository. Update the parent to a commit that exists.",
+        "confirm": ""
+      },
+      {
+        "id": "ci-not-fetching",
+        "cause": "CI does not fetch submodules.",
+        "fix": "Enable submodules in the checkout step. Most CI systems skip them by default.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The submodule directory has content.",
+      "git submodule status shows no prefix.",
+      "A fresh clone works in CI, not only locally."
+    ],
+    "escalate": [
+      "Output of git submodule status",
+      "The submodule URLs from .gitmodules",
+      "Whether it works in CI as well as locally"
+    ]
+  },
+  {
+    "id": "git-credential-loop",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Remotes",
+    "title": "Git keeps asking for credentials",
+    "summary": "Every push or pull prompts, or an old credential is reused and rejected.",
+    "aliases": [
+      "asking for password",
+      "credential prompt",
+      "authentication failed git",
+      "support for password authentication was removed",
+      "credential manager",
+      "keeps asking username"
+    ],
+    "source": "https://git-scm.com/docs/gitcredentials",
+    "inputs": [
+      {
+        "key": "remote",
+        "label": "Remote",
+        "example": "origin"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the remote URL scheme",
+        "cmd": "git remote -v",
+        "risk": "safe",
+        "look": "HTTPS uses a token through a credential helper. SSH uses a key. Which one you have determines everything that follows.",
+        "signals": [
+          {
+            "match": "https://",
+            "means": "HTTPS. A personal access token is needed; passwords no longer work.",
+            "goto": "cause:needs-token"
+          },
+          {
+            "match": "git@|ssh://",
+            "means": "SSH. The key is the credential.",
+            "goto": "cause:ssh-key"
+          }
+        ]
+      },
+      {
+        "title": "Check which credential helper is configured",
+        "cmd": "git config --show-origin credential.helper",
+        "risk": "safe",
+        "look": "On Windows this should be manager. No helper means Git cannot store anything and will prompt every time."
+      },
+      {
+        "title": "Check what is cached for the host",
+        "cmd": "cmdkey /list | findstr git",
+        "risk": "safe",
+        "look": "Stored Windows credentials. A stale entry with an expired token is reused silently and produces repeated failures."
+      },
+      {
+        "title": "Remove the stale credential",
+        "cmd": "cmdkey /delete:git:https://github.com",
+        "risk": "state",
+        "look": "The next push prompts once, then stores the new credential and stops asking.",
+        "note": "Deletes the stored credential for that host from Windows Credential Manager. The next Git operation will prompt for a fresh one, so have the new token ready. Other tools using the same stored credential will also start prompting."
+      }
+    ],
+    "causes": [
+      {
+        "id": "needs-token",
+        "cause": "HTTPS with a password.",
+        "fix": "Password authentication was removed. Use a personal access token as the password.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-credential",
+        "cause": "An expired token is cached.",
+        "fix": "Delete it from Credential Manager. Git will not overwrite it on its own.",
+        "confirm": ""
+      },
+      {
+        "id": "no-helper",
+        "cause": "No credential helper.",
+        "fix": "git config --global credential.helper manager.",
+        "confirm": ""
+      },
+      {
+        "id": "ssh-key",
+        "cause": "SSH key is not loaded or not authorised.",
+        "fix": "Follow the SSH runbook. Test with ssh -T git@github.com.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-account",
+        "cause": "Cached credentials belong to another account.",
+        "fix": "Common with work and personal accounts. Clear the entry and use the right one.",
+        "confirm": ""
+      },
+      {
+        "id": "token-scope",
+        "cause": "The token lacks repo scope.",
+        "fix": "Regenerate with the right scopes. Read-only tokens fail on push with a confusing message.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Push and pull work without prompting.",
+      "The stored credential is for the right account.",
+      "The token has an expiry you know about."
+    ],
+    "escalate": [
+      "Remote URL scheme",
+      "Configured credential helper",
+      "Stored credentials for the host"
+    ]
+  },
+  {
+    "id": "git-lost-stash",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "History & Undo",
+    "title": "I lost a stash",
+    "summary": "A stash was dropped, popped into a conflict, or cleared. The content usually still exists.",
+    "aliases": [
+      "lost stash",
+      "stash gone",
+      "stash drop",
+      "stash clear",
+      "recover stash",
+      "stash disappeared"
+    ],
+    "source": "https://git-scm.com/docs/git-stash",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check what stashes remain",
+        "cmd": "git stash list",
+        "risk": "safe",
+        "look": "Empty means they were dropped or cleared. Stash entries are commits, and dropping one only removes the reference.",
+        "signals": [
+          {
+            "match": "stash@\\{",
+            "means": "Stashes exist. Check whether the one you want is among them.",
+            "goto": ""
+          },
+          {
+            "match": "^\\s*$",
+            "means": "No stashes listed. Look for dangling commits.",
+            "goto": "step:2"
+          }
+        ]
+      },
+      {
+        "title": "Find dangling stash commits",
+        "cmd": "git fsck --unreachable 2>&1 | findstr commit",
+        "risk": "safe",
+        "look": "Unreachable commits still in the object store. A stash creates a merge commit, which is a strong identifying signal."
+      },
+      {
+        "title": "Inspect a candidate before acting",
+        "cmd": "git show --stat <sha>",
+        "risk": "safe",
+        "look": "Confirm it is your work. A stash commit shows the working tree state at the time it was created."
+      },
+      {
+        "title": "Restore it as a branch",
+        "cmd": "git branch recovered-stash <sha>",
+        "risk": "safe",
+        "look": "Creates a branch at that commit so it can never be garbage collected. Nothing else is modified."
+      }
+    ],
+    "causes": [
+      {
+        "id": "dropped",
+        "cause": "The stash was dropped.",
+        "fix": "Find the commit in fsck output and branch from it. git stash drop prints the SHA; scroll back in the terminal.",
+        "confirm": ""
+      },
+      {
+        "id": "popped-conflict",
+        "cause": "A pop conflicted and the entry was kept.",
+        "fix": "Check git stash list. Pop keeps the entry when it conflicts, precisely so nothing is lost.",
+        "confirm": ""
+      },
+      {
+        "id": "cleared",
+        "cause": "git stash clear was run.",
+        "fix": "The commits become unreachable but remain until garbage collection. fsck finds them.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-repo",
+        "cause": "The stash is in a different clone.",
+        "fix": "Stashes are local and are never pushed. Check other clones.",
+        "confirm": ""
+      },
+      {
+        "id": "gc-collected",
+        "cause": "Garbage collection removed them.",
+        "fix": "If fsck finds nothing, they are gone. This is why stashes are for hours, not weeks.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The work is on a branch.",
+      "git log shows the expected content.",
+      "It is committed properly rather than stashed again."
+    ],
+    "escalate": [
+      "Output of git stash list",
+      "Unreachable commits from fsck",
+      "What git show reveals for each candidate"
+    ]
+  },
+  {
+    "id": "git-slow-repo",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Performance",
+    "title": "Git operations are very slow",
+    "summary": "status, checkout and commit take many seconds in a repository that should be fast.",
+    "aliases": [
+      "git slow",
+      "status slow",
+      "checkout slow",
+      "large repository",
+      "git performance",
+      "slow commit"
+    ],
+    "source": "https://git-scm.com/docs/git-gc",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Measure where the time goes",
+        "cmd": "git count-objects -vH",
+        "risk": "safe",
+        "look": "size-pack and the loose object count. Many loose objects or a very large pack both slow everything down.",
+        "signals": [
+          {
+            "match": "count: [1-9]\\d{4,}",
+            "means": "Tens of thousands of loose objects. Repacking will help substantially.",
+            "goto": "cause:loose-objects"
+          },
+          {
+            "match": "size-pack: \\d+\\.\\d+ GiB",
+            "means": "A multi-gigabyte pack. Large binaries are likely in history.",
+            "goto": "cause:large-history"
+          }
+        ]
+      },
+      {
+        "title": "Find the largest objects in history",
+        "cmd": "git rev-list --objects --all | git cat-file --batch-check=\"%(objectsize) %(rest)\" | sort -rn | head -10",
+        "risk": "safe",
+        "look": "Sizes in bytes with paths. Binaries committed years ago still cost every clone, forever."
+      },
+      {
+        "title": "Check the working tree size",
+        "cmd": "git status --porcelain | measure-object -line && dir /s /b | measure-object -line",
+        "risk": "safe",
+        "look": "A very large working tree makes status slow regardless of history. Untracked build output is a common cause."
+      },
+      {
+        "title": "Repack the repository",
+        "cmd": "git gc --aggressive --prune=now",
+        "risk": "destructive",
+        "look": "count-objects shows far fewer loose objects and a smaller total.",
+        "note": "Repacks objects and permanently deletes anything unreachable, including reflog entries beyond the expiry and dropped stashes. If you are also trying to recover lost work, do that first — this removes exactly the objects fsck would have found. It can take a long time on a large repository."
+      }
+    ],
+    "causes": [
+      {
+        "id": "loose-objects",
+        "cause": "Many loose objects.",
+        "fix": "git gc packs them. Routine maintenance usually handles it automatically.",
+        "confirm": ""
+      },
+      {
+        "id": "large-history",
+        "cause": "Large binaries in history.",
+        "fix": "They cost every clone forever. Removing them requires a coordinated history rewrite.",
+        "confirm": ""
+      },
+      {
+        "id": "untracked-files",
+        "cause": "Many untracked files slow status.",
+        "fix": "Add build output to .gitignore. Git scans everything otherwise.",
+        "confirm": ""
+      },
+      {
+        "id": "no-fsmonitor",
+        "cause": "Status scans the whole tree every time.",
+        "fix": "Enable core.fsmonitor on a large repository.",
+        "confirm": ""
+      },
+      {
+        "id": "antivirus",
+        "cause": "Antivirus scans every file Git touches.",
+        "fix": "Exclude the repository directory. On Windows this is frequently the dominant cost.",
+        "confirm": ""
+      },
+      {
+        "id": "should-use-lfs",
+        "cause": "Large assets are tracked directly.",
+        "fix": "Move them to Git LFS going forward.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Common operations feel fast.",
+      "Loose object count is low.",
+      "Large binaries are in LFS or excluded."
+    ],
+    "escalate": [
+      "Output of git count-objects -vH",
+      "The largest objects in history",
+      "Whether antivirus scans the repository"
+    ]
+  },
+  {
+    "id": "git-cherry-pick-conflict",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Merging",
+    "title": "Cherry-pick stops with a conflict",
+    "summary": "A commit does not apply cleanly to this branch because its context differs.",
+    "aliases": [
+      "cherry-pick conflict",
+      "could not apply",
+      "cherry pick failed",
+      "after resolving conflicts",
+      "backport conflict",
+      "cherry-pick error"
+    ],
+    "source": "https://git-scm.com/docs/git-cherry-pick",
+    "inputs": [
+      {
+        "key": "sha",
+        "label": "Commit to pick",
+        "example": "a1b2c3d"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See which files conflicted",
+        "cmd": "git status --short",
+        "risk": "safe",
+        "look": "UU entries are conflicts. Cherry-pick applies a diff, so it fails whenever surrounding context differs from the original branch.",
+        "signals": [
+          {
+            "match": "^UU ",
+            "means": "Content conflict. Resolve as with a merge.",
+            "goto": "cause:context-differs"
+          },
+          {
+            "match": "^(DU|UD) ",
+            "means": "The file does not exist here in the same form.",
+            "goto": "cause:missing-file"
+          }
+        ]
+      },
+      {
+        "title": "Look at what the original commit changed",
+        "cmd": "git show {sha}",
+        "risk": "safe",
+        "look": "The intended change. Resolving well means reproducing that intent here, not just making the markers go away."
+      },
+      {
+        "title": "Check whether the change is already present",
+        "cmd": "git log --oneline --grep=\"$(git log -1 --format=%s {sha})\"",
+        "risk": "safe",
+        "look": "A commit with the same subject already on this branch means it was backported and the pick is unnecessary."
+      },
+      {
+        "title": "Abort and return to a clean state",
+        "cmd": "git cherry-pick --abort",
+        "risk": "destructive",
+        "look": "A clean working tree at the pre-pick commit.",
+        "note": "Discards the in-progress cherry-pick along with any conflict resolution you have done. Committed history is untouched, but unsaved resolution work is lost. Use --skip instead if you want to abandon only this commit in a multi-commit pick."
+      }
+    ],
+    "causes": [
+      {
+        "id": "context-differs",
+        "cause": "The surrounding code differs from the source branch.",
+        "fix": "Resolve to the intended final state. Read the original commit to understand the intent.",
+        "confirm": ""
+      },
+      {
+        "id": "missing-file",
+        "cause": "The file does not exist on this branch.",
+        "fix": "The change may need adapting rather than picking. Consider whether it applies at all.",
+        "confirm": ""
+      },
+      {
+        "id": "already-applied",
+        "cause": "The change is already here.",
+        "fix": "Skip it. git cherry-pick --skip moves on in a multi-commit pick.",
+        "confirm": ""
+      },
+      {
+        "id": "needs-dependency",
+        "cause": "The commit depends on an earlier one not present.",
+        "fix": "Pick the dependency first, or pick the range.",
+        "confirm": ""
+      },
+      {
+        "id": "should-merge",
+        "cause": "You are picking many commits.",
+        "fix": "A merge or rebase is usually better than a long sequence of cherry-picks.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The cherry-pick completes.",
+      "The change works on this branch, not just compiles.",
+      "Tests pass."
+    ],
+    "escalate": [
+      "Which files conflicted",
+      "The original commit's diff",
+      "Whether the change is already present"
     ]
   }
 ]

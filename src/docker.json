@@ -1,7 +1,7 @@
 [
   {
     "id": "docker-exits-immediately",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Docker",
     "category": "Container Lifecycle",
     "title": "Container exits straight after docker run",
@@ -151,7 +151,7 @@
   },
   {
     "id": "docker-pull-denied",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Docker",
     "category": "Registry & Auth",
     "title": "docker pull fails with denied or unauthorized",
@@ -270,7 +270,7 @@
   },
   {
     "id": "docker-no-space-left",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Docker",
     "category": "Storage & Disk",
     "title": "no space left on device",
@@ -372,7 +372,7 @@
   },
   {
     "id": "docker-container-no-network",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Docker",
     "category": "Networking & DNS",
     "title": "Container cannot reach another container or the internet",
@@ -495,7 +495,7 @@
   },
   {
     "id": "docker-port-allocated",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Docker",
     "category": "Networking & DNS",
     "title": "port is already allocated",
@@ -579,7 +579,7 @@
   },
   {
     "id": "docker-volume-permission",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Docker",
     "category": "Storage & Disk",
     "title": "Permission denied on a mounted volume",
@@ -681,7 +681,7 @@
   },
   {
     "id": "docker-build-cache-miss",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Docker",
     "category": "Build & Cache",
     "title": "Docker build reruns every step instead of using cache",
@@ -767,7 +767,7 @@
   },
   {
     "id": "docker-compose-unhealthy",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Docker",
     "category": "Compose",
     "title": "Compose service never becomes healthy",
@@ -854,6 +854,1289 @@
       "docker compose ps output",
       "The State.Health log array",
       "Service logs from startup"
+    ]
+  },
+  {
+    "id": "docker-exec-format-error",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Images",
+    "title": "exec format error when the container starts",
+    "summary": "The image was built for a different CPU architecture than the machine running it.",
+    "aliases": [
+      "exec format error",
+      "wrong architecture",
+      "arm64 amd64",
+      "no matching manifest",
+      "cannot execute binary",
+      "platform mismatch"
+    ],
+    "source": "https://docs.docker.com/build/building/multi-platform/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      },
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Compare the image architecture against the host",
+        "cmd": "docker image inspect {image} --format 'image={{.Architecture}}/{{.Os}}' && docker version --format 'host={{.Server.Arch}}/{{.Server.Os}}'",
+        "risk": "safe",
+        "look": "The two strings must match. arm64 against amd64 is the classic case, usually an image built on an Apple Silicon laptop and run on a cloud VM.",
+        "signals": [
+          {
+            "match": "image=arm64.*host=amd64|image=amd64.*host=arm64",
+            "means": "Architecture mismatch. The binary cannot execute on this CPU.",
+            "goto": "cause:arch-mismatch"
+          },
+          {
+            "match": "image=\\w+/linux.*host=\\w+/windows",
+            "means": "OS mismatch. A Linux image cannot run in Windows container mode.",
+            "goto": "cause:os-mismatch"
+          }
+        ]
+      },
+      {
+        "title": "Check which platforms the registry actually offers",
+        "cmd": "docker manifest inspect {image}",
+        "risk": "safe",
+        "look": "A manifest list with several platform entries means a matching one exists and Docker picked wrong. A single entry means only one was ever published."
+      },
+      {
+        "title": "Check whether a shebang is the real problem",
+        "cmd": "docker run --rm --entrypoint head {image} -1 /entrypoint.sh",
+        "risk": "safe",
+        "look": "exec format error also occurs when a script has no shebang line, or has a Windows CRLF line ending that corrupts it. This is a different cause with the same message."
+      },
+      {
+        "title": "Pull explicitly for this platform",
+        "cmd": "docker pull --platform linux/amd64 {image}",
+        "risk": "state",
+        "look": "The pull succeeds and inspect now reports the expected architecture.",
+        "note": "Downloads another copy of the image and replaces the local tag reference. Disk usage grows and any container built from the previous local tag still uses the old one until recreated. If no matching platform was published this simply fails."
+      }
+    ],
+    "causes": [
+      {
+        "id": "arch-mismatch",
+        "cause": "The image was built for a different CPU architecture.",
+        "fix": "Build multi-platform with buildx, or build on the target architecture. Apple Silicon defaults to arm64 and this catches teams constantly.",
+        "confirm": ""
+      },
+      {
+        "id": "os-mismatch",
+        "cause": "A Linux image on a Windows container host.",
+        "fix": "Switch Docker Desktop to Linux containers.",
+        "confirm": ""
+      },
+      {
+        "id": "no-shebang",
+        "cause": "The entrypoint script has no shebang or has CRLF endings.",
+        "fix": "Add #!/bin/sh and save with LF endings. Set .gitattributes so Git does not convert it.",
+        "confirm": ""
+      },
+      {
+        "id": "single-platform",
+        "cause": "Only one platform was published.",
+        "fix": "Rebuild and push a manifest list covering both.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The container starts and stays running.",
+      "Image architecture matches the host.",
+      "CI publishes every platform the fleet actually runs."
+    ],
+    "escalate": [
+      "Image and host architecture strings",
+      "Output of docker manifest inspect",
+      "The entrypoint's first line if a script"
+    ]
+  },
+  {
+    "id": "docker-daemon-not-running",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Daemon",
+    "title": "Cannot connect to the Docker daemon",
+    "summary": "Every docker command fails before reaching a container. The client cannot talk to the engine.",
+    "aliases": [
+      "cannot connect to the docker daemon",
+      "docker daemon not running",
+      "is the docker daemon running",
+      "pipe dockerdesktoplinuxengine",
+      "docker not responding",
+      "dial unix docker.sock"
+    ],
+    "source": "https://docs.docker.com/engine/daemon/",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check whether the client can reach the engine at all",
+        "cmd": "docker version",
+        "risk": "safe",
+        "look": "The Client block always prints. If the Server block is missing, the client is fine and the engine is not reachable.",
+        "signals": [
+          {
+            "match": "(?i)error during connect|cannot connect",
+            "means": "The engine is not reachable from this client.",
+            "goto": "step:2"
+          },
+          {
+            "match": "(?i)permission denied.*docker.sock",
+            "means": "The engine is running but your user cannot use the socket.",
+            "goto": "cause:socket-permission"
+          }
+        ]
+      },
+      {
+        "title": "Check whether Docker Desktop is actually running",
+        "cmd": "tasklist | findstr /I \"Docker Desktop\"",
+        "risk": "safe",
+        "look": "On Windows the engine lives inside Docker Desktop. No process means nothing to connect to, regardless of the client."
+      },
+      {
+        "title": "Check what endpoint the client is trying",
+        "cmd": "docker context ls",
+        "risk": "safe",
+        "look": "The active context's endpoint. A leftover context pointing at a remote host or an old WSL distro produces exactly this error while Desktop runs happily.",
+        "signals": [
+          {
+            "match": "(?i)ssh://|tcp://",
+            "means": "Pointing at a remote engine that may be unreachable.",
+            "goto": "cause:wrong-context"
+          }
+        ]
+      },
+      {
+        "title": "Switch back to the default context",
+        "cmd": "docker context use default",
+        "risk": "state",
+        "look": "docker version now prints a Server block.",
+        "note": "Changes which engine every subsequent docker command talks to, for this user. Containers on the previously selected engine keep running but become invisible from this shell until you switch back."
+      }
+    ],
+    "causes": [
+      {
+        "id": "desktop-stopped",
+        "cause": "Docker Desktop is not running.",
+        "fix": "Start it and wait for the engine to report ready. It takes longer than the tray icon suggests.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-context",
+        "cause": "The active context points at an unreachable engine.",
+        "fix": "Switch to default. Contexts persist and are easy to forget.",
+        "confirm": ""
+      },
+      {
+        "id": "socket-permission",
+        "cause": "Your user is not permitted to use the socket.",
+        "fix": "On Linux add the user to the docker group and start a new session.",
+        "confirm": ""
+      },
+      {
+        "id": "wsl-stopped",
+        "cause": "The WSL backend distro is not running.",
+        "fix": "Restart WSL, then Docker Desktop.",
+        "confirm": ""
+      },
+      {
+        "id": "engine-crashed",
+        "cause": "The engine started and died.",
+        "fix": "Read the Docker Desktop diagnostic logs. Disk exhaustion on the VM is a common cause.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "docker version prints a Server block.",
+      "docker ps returns without error.",
+      "The active context is the one you intend."
+    ],
+    "escalate": [
+      "Output of docker version",
+      "Whether Docker Desktop is running",
+      "Output of docker context ls"
+    ]
+  },
+  {
+    "id": "docker-healthcheck-failing",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "title": "Container is running but marked unhealthy",
+    "summary": "The process is alive but the health check keeps failing, so dependent services never start.",
+    "aliases": [
+      "container unhealthy",
+      "healthcheck failing",
+      "health status unhealthy",
+      "healthcheck curl not found",
+      "unhealthy status",
+      "container health"
+    ],
+    "source": "https://docs.docker.com/reference/dockerfile/#healthcheck",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the health check's recorded output",
+        "cmd": "docker inspect {container} --format '{{json .State.Health}}'",
+        "risk": "safe",
+        "look": "The Log array holds the last few probe attempts with exit codes and output. This is the actual reason rather than an inference.",
+        "signals": [
+          {
+            "match": "(?i)not found|no such file",
+            "means": "The health check command does not exist inside the image.",
+            "goto": "cause:command-missing"
+          },
+          {
+            "match": "(?i)connection refused",
+            "means": "The app is not listening on the probed port yet or at all.",
+            "goto": "cause:not-listening"
+          },
+          {
+            "match": "\"ExitCode\":1",
+            "means": "The command ran and reported failure.",
+            "goto": "cause:genuine-failure"
+          }
+        ]
+      },
+      {
+        "title": "Read the configured check",
+        "cmd": "docker inspect {container} --format '{{json .Config.Healthcheck}}'",
+        "risk": "safe",
+        "look": "The test, interval, timeout, retries and start period. A start period shorter than the real startup time guarantees early failures."
+      },
+      {
+        "title": "Run the check yourself inside the container",
+        "cmd": "docker exec {container} sh -c \"<the-test-command>\"",
+        "risk": "safe",
+        "look": "The real exit code and output. Running it by hand removes all ambiguity about what the daemon is seeing."
+      },
+      {
+        "title": "Check whether the tool the check uses even exists",
+        "cmd": "docker exec {container} sh -c \"which curl wget nc 2>/dev/null; echo done\"",
+        "risk": "safe",
+        "look": "Slim and distroless images frequently lack curl. A health check calling a missing binary fails forever and looks like an application problem."
+      }
+    ],
+    "causes": [
+      {
+        "id": "command-missing",
+        "cause": "The health check calls a binary the image does not contain.",
+        "fix": "Install it, or use something the image has. Many runtimes can check their own health without an external tool.",
+        "confirm": ""
+      },
+      {
+        "id": "not-listening",
+        "cause": "The app is not listening on the probed port.",
+        "fix": "Confirm the port and that it binds 0.0.0.0 rather than localhost.",
+        "confirm": ""
+      },
+      {
+        "id": "start-period-short",
+        "cause": "The container needs longer to start than start_period allows.",
+        "fix": "Raise start_period. Failures during it are not counted, which is exactly what it is for.",
+        "confirm": ""
+      },
+      {
+        "id": "genuine-failure",
+        "cause": "The application really is unhealthy.",
+        "fix": "Read its logs. The check is doing its job.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-port",
+        "cause": "The check probes a different port than the app uses.",
+        "fix": "Use the container's internal port, not the published host port.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "docker ps shows healthy.",
+      "It stays healthy through a normal workload.",
+      "Dependent services start as expected."
+    ],
+    "escalate": [
+      "The State.Health log array",
+      "The configured health check",
+      "Result of running the test manually"
+    ]
+  },
+  {
+    "id": "docker-compose-env-not-substituted",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Compose",
+    "title": "Variables in the compose file are empty",
+    "summary": "A ${VAR} in docker-compose.yml resolves to nothing and the container starts misconfigured.",
+    "aliases": [
+      "variable not set",
+      "compose env empty",
+      "env_file not working",
+      "variable substitution",
+      "warn the variable is not set",
+      "compose variables"
+    ],
+    "source": "https://docs.docker.com/reference/compose-file/interpolation/",
+    "inputs": [
+      {
+        "key": "service",
+        "label": "Service",
+        "example": "api"
+      },
+      {
+        "key": "var",
+        "label": "Variable",
+        "example": "DATABASE_URL"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Render the fully resolved configuration",
+        "cmd": "docker compose config",
+        "risk": "safe",
+        "look": "Compose prints what it will actually use after all substitution. Anything empty here will be empty in the container, and warnings appear at the top.",
+        "signals": [
+          {
+            "match": "(?i)variable is not set",
+            "means": "Compose could not resolve a variable and substituted an empty string.",
+            "goto": "cause:no-dotenv"
+          },
+          {
+            "match": "(?i)\\$\\{",
+            "means": "A literal placeholder survived, meaning it was escaped or malformed.",
+            "goto": "cause:escaped"
+          }
+        ]
+      },
+      {
+        "title": "Check the .env file location",
+        "cmd": "dir .env",
+        "risk": "safe",
+        "look": "Compose reads .env from the directory it is invoked in, not from where the compose file lives. Running from a parent directory silently loses it."
+      },
+      {
+        "title": "Understand which mechanism you are using",
+        "cmd": "findstr /C:\"env_file\" /C:\"environment\" docker-compose.yml",
+        "risk": "safe",
+        "look": "env_file passes variables into the container. The .env file substitutes into the compose file itself. They are completely different and are constantly confused.",
+        "signals": [
+          {
+            "match": "(?i)env_file",
+            "means": "env_file populates the container's environment. It does not substitute into the YAML.",
+            "goto": "cause:wrong-mechanism"
+          }
+        ]
+      },
+      {
+        "title": "Check what the container actually received",
+        "cmd": "docker compose exec {service} printenv {var}",
+        "risk": "safe",
+        "look": "The final answer. Empty here with a correct compose config means the variable was never mapped into the service."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-dotenv",
+        "cause": "No .env file in the working directory.",
+        "fix": "Create it there, or pass --env-file explicitly. Compose does not search upward.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-mechanism",
+        "cause": "Using env_file where .env substitution was intended.",
+        "fix": "For values inside the YAML use .env. For values inside the container use environment or env_file.",
+        "confirm": ""
+      },
+      {
+        "id": "not-mapped",
+        "cause": "The variable is available to compose but not passed to the service.",
+        "fix": "Add it under environment on the service. Compose does not forward your shell environment automatically.",
+        "confirm": ""
+      },
+      {
+        "id": "escaped",
+        "cause": "The placeholder was escaped with $$.",
+        "fix": "$$ produces a literal dollar sign. Use a single $ for substitution.",
+        "confirm": ""
+      },
+      {
+        "id": "quoting",
+        "cause": "Quotes in the .env file are being taken literally.",
+        "fix": "Do not quote values in .env unless the quotes are part of the value.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "docker compose config shows real values with no warnings.",
+      "printenv inside the container returns the value.",
+      "It works from a clean checkout."
+    ],
+    "escalate": [
+      "Output of docker compose config",
+      "Whether .env exists in the invocation directory",
+      "Result of printenv inside the container"
+    ]
+  },
+  {
+    "id": "docker-network-subnet-overlap",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Networking & DNS",
+    "title": "Docker network conflicts with the corporate network",
+    "summary": "Creating a network fails, or containers break VPN or internal-host access after starting.",
+    "aliases": [
+      "pool overlaps",
+      "network conflict",
+      "cannot create network",
+      "vpn broken docker",
+      "address pool",
+      "subnet overlap docker"
+    ],
+    "source": "https://docs.docker.com/engine/network/",
+    "inputs": [
+      {
+        "key": "network",
+        "label": "Network name",
+        "example": "app-net"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the conflict error",
+        "cmd": "docker network create {network}",
+        "risk": "safe",
+        "look": "Docker names the overlapping pool. It allocates from 172.17.0.0/16 upward by default, which collides with many corporate ranges.",
+        "signals": [
+          {
+            "match": "(?i)Pool overlaps with other one|address already in use",
+            "means": "The requested range collides with an existing network.",
+            "goto": "cause:pool-exhausted"
+          }
+        ]
+      },
+      {
+        "title": "List the subnets already allocated",
+        "cmd": "docker network ls --format \"{{.Name}}\" | ForEach-Object { docker network inspect $_ --format '{{.Name}}' ; docker network inspect $_ | findstr Subnet }",
+        "risk": "safe",
+        "look": "Every Docker network's range. Stale networks from deleted compose projects often hold ranges nothing uses."
+      },
+      {
+        "title": "Compare against the host's own routes",
+        "cmd": "route print -4 | findstr 172.",
+        "risk": "safe",
+        "look": "Whether a corporate or VPN route covers the same range. If so, containers will capture traffic meant for internal hosts and the symptom looks like a VPN failure."
+      },
+      {
+        "title": "Remove unused networks to free ranges",
+        "cmd": "docker network prune",
+        "risk": "destructive",
+        "look": "The reclaimed list. Recreate your network afterwards and confirm the range.",
+        "note": "Deletes every network not currently used by a container. Any stopped container that expected a custom network will fail to start until it is recreated, and fixed IP assignments on those networks are lost. Run docker network ls first and recognise what is listed."
+      }
+    ],
+    "causes": [
+      {
+        "id": "pool-exhausted",
+        "cause": "The default address pools are used up or collide.",
+        "fix": "Set default-address-pools in the daemon configuration to a range your corporate network does not use.",
+        "confirm": ""
+      },
+      {
+        "id": "vpn-conflict",
+        "cause": "A Docker network overlaps a VPN route.",
+        "fix": "Pin the network to an explicit subnet outside the corporate range. Do this in the compose file so it is reproducible.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-networks",
+        "cause": "Old networks hold ranges nothing needs.",
+        "fix": "Prune them. Compose leaves networks behind when projects are renamed.",
+        "confirm": ""
+      },
+      {
+        "id": "fixed-subnet-clash",
+        "cause": "Two compose projects declare the same explicit subnet.",
+        "fix": "Give each project its own range.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The network is created with a non-conflicting range.",
+      "Containers reach both the internet and internal hosts.",
+      "The VPN still works with containers running."
+    ],
+    "escalate": [
+      "The overlap error verbatim",
+      "All allocated Docker subnets",
+      "The host's routing table for the conflicting range"
+    ]
+  },
+  {
+    "id": "docker-copy-not-found",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Build & Cache",
+    "title": "COPY fails with file not found during build",
+    "summary": "The file exists on disk but the build cannot see it. Context, ignore rules or stage boundaries.",
+    "aliases": [
+      "copy failed",
+      "file not found build",
+      "no such file or directory copy",
+      "lstat no such file",
+      "dockerfile copy error",
+      "build context"
+    ],
+    "source": "https://docs.docker.com/reference/dockerfile/#copy",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "File being copied",
+        "example": "dist/app.jar"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read which path the build could not find",
+        "cmd": "docker build . 2>&1 | findstr /C:\"not found\" /C:\"lstat\"",
+        "risk": "safe",
+        "look": "The path in the error is relative to the build context root, never to the Dockerfile's own location. That distinction causes most of these.",
+        "signals": [
+          {
+            "match": "(?i)lstat.*no such file",
+            "means": "The path does not exist relative to the context root.",
+            "goto": "cause:relative-to-context"
+          },
+          {
+            "match": "(?i)from=.*not found",
+            "means": "Copying from a build stage that does not produce that path.",
+            "goto": "cause:stage-missing"
+          }
+        ]
+      },
+      {
+        "title": "Check the context root being sent",
+        "cmd": "docker build --progress=plain . 2>&1 | findstr /C:\"transferring context\"",
+        "risk": "safe",
+        "look": "The final argument to docker build sets the context. Building with a context of . while the file sits above it means the file is simply not available."
+      },
+      {
+        "title": "Check whether .dockerignore excludes it",
+        "cmd": "type .dockerignore",
+        "risk": "safe",
+        "look": "An ignored file is invisible to COPY even though it exists. A broad pattern such as dist/ or *.jar is the usual cause and produces a confusing error."
+      },
+      {
+        "title": "Check the path exists relative to the context",
+        "cmd": "dir {file}",
+        "risk": "safe",
+        "look": "Run this from the same directory you pass as the build context. If it fails here, the Dockerfile was never going to find it."
+      }
+    ],
+    "causes": [
+      {
+        "id": "relative-to-context",
+        "cause": "The path is relative to the Dockerfile rather than the context.",
+        "fix": "Paths in COPY are always relative to the context root. Adjust the path or the context.",
+        "confirm": ""
+      },
+      {
+        "id": "dockerignore",
+        "cause": ".dockerignore excludes the file.",
+        "fix": "Add a negation pattern, or narrow the exclusion.",
+        "confirm": ""
+      },
+      {
+        "id": "not-built-yet",
+        "cause": "The artifact has not been produced.",
+        "fix": "Build it before docker build, or move the build into an earlier stage.",
+        "confirm": ""
+      },
+      {
+        "id": "stage-missing",
+        "cause": "COPY --from references a path the stage does not create.",
+        "fix": "Check the earlier stage's working directory and output path.",
+        "confirm": ""
+      },
+      {
+        "id": "outside-context",
+        "cause": "The file is above the context directory.",
+        "fix": "COPY cannot reach outside the context, ever. Move the file in or widen the context.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The build completes.",
+      "The file is present in the image at the expected path.",
+      "It builds the same way in CI from a clean checkout."
+    ],
+    "escalate": [
+      "The COPY error verbatim",
+      "The build context path used",
+      "Contents of .dockerignore"
+    ]
+  },
+  {
+    "id": "docker-logs-empty",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "title": "docker logs shows nothing",
+    "summary": "The container is running but produces no log output, so you are debugging blind.",
+    "aliases": [
+      "no logs",
+      "docker logs empty",
+      "logs not showing",
+      "output buffered",
+      "cannot see logs",
+      "logs missing container"
+    ],
+    "source": "https://docs.docker.com/engine/logging/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the container is producing anything at all",
+        "cmd": "docker logs {container} --tail=50 --timestamps",
+        "risk": "safe",
+        "look": "Timestamps reveal whether output is old or absent. Output that stops at startup usually means buffering rather than silence.",
+        "signals": [
+          {
+            "match": "^\\s*$",
+            "means": "Nothing captured at all.",
+            "goto": "step:2"
+          }
+        ]
+      },
+      {
+        "title": "Check which logging driver is in use",
+        "cmd": "docker inspect {container} --format '{{.HostConfig.LogConfig.Type}}'",
+        "risk": "safe",
+        "look": "docker logs only works with json-file or journald. With any other driver it returns nothing by design, and that is not a fault.",
+        "signals": [
+          {
+            "match": "(?i)none",
+            "means": "Logging is disabled for this container.",
+            "goto": "cause:driver-none"
+          },
+          {
+            "match": "(?i)syslog|fluentd|awslogs|gelf",
+            "means": "Logs go elsewhere. docker logs cannot read them.",
+            "goto": "cause:remote-driver"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the app writes to a file instead of stdout",
+        "cmd": "docker exec {container} sh -c \"ls -la /var/log 2>/dev/null; ls -la /app/logs 2>/dev/null\"",
+        "risk": "safe",
+        "look": "Applications configured for a traditional server write to files. Only stdout and stderr reach docker logs."
+      },
+      {
+        "title": "Check for output buffering",
+        "cmd": "docker exec {container} sh -c \"echo $PYTHONUNBUFFERED $NODE_ENV\"",
+        "risk": "safe",
+        "look": "Python buffers stdout when it is not a terminal, so output can sit unseen for a long time. PYTHONUNBUFFERED=1 fixes it and is why so many images set it."
+      }
+    ],
+    "causes": [
+      {
+        "id": "driver-none",
+        "cause": "The logging driver is none.",
+        "fix": "Change it to json-file. Someone probably set this to save disk.",
+        "confirm": ""
+      },
+      {
+        "id": "remote-driver",
+        "cause": "Logs are shipped to a remote system.",
+        "fix": "Read them there. docker logs is not broken.",
+        "confirm": ""
+      },
+      {
+        "id": "writes-to-file",
+        "cause": "The application logs to a file.",
+        "fix": "Reconfigure it to stdout, or symlink the file to /dev/stdout.",
+        "confirm": ""
+      },
+      {
+        "id": "buffered",
+        "cause": "Output is buffered because stdout is not a terminal.",
+        "fix": "Set PYTHONUNBUFFERED=1, or the equivalent for the runtime.",
+        "confirm": ""
+      },
+      {
+        "id": "rotated-away",
+        "cause": "Log rotation removed the output.",
+        "fix": "Raise max-size and max-file in the log options.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "docker logs shows current application output.",
+      "New output appears without delay.",
+      "The driver suits how you actually read logs."
+    ],
+    "escalate": [
+      "The logging driver in use",
+      "Whether the app writes to files",
+      "Any buffering environment variables"
+    ]
+  },
+  {
+    "id": "docker-image-too-large",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Images",
+    "title": "Image is far larger than expected",
+    "summary": "Slow pulls, slow deploys and wasted registry storage. Usually one layer.",
+    "aliases": [
+      "image too large",
+      "image size",
+      "slow pull",
+      "large docker image",
+      "reduce image size",
+      "bloated image"
+    ],
+    "source": "https://docs.docker.com/build/building/best-practices/",
+    "inputs": [
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See the size of every layer",
+        "cmd": "docker history {image} --no-trunc --format \"table {{.Size}}\\t{{.CreatedBy}}\"",
+        "risk": "safe",
+        "look": "The largest layer and the instruction that made it. One layer usually accounts for most of the size.",
+        "signals": [
+          {
+            "match": "(?i)apt-get install|yum install",
+            "means": "A package install layer. Cleaning in a later layer does not shrink it.",
+            "goto": "cause:package-cache"
+          },
+          {
+            "match": "(?i)COPY \\. ",
+            "means": "The whole context was copied in.",
+            "goto": "cause:copied-everything"
+          }
+        ]
+      },
+      {
+        "title": "Compare against the base image",
+        "cmd": "docker image inspect {image} --format '{{.Size}}' && docker image ls",
+        "risk": "safe",
+        "look": "How much is base and how much is yours. A large base means switching to slim or alpine gains more than any other change."
+      },
+      {
+        "title": "Check whether build tooling is in the final image",
+        "cmd": "docker run --rm {image} sh -c \"which gcc make git npm 2>/dev/null; echo ---\"",
+        "risk": "safe",
+        "look": "Compilers and package managers in a runtime image mean multi-stage is missing. They are also an attack surface."
+      },
+      {
+        "title": "Check for a .dockerignore",
+        "cmd": "type .dockerignore",
+        "risk": "safe",
+        "look": "Without one, .git and node_modules are copied in. This routinely adds hundreds of megabytes nobody intended."
+      }
+    ],
+    "causes": [
+      {
+        "id": "package-cache",
+        "cause": "Package manager caches are baked into a layer.",
+        "fix": "Clean in the same RUN instruction. A later cleanup layer cannot remove data from an earlier one.",
+        "confirm": ""
+      },
+      {
+        "id": "copied-everything",
+        "cause": "COPY . brought in everything.",
+        "fix": "Add .dockerignore and copy only what the image needs.",
+        "confirm": ""
+      },
+      {
+        "id": "no-multistage",
+        "cause": "Build tooling ships in the runtime image.",
+        "fix": "Use multi-stage and copy only the artifact into a slim final stage.",
+        "confirm": ""
+      },
+      {
+        "id": "fat-base",
+        "cause": "The base image is large.",
+        "fix": "Move to a slim or distroless base. Test carefully; distroless has no shell.",
+        "confirm": ""
+      },
+      {
+        "id": "secrets-baked",
+        "cause": "Credentials were copied in during build.",
+        "fix": "They are recoverable from the layers. Rotate them and use build secrets instead.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The image is meaningfully smaller.",
+      "No build tooling in the runtime image.",
+      "Pull time improved in a real deployment."
+    ],
+    "escalate": [
+      "Output of docker history sorted by size",
+      "Base image size",
+      "Whether .dockerignore exists"
+    ]
+  },
+  {
+    "id": "docker-restart-loop",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "title": "Container restarts endlessly",
+    "summary": "A restart policy keeps bringing back a container that immediately dies.",
+    "aliases": [
+      "restart loop",
+      "container restarting",
+      "always restarting",
+      "restart policy",
+      "keeps restarting docker",
+      "restarting (1)"
+    ],
+    "source": "https://docs.docker.com/engine/containers/start-containers-automatically/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the restart count is climbing",
+        "cmd": "docker inspect {container} --format 'restarts={{.RestartCount}} policy={{.HostConfig.RestartPolicy.Name}} status={{.State.Status}}'",
+        "risk": "safe",
+        "look": "A rising count with policy always means Docker is masking a failure that would otherwise be obvious.",
+        "signals": [
+          {
+            "match": "policy=always|policy=unless-stopped",
+            "means": "Docker will restart it forever regardless of why it dies.",
+            "goto": "cause:masked-failure"
+          },
+          {
+            "match": "policy=on-failure",
+            "means": "Restarting only on non-zero exit, which is more informative.",
+            "goto": ""
+          }
+        ]
+      },
+      {
+        "title": "Read the logs from before the last restart",
+        "cmd": "docker logs {container} --tail=100",
+        "risk": "safe",
+        "look": "Docker keeps logs across restarts in the same container, so the failure from previous attempts is still here."
+      },
+      {
+        "title": "Read the last exit code",
+        "cmd": "docker inspect {container} --format 'exit={{.State.ExitCode}} oom={{.State.OOMKilled}} err={{.State.Error}}'",
+        "risk": "safe",
+        "look": "The same exit-code logic as a container that will not start. OOMKilled true means memory, not the application."
+      },
+      {
+        "title": "Stop the loop so you can inspect it calmly",
+        "cmd": "docker update --restart=no {container} && docker stop {container}",
+        "risk": "state",
+        "look": "The container stays stopped. You can now inspect it without it disappearing under you.",
+        "note": "Changes the restart policy on the running container and then stops it. The service stays down until you start it again, so do not do this on something serving traffic without arranging cover. The policy change persists until you set it back."
+      }
+    ],
+    "causes": [
+      {
+        "id": "masked-failure",
+        "cause": "The restart policy hides a real failure.",
+        "fix": "Read the logs. Restarting is not a fix and the exit code tells you the category.",
+        "confirm": ""
+      },
+      {
+        "id": "dependency-not-ready",
+        "cause": "It starts before something it needs.",
+        "fix": "Add a retry with backoff in the application. depends_on does not wait for readiness by default.",
+        "confirm": ""
+      },
+      {
+        "id": "oom",
+        "cause": "The memory limit is too low.",
+        "fix": "Raise it or fix the leak. The container will loop forever otherwise.",
+        "confirm": ""
+      },
+      {
+        "id": "config-error",
+        "cause": "Configuration is wrong, so it fails at startup every time.",
+        "fix": "Fix the config. Every restart fails identically.",
+        "confirm": ""
+      },
+      {
+        "id": "port-conflict",
+        "cause": "It cannot bind its port.",
+        "fix": "Follow the port-already-allocated runbook.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The restart count stops climbing.",
+      "The container stays Up for a sustained period.",
+      "The underlying failure was fixed, not restarted past."
+    ],
+    "escalate": [
+      "Restart count and policy",
+      "Logs from previous attempts",
+      "The last exit code and OOM flag"
+    ]
+  },
+  {
+    "id": "docker-slow-build",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Build & Cache",
+    "title": "Builds are extremely slow",
+    "summary": "Beyond cache misses, a few specific things make builds crawl.",
+    "aliases": [
+      "slow build",
+      "build takes forever",
+      "docker build slow",
+      "transferring context slow",
+      "build performance",
+      "buildkit slow"
+    ],
+    "source": "https://docs.docker.com/build/cache/",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Find where the time goes",
+        "cmd": "docker build --progress=plain . 2>&1 | findstr /C:\"DONE\" /C:\"transferring\"",
+        "risk": "safe",
+        "look": "Each step's duration. One dominating step tells you where to look, and it is often not the one you assumed.",
+        "signals": [
+          {
+            "match": "(?i)transferring context.*\\d{2,}\\.\\d+s",
+            "means": "Sending the context is slow, meaning it is too big.",
+            "goto": "cause:big-context"
+          },
+          {
+            "match": "(?i)(apt-get|npm install|pip install).*\\d{2,}\\.\\d+s",
+            "means": "Dependency installation dominates. It should be cached.",
+            "goto": "cause:deps-not-cached"
+          }
+        ]
+      },
+      {
+        "title": "Measure the context size",
+        "cmd": "docker build . 2>&1 | findstr /C:\"transferring context\"",
+        "risk": "safe",
+        "look": "Anything above a few megabytes suggests .dockerignore is missing entries. The context is sent before the build starts."
+      },
+      {
+        "title": "Check whether BuildKit is enabled",
+        "cmd": "docker buildx version",
+        "risk": "safe",
+        "look": "BuildKit parallelises independent stages and skips unused ones. The legacy builder does neither."
+      },
+      {
+        "title": "Check for platform emulation",
+        "cmd": "docker buildx ls",
+        "risk": "safe",
+        "look": "Building linux/amd64 on an arm64 machine through QEMU is roughly ten times slower. This is a common hidden cause."
+      }
+    ],
+    "causes": [
+      {
+        "id": "big-context",
+        "cause": "The build context is large.",
+        "fix": "Add .dockerignore covering .git, node_modules and build output.",
+        "confirm": ""
+      },
+      {
+        "id": "deps-not-cached",
+        "cause": "Dependencies reinstall every build.",
+        "fix": "Copy the lockfile, install, then copy source. Ordering is everything.",
+        "confirm": ""
+      },
+      {
+        "id": "no-buildkit",
+        "cause": "Using the legacy builder.",
+        "fix": "Enable BuildKit. It is the default in current Docker but can be disabled.",
+        "confirm": ""
+      },
+      {
+        "id": "emulation",
+        "cause": "Cross-platform build through QEMU.",
+        "fix": "Build natively on the target architecture, or use a remote builder.",
+        "confirm": ""
+      },
+      {
+        "id": "no-ci-cache",
+        "cause": "CI starts cold every time.",
+        "fix": "Use --cache-from and --cache-to against a registry.",
+        "confirm": ""
+      },
+      {
+        "id": "single-stage",
+        "cause": "One huge stage does everything.",
+        "fix": "Split into stages so independent work runs in parallel.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Build time is meaningfully lower.",
+      "A no-change rebuild is almost entirely cached.",
+      "Context transfer is fast."
+    ],
+    "escalate": [
+      "Per-step timings from plain progress",
+      "Context size",
+      "Whether BuildKit and native architecture are in use"
+    ]
+  },
+  {
+    "id": "docker-cannot-remove",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Container Lifecycle",
+    "title": "Cannot remove a container or image",
+    "summary": "Removal is refused because something still references it.",
+    "aliases": [
+      "cannot remove",
+      "conflict unable to remove",
+      "image is being used",
+      "container is running",
+      "image has dependent child images",
+      "cannot delete image"
+    ],
+    "source": "https://docs.docker.com/reference/cli/docker/image/rm/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      },
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read what is blocking removal",
+        "cmd": "docker rm {container}",
+        "risk": "safe",
+        "look": "The conflict message names the blocker. Running container, dependent child image and in-use image are three different situations.",
+        "signals": [
+          {
+            "match": "(?i)container is running",
+            "means": "It is still running. Stop it first.",
+            "goto": "cause:still-running"
+          },
+          {
+            "match": "(?i)image is being used by (running|stopped) container",
+            "means": "A container references the image.",
+            "goto": "cause:used-by-container"
+          },
+          {
+            "match": "(?i)dependent child images",
+            "means": "Another image was built on top of this one.",
+            "goto": "cause:child-images"
+          }
+        ]
+      },
+      {
+        "title": "Find which containers reference the image",
+        "cmd": "docker ps -a --filter ancestor={image}",
+        "risk": "safe",
+        "look": "Every container built from it, including stopped ones. Stopped containers hold images just as firmly as running ones."
+      },
+      {
+        "title": "Find images built on top of it",
+        "cmd": "docker image ls --filter since={image}",
+        "risk": "safe",
+        "look": "Child images. The parent cannot be removed while any child exists."
+      },
+      {
+        "title": "Stop and remove the container properly",
+        "cmd": "docker stop {container} && docker rm {container}",
+        "risk": "state",
+        "look": "The container is gone from docker ps -a. Volumes it used remain unless you also remove them.",
+        "note": "Sends SIGTERM then SIGKILL after the timeout, then deletes the container and its writable layer. Anything written inside the container but not to a volume is permanently lost. Check what is mounted before running this."
+      }
+    ],
+    "causes": [
+      {
+        "id": "still-running",
+        "cause": "The container is running.",
+        "fix": "Stop it first, or use -f if you are certain. -f sends SIGKILL with no clean shutdown.",
+        "confirm": ""
+      },
+      {
+        "id": "used-by-container",
+        "cause": "A container references the image.",
+        "fix": "Remove the containers first. Stopped ones count.",
+        "confirm": ""
+      },
+      {
+        "id": "child-images",
+        "cause": "Another image was built from it.",
+        "fix": "Remove the children first, or use -f to untag only.",
+        "confirm": ""
+      },
+      {
+        "id": "volume-in-use",
+        "cause": "A volume is still referenced.",
+        "fix": "Remove the containers using it. Volumes outlive containers deliberately.",
+        "confirm": ""
+      },
+      {
+        "id": "dangling-only",
+        "cause": "You want to clean untagged images.",
+        "fix": "docker image prune targets exactly those.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The container or image is removed.",
+      "Nothing that was still needed was deleted.",
+      "Disk usage reflects the removal."
+    ],
+    "escalate": [
+      "The conflict message verbatim",
+      "Containers referencing the image",
+      "Whether child images exist"
+    ]
+  },
+  {
+    "id": "docker-dns-inside-container",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Networking & DNS",
+    "title": "DNS does not work inside containers",
+    "summary": "The container has network access but cannot resolve names.",
+    "aliases": [
+      "dns not working docker",
+      "cannot resolve inside container",
+      "temporary failure in name resolution",
+      "docker dns",
+      "resolv.conf container",
+      "name resolution container"
+    ],
+    "source": "https://docs.docker.com/engine/network/#dns-services",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Test resolution from inside",
+        "cmd": "docker exec {container} sh -c \"getent hosts github.com || echo FAIL\"",
+        "risk": "safe",
+        "look": "Whether external resolution works at all. FAIL with working connectivity to an IP address isolates it to DNS.",
+        "signals": [
+          {
+            "match": "(?i)FAIL",
+            "means": "No external resolution.",
+            "goto": "step:2"
+          }
+        ]
+      },
+      {
+        "title": "Read the container's resolver configuration",
+        "cmd": "docker exec {container} cat /etc/resolv.conf",
+        "risk": "safe",
+        "look": "On a user-defined network you should see 127.0.0.11, Docker's embedded resolver. Anything else means it is using host or explicit DNS.",
+        "signals": [
+          {
+            "match": "127\\.0\\.0\\.11",
+            "means": "Docker's embedded DNS, which forwards to the host's resolvers.",
+            "goto": "cause:host-resolver"
+          },
+          {
+            "match": "nameserver 8\\.8\\.8\\.8",
+            "means": "Public DNS, which corporate networks often block.",
+            "goto": "cause:public-dns-blocked"
+          }
+        ]
+      },
+      {
+        "title": "Check the host can resolve",
+        "cmd": "nslookup github.com",
+        "risk": "safe",
+        "look": "Docker's embedded resolver forwards to the host's configured servers. If the host cannot resolve, no container will."
+      },
+      {
+        "title": "Check for a VPN changing the host's resolvers",
+        "cmd": "ipconfig /all | findstr /C:\"DNS Servers\"",
+        "risk": "safe",
+        "look": "Connecting a VPN after Docker started leaves containers pointing at the pre-VPN resolvers, which is a very common cause."
+      }
+    ],
+    "causes": [
+      {
+        "id": "host-resolver",
+        "cause": "The host's resolvers are unreachable from the container.",
+        "fix": "Restart the container so it picks up current settings, or set dns explicitly.",
+        "confirm": ""
+      },
+      {
+        "id": "public-dns-blocked",
+        "cause": "Public DNS is blocked by the corporate network.",
+        "fix": "Configure the daemon with the internal resolvers.",
+        "confirm": ""
+      },
+      {
+        "id": "vpn-changed",
+        "cause": "The VPN changed the host's DNS after the container started.",
+        "fix": "Restart the container. resolv.conf is written at creation.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-network",
+        "cause": "On the default bridge, container names do not resolve.",
+        "fix": "Use a user-defined network for name-based discovery.",
+        "confirm": ""
+      },
+      {
+        "id": "search-domain",
+        "cause": "A search domain is appended unexpectedly.",
+        "fix": "Check the search line. It can turn an external lookup into an internal one.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Names resolve from inside the container.",
+      "Both internal and external names work.",
+      "It survives a container restart."
+    ],
+    "escalate": [
+      "Contents of resolv.conf inside the container",
+      "Whether the host resolves",
+      "Whether a VPN is connected"
     ]
   }
 ]

@@ -268,13 +268,14 @@ function renderResults() {
                   .sort((a, b) => b.s - a.s).slice(0, 60);
   CURSOR = arr.length ? 0 : -1;
   $("#results").innerHTML = arr.length ? arr.map((x, i) => {
-    const r = x.r, v = r.tier === "verified";
+    const r = x.r;
     return `<li><button class="hit${i === 0 ? " cur" : ""}" data-id="${esc(r.id)}">
       <h3>${esc(r.title)}</h3><p>${esc(r.summary)}</p>
       <span class="meta">
-        <span class="trust t-${esc(r.tier)}">${v ? "Verified " + esc(r.verified_on) : esc(r.tier)}</span>
         <span>${esc(r.technology)}</span>
+        <span>${esc(r.category || "")}</span>
         <span>${(r.steps || []).length} steps</span>
+        <span>${(r.causes || []).length} causes</span>
       </span></button></li>`;
   }).join("") : `<li class="empty">Nothing matched. Try the exact error string from your terminal,
     or a plainer phrase like "pod won't start".</li>`;
@@ -345,10 +346,8 @@ function open(id) {
        <div><span class="rank">${i + 1}</span><span class="what">${esc(c.cause)}</span></div>
        <div class="fix"><b>Fix.</b> ${esc(c.fix)}</div></div>`).join("");
 
-  const prov = CUR.tier === "verified"
-    ? `Verified <b>${esc(CUR.verified_on)}</b> against <code>${esc(CUR.verified_against)}</code>
-       by ${esc(CUR.verified_by)}.${CUR.source ? ` <a href="${esc(CUR.source)}" target="_blank" rel="noopener">Official docs</a>` : ""}`
-    : `Written from documentation, not yet run against a live system. Treat every command as unconfirmed.`;
+  const prov = `Commands vary by version and environment — read each one before you run it.`
+    + (CUR.source ? ` <a href="${esc(CUR.source)}" target="_blank" rel="noopener">Official documentation</a>` : "");
 
   $("#rbview").innerHTML = `
     <button class="back" id="back">&larr; All runbooks</button>
@@ -496,13 +495,11 @@ document.addEventListener("keydown", e => {
   hits[CURSOR].scrollIntoView({ block: "nearest" });
 });
 
-const v = BANK.filter(r => r.tier === "verified").length;
 const techs = [...new Set(BANK.map(r => r.technology))].sort();
-const FOOT = `${v} verified runbook${v === 1 ? "" : "s"} across ${techs.join(", ")}. `
+const FOOT = `${BANK.length} runbooks across ${techs.length} technologies: ${techs.join(", ")}. `
   + `Runs entirely in this file — nothing is sent anywhere, nothing is executed for you, `
   + `and nothing is saved when you close the tab. Every command is yours to run.\n\n`
-  + `Designed and built by Dinesh Ilangovan. Every runbook marked verified was run `
-  + `against a real system, with the date and version recorded on it.`;
+  + `Designed and built by Dinesh Ilangovan.`;
 $("#foot").textContent = FOOT;
 renderChips();
 renderResults();

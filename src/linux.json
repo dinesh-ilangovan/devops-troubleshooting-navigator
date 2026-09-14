@@ -1,7 +1,7 @@
 [
   {
     "id": "linux-disk-full",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Linux",
     "category": "Storage",
     "title": "Filesystem is full",
@@ -106,7 +106,7 @@
   },
   {
     "id": "linux-port-in-use",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Linux",
     "category": "Networking",
     "title": "Address already in use",
@@ -204,7 +204,7 @@
   },
   {
     "id": "linux-service-fails",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Linux",
     "category": "systemd",
     "title": "systemd service will not start",
@@ -319,7 +319,7 @@
   },
   {
     "id": "linux-high-load",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Linux",
     "category": "Performance",
     "title": "Load average is high and the box feels slow",
@@ -417,7 +417,7 @@
   },
   {
     "id": "linux-ssh-denied",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Linux",
     "category": "Access",
     "title": "SSH permission denied (publickey)",
@@ -530,7 +530,7 @@
   },
   {
     "id": "linux-oom-killer",
-    "tier": "documented",
+    "tier": "guide",
     "technology": "Linux",
     "category": "Memory",
     "title": "Process was killed by the OOM killer",
@@ -624,6 +624,1128 @@
       "The dmesg OOM lines verbatim",
       "free -h output",
       "RSS of the top processes"
+    ]
+  },
+  {
+    "id": "linux-cron-not-running",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Scheduling",
+    "title": "Cron job never runs",
+    "summary": "The entry is in the crontab but nothing happens. Almost always environment or the schedule itself.",
+    "aliases": [
+      "cron not running",
+      "crontab not working",
+      "cron job not executing",
+      "scheduled job missing",
+      "cron silent",
+      "job did not run"
+    ],
+    "source": "https://man7.org/linux/man-pages/man5/crontab.5.html",
+    "inputs": [
+      {
+        "key": "user",
+        "label": "Crontab owner",
+        "example": "deploy"
+      },
+      {
+        "key": "job",
+        "label": "Command",
+        "example": "/opt/app/backup.sh"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm cron attempted to run it",
+        "cmd": "sudo grep CRON /var/log/syslog | tail -20",
+        "risk": "safe",
+        "look": "A line for your job means cron fired and the problem is in the script. No line at all means cron never scheduled it.",
+        "signals": [
+          {
+            "match": "(?i)CMD \\(",
+            "means": "Cron ran it. The failure is inside the command.",
+            "goto": "cause:script-fails"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "Cron never fired it.",
+            "goto": "step:2"
+          },
+          {
+            "match": "(?i)No MTA installed",
+            "means": "It ran and produced output cron could not mail. The output is being lost.",
+            "goto": "cause:output-lost"
+          }
+        ]
+      },
+      {
+        "title": "Check the entry is in the crontab you think",
+        "cmd": "sudo crontab -l -u {user} && cat /etc/crontab",
+        "risk": "safe",
+        "look": "User crontabs and /etc/crontab are separate. The system file has an extra user field; the user crontab does not, and putting a user field in a user crontab breaks the line silently."
+      },
+      {
+        "title": "Check the schedule expression is what you intend",
+        "cmd": "echo 'Read the five fields: minute hour day-of-month month day-of-week'",
+        "risk": "safe",
+        "look": "Setting both day-of-month and day-of-week means OR, not AND, which surprises almost everyone. A job set for the 1st and Monday runs on both."
+      },
+      {
+        "title": "Run the command in cron's own environment",
+        "cmd": "sudo -u {user} env -i /bin/sh -c \"{job}\"",
+        "risk": "safe",
+        "look": "env -i strips the environment the way cron does. A script that works in your shell and fails here has a PATH problem, which is the single most common cause."
+      }
+    ],
+    "causes": [
+      {
+        "id": "script-fails",
+        "cause": "Cron ran it and it failed.",
+        "fix": "Redirect output to a file in the crontab line so the failure is visible.",
+        "confirm": ""
+      },
+      {
+        "id": "path",
+        "cause": "Cron's PATH is minimal.",
+        "fix": "Use absolute paths for every binary, or set PATH at the top of the crontab.",
+        "confirm": ""
+      },
+      {
+        "id": "output-lost",
+        "cause": "Output goes to mail and there is no mail transfer agent.",
+        "fix": "Append >> /var/log/myjob.log 2>&1 to the crontab line.",
+        "confirm": ""
+      },
+      {
+        "id": "percent-sign",
+        "cause": "An unescaped % in the command.",
+        "fix": "In crontab, % means newline. Escape it as \\% — date format strings hit this constantly.",
+        "confirm": ""
+      },
+      {
+        "id": "no-newline",
+        "cause": "The crontab file has no trailing newline.",
+        "fix": "The last line is ignored without one. Always edit with crontab -e.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-crontab",
+        "cause": "Entry is in a different crontab than the one running.",
+        "fix": "Check both the user crontab and /etc/cron.d.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The job appears in syslog at the expected time.",
+      "Its output lands in a log file.",
+      "It works from a clean environment, not just your shell."
+    ],
+    "escalate": [
+      "Syslog CRON lines for the job",
+      "The crontab entry verbatim",
+      "Result of running under env -i"
+    ]
+  },
+  {
+    "id": "linux-too-many-open-files",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Limits",
+    "title": "Too many open files",
+    "summary": "A process hits its file descriptor limit. Sockets count as files, so busy servers hit this without touching disk.",
+    "aliases": [
+      "too many open files",
+      "emfile",
+      "file descriptor limit",
+      "ulimit",
+      "cannot open socket",
+      "fd limit reached"
+    ],
+    "source": "https://man7.org/linux/man-pages/man5/limits.conf.5.html",
+    "inputs": [
+      {
+        "key": "pid",
+        "label": "Process ID",
+        "example": "1234"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the limit the running process actually has",
+        "cmd": "cat /proc/{pid}/limits | grep -i 'open files'",
+        "risk": "safe",
+        "look": "The running process's real limit, which is what matters. Your shell's ulimit is irrelevant to a process started by systemd."
+      },
+      {
+        "title": "Count how many it currently holds",
+        "cmd": "ls /proc/{pid}/fd | wc -l",
+        "risk": "safe",
+        "look": "Compare against the soft limit. Close to it under normal load means the limit is too low; growing steadily means a leak."
+      },
+      {
+        "title": "See what kind of descriptors they are",
+        "cmd": "ls -l /proc/{pid}/fd | awk '{print $NF}' | sort | uniq -c | sort -rn | head",
+        "risk": "safe",
+        "look": "Mostly sockets points at connection handling. Many copies of one file points at a leak in the code.",
+        "signals": [
+          {
+            "match": "(?i)socket",
+            "means": "Sockets dominate. Connection churn or unclosed connections.",
+            "goto": "cause:socket-leak"
+          },
+          {
+            "match": "(?i)deleted",
+            "means": "Deleted files still held open. Also consuming disk.",
+            "goto": "cause:fd-leak"
+          }
+        ]
+      },
+      {
+        "title": "Check the system-wide ceiling too",
+        "cmd": "sysctl fs.file-nr fs.file-max",
+        "risk": "safe",
+        "look": "The first number in file-nr is allocated across the whole system. Near file-max means a host-wide limit rather than a per-process one."
+      }
+    ],
+    "causes": [
+      {
+        "id": "limit-too-low",
+        "cause": "The per-process limit is below what the workload needs.",
+        "fix": "Raise LimitNOFILE in the systemd unit. limits.conf does not apply to systemd services, which catches people out.",
+        "confirm": ""
+      },
+      {
+        "id": "socket-leak",
+        "cause": "Connections are not being closed.",
+        "fix": "Check for missing close calls or an unbounded connection pool.",
+        "confirm": ""
+      },
+      {
+        "id": "fd-leak",
+        "cause": "The process opens files and never closes them.",
+        "fix": "Deleted-but-open entries are a strong signal. Fix the code; raising the limit only delays it.",
+        "confirm": ""
+      },
+      {
+        "id": "system-wide",
+        "cause": "The host-wide maximum is reached.",
+        "fix": "Raise fs.file-max, and find which process is consuming them.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-place",
+        "cause": "The limit was set in the wrong file.",
+        "fix": "For systemd services use LimitNOFILE in the unit. For login shells use limits.conf.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The process runs without hitting the limit under normal load.",
+      "The descriptor count is stable rather than growing.",
+      "The limit is set where the service actually reads it."
+    ],
+    "escalate": [
+      "Contents of /proc/PID/limits",
+      "Current descriptor count and types",
+      "System-wide file-nr and file-max"
+    ]
+  },
+  {
+    "id": "linux-time-drift",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Time",
+    "title": "System clock is wrong or drifting",
+    "summary": "Certificate errors, token rejections and confusing log ordering all trace back to clock skew.",
+    "aliases": [
+      "clock skew",
+      "time wrong",
+      "ntp not syncing",
+      "certificate not yet valid",
+      "time drift",
+      "chrony not working"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/timedatectl.1.html",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Check the sync status",
+        "cmd": "timedatectl status",
+        "risk": "safe",
+        "look": "System clock synchronized and the NTP service state. Both must be yes and active; either one alone is not enough.",
+        "signals": [
+          {
+            "match": "(?i)synchronized: no",
+            "means": "Not synchronised. The service is not working.",
+            "goto": "cause:not-syncing"
+          },
+          {
+            "match": "(?i)NTP service: inactive",
+            "means": "No time daemon is running at all.",
+            "goto": "cause:no-daemon"
+          },
+          {
+            "match": "(?i)RTC in local TZ: yes",
+            "means": "Hardware clock in local time, which causes drift on dual-boot machines.",
+            "goto": "cause:rtc-local"
+          }
+        ]
+      },
+      {
+        "title": "Check how far off it actually is",
+        "cmd": "chronyc tracking 2>/dev/null || ntpq -p 2>/dev/null || timedatectl show",
+        "risk": "safe",
+        "look": "System time offset in seconds. Kerberos and many token systems reject anything beyond about five minutes."
+      },
+      {
+        "title": "Check the daemon can reach its sources",
+        "cmd": "chronyc sources -v 2>/dev/null || ntpq -pn",
+        "risk": "safe",
+        "look": "A caret and asterisk marks the selected source. All sources unreachable means egress to UDP 123 is blocked."
+      },
+      {
+        "title": "Force an immediate step correction",
+        "cmd": "sudo chronyc makestep",
+        "risk": "state",
+        "look": "chronyc tracking shows the offset near zero afterwards.",
+        "note": "Jumps the clock rather than slewing it gradually. A backward jump can confuse applications that assume time only moves forward, and databases in particular dislike it. Prefer letting chrony slew unless the offset is too large to correct that way."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-daemon",
+        "cause": "No time synchronisation service is running.",
+        "fix": "Install and enable chrony. Do not run two time daemons together.",
+        "confirm": ""
+      },
+      {
+        "id": "not-syncing",
+        "cause": "The daemon runs but cannot sync.",
+        "fix": "Check the sources. UDP 123 egress is often blocked by default in cloud security groups.",
+        "confirm": ""
+      },
+      {
+        "id": "blocked-egress",
+        "cause": "NTP traffic cannot leave the host.",
+        "fix": "Allow UDP 123, or point at an internal NTP server.",
+        "confirm": ""
+      },
+      {
+        "id": "rtc-local",
+        "cause": "The hardware clock is in local time.",
+        "fix": "Set it to UTC. Dual-boot machines with Windows commonly get this wrong.",
+        "confirm": ""
+      },
+      {
+        "id": "vm-pause",
+        "cause": "The VM was suspended and resumed.",
+        "fix": "The guest agent normally corrects this. Check it is installed and running.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "timedatectl reports synchronised.",
+      "The offset is small and stable.",
+      "Certificate and token errors have stopped."
+    ],
+    "escalate": [
+      "Output of timedatectl status",
+      "Tracking offset",
+      "Whether NTP sources are reachable"
+    ]
+  },
+  {
+    "id": "linux-package-lock",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Packages",
+    "title": "Could not get lock on the package manager",
+    "summary": "apt or yum refuses to run because another process holds the lock.",
+    "aliases": [
+      "could not get lock",
+      "dpkg lock",
+      "apt lock",
+      "yum lock",
+      "another process is using",
+      "unattended-upgrades lock"
+    ],
+    "source": "https://manpages.debian.org/stable/apt/apt.8.en.html",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Find which process holds the lock",
+        "cmd": "sudo lsof /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock 2>/dev/null",
+        "risk": "safe",
+        "look": "The process name and PID. unattended-upgrades appearing here is normal on a freshly booted machine and will finish on its own.",
+        "signals": [
+          {
+            "match": "(?i)unattended|apt\\.system",
+            "means": "Automatic updates are running. Wait rather than intervene.",
+            "goto": "cause:unattended"
+          },
+          {
+            "match": "(?i)apt|dpkg",
+            "means": "Another apt session. Possibly your own in a different terminal.",
+            "goto": "cause:other-session"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "Nothing holds it. The lock is stale.",
+            "goto": "cause:stale-lock"
+          }
+        ]
+      },
+      {
+        "title": "Check whether automatic updates are active",
+        "cmd": "systemctl is-active unattended-upgrades apt-daily.service",
+        "risk": "safe",
+        "look": "Active means waiting is correct. This typically clears within a few minutes of boot."
+      },
+      {
+        "title": "Check whether dpkg was interrupted",
+        "cmd": "sudo dpkg --audit",
+        "risk": "safe",
+        "look": "Packages left half-configured by an interrupted run. These must be resolved before anything else will work."
+      },
+      {
+        "title": "Repair an interrupted installation",
+        "cmd": "sudo dpkg --configure -a",
+        "risk": "state",
+        "look": "No output means all packages are consistent. Retry the original command afterwards.",
+        "note": "Finishes configuring every half-installed package. Services belonging to those packages may restart as part of it, so on a production host do this in a maintenance window. It does not remove anything."
+      }
+    ],
+    "causes": [
+      {
+        "id": "unattended",
+        "cause": "Automatic updates hold the lock.",
+        "fix": "Wait. Killing it mid-transaction leaves the package database inconsistent.",
+        "confirm": ""
+      },
+      {
+        "id": "other-session",
+        "cause": "Another apt session is open.",
+        "fix": "Finish or close it. Check other terminals and any running automation.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-lock",
+        "cause": "The lock file remains after a killed process.",
+        "fix": "Only after confirming nothing holds it, remove the lock files and run dpkg --configure -a.",
+        "confirm": ""
+      },
+      {
+        "id": "interrupted-dpkg",
+        "cause": "A previous run was interrupted.",
+        "fix": "dpkg --configure -a repairs it. Nothing else will proceed until this is done.",
+        "confirm": ""
+      },
+      {
+        "id": "cloud-init",
+        "cause": "cloud-init is still running on a new instance.",
+        "fix": "Wait for it to finish. It installs packages during first boot.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The package command completes.",
+      "dpkg --audit reports nothing.",
+      "No transaction was killed mid-way."
+    ],
+    "escalate": [
+      "Which process held the lock",
+      "Output of dpkg --audit",
+      "Whether automatic updates were running"
+    ]
+  },
+  {
+    "id": "linux-sudo-failing",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Access",
+    "title": "sudo fails or asks for an unexpected password",
+    "summary": "Privilege escalation is refused, or a script that expects passwordless sudo hangs waiting for input.",
+    "aliases": [
+      "sudo password required",
+      "user is not in the sudoers file",
+      "sudo not working",
+      "permission denied sudo",
+      "sudo hangs",
+      "nopasswd"
+    ],
+    "source": "https://man7.org/linux/man-pages/man5/sudoers.5.html",
+    "inputs": [
+      {
+        "key": "user",
+        "label": "User",
+        "example": "deploy"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check what the user is permitted to do",
+        "cmd": "sudo -l -U {user}",
+        "risk": "safe",
+        "look": "The exact rules that apply. NOPASSWD must appear for the specific command if automation is to run unattended.",
+        "signals": [
+          {
+            "match": "(?i)not allowed to run sudo",
+            "means": "No sudo rule applies to this user at all.",
+            "goto": "cause:not-in-sudoers"
+          },
+          {
+            "match": "(?i)NOPASSWD",
+            "means": "Passwordless is configured. Check it covers the command you are running.",
+            "goto": "cause:command-not-covered"
+          },
+          {
+            "match": "(?i)\\(ALL\\) ALL",
+            "means": "Full sudo, but a password is required.",
+            "goto": "cause:password-required"
+          }
+        ]
+      },
+      {
+        "title": "Check group membership",
+        "cmd": "id {user}",
+        "risk": "safe",
+        "look": "sudo or wheel in the group list, depending on the distribution. A group added during the current session does not apply until a new login."
+      },
+      {
+        "title": "Validate the sudoers configuration parses",
+        "cmd": "sudo visudo -c",
+        "risk": "safe",
+        "look": "A syntax error anywhere in sudoers or sudoers.d can disable sudo entirely, which is why visudo exists."
+      },
+      {
+        "title": "Check the drop-in files, which override the main file",
+        "cmd": "sudo ls -la /etc/sudoers.d/",
+        "risk": "safe",
+        "look": "Later files override earlier ones. A file with the wrong permissions or a dot in its name is ignored silently, which is a very common cause."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-in-sudoers",
+        "cause": "The user has no sudo rule.",
+        "fix": "Add them to the sudo or wheel group, or create a drop-in file. Always edit with visudo.",
+        "confirm": ""
+      },
+      {
+        "id": "group-not-applied",
+        "cause": "Group membership was added during the current session.",
+        "fix": "Log out and back in. Group membership is fixed at login.",
+        "confirm": ""
+      },
+      {
+        "id": "password-required",
+        "cause": "A password is required and automation cannot supply one.",
+        "fix": "Add a NOPASSWD rule scoped to the specific commands, never to ALL.",
+        "confirm": ""
+      },
+      {
+        "id": "command-not-covered",
+        "cause": "NOPASSWD covers different commands.",
+        "fix": "The path must match exactly, including arguments if specified.",
+        "confirm": ""
+      },
+      {
+        "id": "dropin-ignored",
+        "cause": "A sudoers.d file is ignored.",
+        "fix": "It must be mode 0440 and its name must contain no dot or tilde. sudo says nothing when it skips a file.",
+        "confirm": ""
+      },
+      {
+        "id": "syntax-error",
+        "cause": "sudoers has a syntax error.",
+        "fix": "visudo -c names the line. If sudo is already broken you need root or single-user mode.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "sudo -l shows the intended permissions.",
+      "The command runs without an unexpected prompt.",
+      "visudo -c reports no errors."
+    ],
+    "escalate": [
+      "Output of sudo -l -U",
+      "Group membership from id",
+      "Listing of /etc/sudoers.d with permissions"
+    ]
+  },
+  {
+    "id": "linux-cert-expired",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "TLS",
+    "title": "Certificate verification failed",
+    "summary": "TLS connections fail. Expiry, an untrusted issuer and a hostname mismatch all look similar at first.",
+    "aliases": [
+      "certificate verify failed",
+      "x509",
+      "certificate expired",
+      "unable to get local issuer",
+      "ssl error",
+      "self signed certificate"
+    ],
+    "source": "https://www.openssl.org/docs/man3.0/man1/openssl-s_client.html",
+    "inputs": [
+      {
+        "key": "host",
+        "label": "Host",
+        "example": "api.internal.example.com"
+      },
+      {
+        "key": "port",
+        "label": "Port",
+        "example": "443"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the certificate the server presents",
+        "cmd": "openssl s_client -connect {host}:{port} -servername {host} < /dev/null 2>/dev/null | openssl x509 -noout -dates -subject -issuer",
+        "risk": "safe",
+        "look": "notAfter, the subject and the issuer. These three answer expiry, hostname and trust in one command.",
+        "signals": [
+          {
+            "match": "(?i)notAfter",
+            "means": "Compare the date against now. An expired certificate is the simplest case.",
+            "goto": "cause:expired"
+          },
+          {
+            "match": "(?i)self.signed|self-signed",
+            "means": "Self-signed, so no public CA vouches for it.",
+            "goto": "cause:self-signed"
+          }
+        ]
+      },
+      {
+        "title": "Read the verification result specifically",
+        "cmd": "openssl s_client -connect {host}:{port} -servername {host} < /dev/null 2>&1 | grep -i 'verify'",
+        "risk": "safe",
+        "look": "The verify return code and its text. Code 10 is expired, 18 is self-signed, 20 is an unobtainable issuer, and each has a different fix.",
+        "signals": [
+          {
+            "match": "(?i)verify error:num=10",
+            "means": "Expired.",
+            "goto": "cause:expired"
+          },
+          {
+            "match": "(?i)verify error:num=(18|19)",
+            "means": "Self-signed or a self-signed root in the chain.",
+            "goto": "cause:self-signed"
+          },
+          {
+            "match": "(?i)verify error:num=20|unable to get local issuer",
+            "means": "The chain is incomplete or the CA is not trusted.",
+            "goto": "cause:incomplete-chain"
+          }
+        ]
+      },
+      {
+        "title": "Check the hostname matches the certificate",
+        "cmd": "openssl s_client -connect {host}:{port} -servername {host} < /dev/null 2>/dev/null | openssl x509 -noout -text | grep -A2 'Subject Alternative Name'",
+        "risk": "safe",
+        "look": "The name you connect to must appear in the SAN list. The Common Name is no longer used by modern clients at all."
+      },
+      {
+        "title": "Check the host's own trust store is current",
+        "cmd": "ls -la /etc/ssl/certs/ca-certificates.crt",
+        "risk": "safe",
+        "look": "An old container image can carry a trust store predating a CA change, which makes a perfectly valid certificate fail."
+      }
+    ],
+    "causes": [
+      {
+        "id": "expired",
+        "cause": "The certificate has expired.",
+        "fix": "Renew it. If renewal is automated, find out why it stopped rather than only renewing by hand.",
+        "confirm": ""
+      },
+      {
+        "id": "incomplete-chain",
+        "cause": "The server does not send intermediates.",
+        "fix": "Configure the full chain. Browsers often fetch missing intermediates; command-line clients do not, which is why it works in a browser and fails in a script.",
+        "confirm": ""
+      },
+      {
+        "id": "self-signed",
+        "cause": "Self-signed or issued by a private CA.",
+        "fix": "Add the CA to the trust store. Never disable verification to make it pass.",
+        "confirm": ""
+      },
+      {
+        "id": "hostname-mismatch",
+        "cause": "The name is not in the SAN list.",
+        "fix": "Reissue with the correct names. CN alone is ignored by modern clients.",
+        "confirm": ""
+      },
+      {
+        "id": "stale-trust-store",
+        "cause": "The client's CA bundle is out of date.",
+        "fix": "Update ca-certificates. Old base images are the usual cause.",
+        "confirm": ""
+      },
+      {
+        "id": "clock-wrong",
+        "cause": "The host clock is wrong, so a valid certificate appears not yet valid.",
+        "fix": "Follow the time drift runbook.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "openssl reports verify return code 0.",
+      "The application connects without disabling verification.",
+      "Renewal is automated with monitoring on expiry."
+    ],
+    "escalate": [
+      "Certificate dates, subject and issuer",
+      "The verify error number",
+      "Whether the SAN list covers the hostname"
+    ]
+  },
+  {
+    "id": "linux-cannot-write-readonly",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Storage",
+    "title": "Read-only file system",
+    "summary": "Writes fail even as root. The filesystem was remounted read-only, usually to protect it.",
+    "aliases": [
+      "read-only file system",
+      "cannot write readonly",
+      "remount read only",
+      "filesystem readonly",
+      "ro filesystem",
+      "cannot touch"
+    ],
+    "source": "https://man7.org/linux/man-pages/man8/mount.8.html",
+    "inputs": [
+      {
+        "key": "path",
+        "label": "Path",
+        "example": "/var"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the mount is read-only",
+        "cmd": "mount | grep -E ' on {path} | on / '",
+        "risk": "safe",
+        "look": "The (ro flag in the options. Present means read-only, and something caused that.",
+        "signals": [
+          {
+            "match": "\\(ro",
+            "means": "Mounted read-only.",
+            "goto": "step:2"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the kernel remounted it after an error",
+        "cmd": "sudo dmesg -T | grep -i -E 'remount|read-only|EXT4-fs error|I/O error' | tail -15",
+        "risk": "safe",
+        "look": "The kernel remounts read-only after filesystem errors to prevent further damage. That is a hardware or corruption signal, not a configuration one.",
+        "signals": [
+          {
+            "match": "(?i)EXT4-fs error|I/O error",
+            "means": "Filesystem or disk errors forced the remount. Do not simply remount it writable.",
+            "goto": "cause:fs-error"
+          },
+          {
+            "match": "(?i)remounting.*read-only",
+            "means": "The kernel deliberately protected the filesystem.",
+            "goto": "cause:fs-error"
+          }
+        ]
+      },
+      {
+        "title": "Check whether fstab declares it read-only",
+        "cmd": "grep {path} /etc/fstab",
+        "risk": "safe",
+        "look": "An ro option in fstab means it was mounted this way intentionally, which is entirely different from an error-driven remount."
+      },
+      {
+        "title": "Check the disk's own health",
+        "cmd": "sudo smartctl -H /dev/sda 2>/dev/null || echo 'smartctl not installed'",
+        "risk": "safe",
+        "look": "Failing hardware behind a read-only remount means the priority is getting data off, not fixing the mount."
+      }
+    ],
+    "causes": [
+      {
+        "id": "fs-error",
+        "cause": "The kernel remounted after filesystem errors.",
+        "fix": "Do not force it writable. Take a backup, then run fsck from a live environment or rescue boot.",
+        "confirm": ""
+      },
+      {
+        "id": "intentional-ro",
+        "cause": "fstab declares it read-only.",
+        "fix": "Someone chose this. Find out why before changing it.",
+        "confirm": ""
+      },
+      {
+        "id": "disk-failing",
+        "cause": "The underlying disk is failing.",
+        "fix": "Recover data first. A writable remount on failing hardware makes things worse.",
+        "confirm": ""
+      },
+      {
+        "id": "container-rootfs",
+        "cause": "A container's root filesystem is read-only by design.",
+        "fix": "Mount a writable volume where writes are needed. Keep the rootfs read-only.",
+        "confirm": ""
+      },
+      {
+        "id": "full-then-ro",
+        "cause": "The filesystem filled and then errored.",
+        "fix": "Follow the disk-full runbook after fsck.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Writes succeed.",
+      "dmesg shows no new filesystem errors.",
+      "If it was an error, the cause was found rather than bypassed."
+    ],
+    "escalate": [
+      "The mount line with its options",
+      "Relevant dmesg lines",
+      "fstab entry and disk health"
+    ]
+  },
+  {
+    "id": "linux-process-wont-die",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Processes",
+    "title": "Process will not terminate",
+    "summary": "kill has no effect. The process is in an uninterruptible state or being restarted.",
+    "aliases": [
+      "process wont die",
+      "cannot kill process",
+      "kill -9 not working",
+      "zombie process",
+      "defunct",
+      "uninterruptible sleep"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/kill.1.html",
+    "inputs": [
+      {
+        "key": "pid",
+        "label": "PID",
+        "example": "1234"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the process state",
+        "cmd": "ps -o pid,ppid,state,wchan:20,comm -p {pid}",
+        "risk": "safe",
+        "look": "State D means uninterruptible sleep and no signal will reach it. State Z means it is already dead and only the exit status remains.",
+        "signals": [
+          {
+            "match": "\\sD\\s",
+            "means": "Uninterruptible sleep, usually blocked on I/O. Signals are queued, not delivered.",
+            "goto": "cause:uninterruptible"
+          },
+          {
+            "match": "\\sZ\\s",
+            "means": "A zombie. Already dead; the parent has not reaped it.",
+            "goto": "cause:zombie"
+          }
+        ]
+      },
+      {
+        "title": "Find what it is blocked on",
+        "cmd": "cat /proc/{pid}/stack 2>/dev/null; cat /proc/{pid}/wchan; echo",
+        "risk": "safe",
+        "look": "The kernel function it is waiting in. NFS and failing block devices are the classic causes of a permanent D state."
+      },
+      {
+        "title": "Check whether a supervisor restarts it",
+        "cmd": "systemctl status {pid} 2>/dev/null || ps -o ppid= -p {pid}",
+        "risk": "safe",
+        "look": "If systemd or another supervisor owns it, killing the process just makes it come back. Stop the unit instead."
+      },
+      {
+        "title": "Stop it through its supervisor",
+        "cmd": "sudo systemctl stop <unit>",
+        "risk": "state",
+        "look": "ps shows the process gone and not replaced by a new PID.",
+        "note": "Stops the service cleanly and prevents the automatic restart. The service is unavailable until started again, so on a production host arrange cover first. This is the correct approach; killing a supervised PID only triggers a restart."
+      }
+    ],
+    "causes": [
+      {
+        "id": "uninterruptible",
+        "cause": "The process is in D state on blocked I/O.",
+        "fix": "Signals cannot reach it. Fix the I/O: a hung NFS mount or a failing disk. It exits once the I/O completes or errors.",
+        "confirm": ""
+      },
+      {
+        "id": "zombie",
+        "cause": "It is already dead.",
+        "fix": "Zombies consume only a process table entry. Fix or restart the parent, which is failing to reap children.",
+        "confirm": ""
+      },
+      {
+        "id": "supervised",
+        "cause": "A supervisor restarts it.",
+        "fix": "Stop the unit rather than the process.",
+        "confirm": ""
+      },
+      {
+        "id": "nfs-hang",
+        "cause": "Blocked on an unreachable NFS server.",
+        "fix": "Restore the server, or force-unmount. This is the most common cause of permanent D state.",
+        "confirm": ""
+      },
+      {
+        "id": "kernel-thread",
+        "cause": "It is a kernel thread.",
+        "fix": "Kernel threads cannot be killed. Names in square brackets in ps are kernel threads.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The process is gone and does not return.",
+      "Whatever blocked it was resolved.",
+      "No new zombies accumulate."
+    ],
+    "escalate": [
+      "Process state and wchan",
+      "What it is blocked on",
+      "Whether a supervisor owns it"
+    ]
+  },
+  {
+    "id": "linux-hostname-resolution",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Networking",
+    "title": "Hostname does not resolve on this machine",
+    "summary": "Name lookups fail locally even though the network is fine.",
+    "aliases": [
+      "cannot resolve hostname",
+      "name or service not known",
+      "dns not working linux",
+      "resolv.conf",
+      "getaddrinfo failed",
+      "temporary failure in name resolution"
+    ],
+    "source": "https://man7.org/linux/man-pages/man5/nsswitch.conf.5.html",
+    "inputs": [
+      {
+        "key": "host",
+        "label": "Hostname",
+        "example": "api.internal.example.com"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Test resolution through the full name service stack",
+        "cmd": "getent hosts {host}",
+        "risk": "safe",
+        "look": "getent follows nsswitch.conf exactly as applications do. dig and nslookup bypass it, which is why they can succeed while your app fails.",
+        "signals": [
+          {
+            "match": "^\\s*$",
+            "means": "Not resolved through the normal path.",
+            "goto": "step:2"
+          },
+          {
+            "match": "\\d+\\.\\d+\\.\\d+\\.\\d+",
+            "means": "It resolves. The application's failure is something else.",
+            "goto": "cause:not-dns"
+          }
+        ]
+      },
+      {
+        "title": "Check the resolver configuration",
+        "cmd": "cat /etc/resolv.conf",
+        "risk": "safe",
+        "look": "The nameserver entries. A 127.0.0.53 entry means systemd-resolved is the local stub, and the real servers are one layer further in."
+      },
+      {
+        "title": "Check the lookup order",
+        "cmd": "cat /etc/nsswitch.conf | grep hosts",
+        "risk": "safe",
+        "look": "The hosts line decides whether files, DNS or mDNS are consulted and in what order. A missing dns entry means DNS is never used at all."
+      },
+      {
+        "title": "Query the nameserver directly",
+        "cmd": "dig @$(grep -m1 nameserver /etc/resolv.conf | awk '{print $2}') {host} +short",
+        "risk": "safe",
+        "look": "Whether the configured server can answer. An answer here with getent failing points at nsswitch rather than DNS."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-nameserver",
+        "cause": "resolv.conf has no usable nameserver.",
+        "fix": "Add one, or fix whatever manages the file. NetworkManager and systemd-resolved both rewrite it.",
+        "confirm": ""
+      },
+      {
+        "id": "resolved-stub",
+        "cause": "systemd-resolved is the stub and its upstreams are wrong.",
+        "fix": "Check resolvectl status for the real upstream servers.",
+        "confirm": ""
+      },
+      {
+        "id": "nsswitch-order",
+        "cause": "The hosts line omits dns.",
+        "fix": "Add it. Without it, only /etc/hosts is consulted.",
+        "confirm": ""
+      },
+      {
+        "id": "search-domain",
+        "cause": "A search domain rewrites the query.",
+        "fix": "Use a fully qualified name with a trailing dot to bypass the search list.",
+        "confirm": ""
+      },
+      {
+        "id": "firewall",
+        "cause": "UDP 53 is blocked.",
+        "fix": "Check egress. Some networks force DNS through a specific resolver.",
+        "confirm": ""
+      },
+      {
+        "id": "not-dns",
+        "cause": "Resolution works; the application fails for another reason.",
+        "fix": "Check its own configuration and any proxy settings.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "getent resolves the name.",
+      "The application connects.",
+      "It survives a network restart."
+    ],
+    "escalate": [
+      "Output of getent hosts",
+      "resolv.conf and the nsswitch hosts line",
+      "Whether dig against the configured server answers"
+    ]
+  },
+  {
+    "id": "linux-user-cannot-login",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Access",
+    "title": "User cannot log in",
+    "summary": "Authentication fails or the session closes immediately after a successful login.",
+    "aliases": [
+      "cannot login",
+      "account locked",
+      "login incorrect",
+      "connection closed by remote host",
+      "no shell",
+      "expired password"
+    ],
+    "source": "https://man7.org/linux/man-pages/man1/chage.1.html",
+    "inputs": [
+      {
+        "key": "user",
+        "label": "User",
+        "example": "deploy"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the account's status",
+        "cmd": "sudo passwd -S {user} && sudo chage -l {user}",
+        "risk": "safe",
+        "look": "Locked state and expiry dates. An expired account or password blocks login even with correct credentials.",
+        "signals": [
+          {
+            "match": "\\sL\\s",
+            "means": "The password is locked.",
+            "goto": "cause:locked"
+          },
+          {
+            "match": "(?i)Account expires.*:\\s*\\w{3}\\s\\d",
+            "means": "An expiry date is set. Check whether it has passed.",
+            "goto": "cause:expired"
+          }
+        ]
+      },
+      {
+        "title": "Check the login shell",
+        "cmd": "getent passwd {user}",
+        "risk": "safe",
+        "look": "The last field. /sbin/nologin or /bin/false means authentication succeeds and the session immediately ends, which looks like a login failure.",
+        "signals": [
+          {
+            "match": "(?i)nologin|/bin/false",
+            "means": "The account has no interactive shell by design.",
+            "goto": "cause:no-shell"
+          }
+        ]
+      },
+      {
+        "title": "Read the authentication log",
+        "cmd": "sudo tail -30 /var/log/auth.log",
+        "risk": "safe",
+        "look": "The precise reason. PAM states whether it was the password, the account state or an access restriction."
+      },
+      {
+        "title": "Check whether a lockout policy is blocking them",
+        "cmd": "sudo faillock --user {user} 2>/dev/null || sudo pam_tally2 -u {user} 2>/dev/null",
+        "risk": "safe",
+        "look": "Failed attempt counts. Repeated failures can lock an account for a period, and the message given to the user does not say so."
+      }
+    ],
+    "causes": [
+      {
+        "id": "locked",
+        "cause": "The password is locked.",
+        "fix": "passwd -u to unlock. Find out why it was locked first.",
+        "confirm": ""
+      },
+      {
+        "id": "expired",
+        "cause": "The account or password expired.",
+        "fix": "chage to extend. Password expiry policies catch service accounts routinely.",
+        "confirm": ""
+      },
+      {
+        "id": "no-shell",
+        "cause": "The shell is nologin.",
+        "fix": "Intentional for service accounts. Change it only if interactive access is genuinely needed.",
+        "confirm": ""
+      },
+      {
+        "id": "faillock",
+        "cause": "Too many failed attempts.",
+        "fix": "faillock --reset. Then find out what was retrying with a bad password.",
+        "confirm": ""
+      },
+      {
+        "id": "pam-restriction",
+        "cause": "access.conf or a PAM rule denies them.",
+        "fix": "Read auth.log. It names the module that denied.",
+        "confirm": ""
+      },
+      {
+        "id": "home-missing",
+        "cause": "The home directory does not exist.",
+        "fix": "Login can fail or behave oddly. Create it with the right ownership.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The user logs in.",
+      "The session stays open.",
+      "auth.log shows a clean accepted entry."
+    ],
+    "escalate": [
+      "Output of passwd -S and chage -l",
+      "The login shell",
+      "Relevant auth.log lines"
     ]
   }
 ]
