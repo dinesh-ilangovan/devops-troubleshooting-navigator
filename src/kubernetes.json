@@ -5389,5 +5389,528 @@
       "The ServiceAccount's pull secrets",
       "The secret type"
     ]
+  },
+  {
+    "id": "k8s-cronjob-timezone",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "title": "CronJob runs at the wrong time of day",
+    "summary": "The schedule fires hours away from when you expected.",
+    "aliases": [
+      "cronjob wrong time",
+      "timezone cronjob",
+      "utc schedule",
+      "job runs at wrong hour",
+      "spec.timezone"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/",
+    "inputs": [
+      {
+        "key": "job",
+        "label": "CronJob",
+        "example": "nightly-report"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the schedule and any timezone",
+        "cmd": "kubectl get cronjob {job} -n {namespace} -o jsonpath='{.spec.schedule}{\"|tz:\"}{.spec.timeZone}'",
+        "risk": "safe",
+        "look": "An empty timeZone means the controller's own zone, which is UTC on nearly every cluster.",
+        "signals": [
+          {
+            "match": "\\|tz:$",
+            "means": "No timezone set. The schedule is interpreted in UTC.",
+            "goto": "cause:utc-default"
+          },
+          {
+            "match": "\\|tz:\\w",
+            "means": "A timezone is set. Confirm the cluster version supports it.",
+            "goto": "cause:version-support"
+          }
+        ]
+      },
+      {
+        "title": "Check when it last fired",
+        "cmd": "kubectl get cronjob {job} -n {namespace} -o jsonpath='{.status.lastScheduleTime}'",
+        "risk": "safe",
+        "look": "The timestamp is UTC. Compare against your local expectation to confirm the offset explains it."
+      },
+      {
+        "title": "Check the cluster version supports timeZone",
+        "cmd": "kubectl version --short",
+        "risk": "safe",
+        "look": "spec.timeZone is stable from 1.27. On older clusters it is silently ignored, which looks like it did nothing."
+      },
+      {
+        "title": "Check for daylight saving effects",
+        "cmd": "kubectl get cronjob {job} -n {namespace} -o yaml | findstr schedule",
+        "risk": "safe",
+        "look": "A UTC schedule does not shift with local clock changes, so a job pinned to local business hours drifts by an hour twice a year."
+      }
+    ],
+    "causes": [
+      {
+        "id": "utc-default",
+        "cause": "The schedule is interpreted in UTC.",
+        "fix": "Set spec.timeZone, or express the schedule in UTC deliberately and document it.",
+        "confirm": ""
+      },
+      {
+        "id": "version-support",
+        "cause": "The cluster ignores timeZone.",
+        "fix": "Upgrade, or convert the schedule to UTC by hand.",
+        "confirm": ""
+      },
+      {
+        "id": "dst-drift",
+        "cause": "Local business hours shift twice a year.",
+        "fix": "Set timeZone so the controller handles the transition.",
+        "confirm": ""
+      },
+      {
+        "id": "controller-zone",
+        "cause": "The controller's zone is not UTC.",
+        "fix": "Unusual but possible. Check the controller manager's configuration.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The job fires at the intended local time.",
+      "It still does after a daylight saving change."
+    ],
+    "escalate": [
+      "The schedule and timeZone",
+      "lastScheduleTime in UTC",
+      "Cluster version"
+    ]
+  },
+  {
+    "id": "k8s-emptydir-full",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Storage",
+    "title": "Pod evicted for filling emptyDir",
+    "summary": "A pod using scratch space fills the node's disk and gets evicted.",
+    "aliases": [
+      "emptydir full",
+      "ephemeral storage exceeded",
+      "pod evicted storage",
+      "scratch space full",
+      "local storage limit"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/storage/volumes/#emptydir",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Read the eviction message",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.status.message}'",
+        "risk": "safe",
+        "look": "It names ephemeral-storage and usually the container that exceeded it.",
+        "signals": [
+          {
+            "match": "ephemeral-storage",
+            "means": "The pod exceeded its local storage allowance.",
+            "goto": "cause:no-limit"
+          },
+          {
+            "match": "emptyDir",
+            "means": "An emptyDir volume grew past its limit.",
+            "goto": "cause:emptydir-unbounded"
+          }
+        ]
+      },
+      {
+        "title": "Check whether limits are declared",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].resources}'",
+        "risk": "safe",
+        "look": "Without an ephemeral-storage limit the pod can consume the node's whole disk and take other workloads down with it."
+      },
+      {
+        "title": "Check the emptyDir definition",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.volumes}'",
+        "risk": "safe",
+        "look": "An emptyDir with no sizeLimit is unbounded. A medium of Memory consumes RAM rather than disk, which is a different failure."
+      },
+      {
+        "title": "Check what is filling it",
+        "cmd": "kubectl exec {pod} -n {namespace} -- du -sh /tmp /var/log 2>/dev/null",
+        "risk": "safe",
+        "look": "The directories consuming space. Logs written to files rather than stdout are the usual cause."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-limit",
+        "cause": "No ephemeral-storage limit is set.",
+        "fix": "Set a request and limit so the pod is evicted before the node fills.",
+        "confirm": ""
+      },
+      {
+        "id": "emptydir-unbounded",
+        "cause": "The emptyDir has no sizeLimit.",
+        "fix": "Set one. The pod is then evicted rather than the node filling.",
+        "confirm": ""
+      },
+      {
+        "id": "logs-to-file",
+        "cause": "The app writes logs to disk.",
+        "fix": "Log to stdout. The platform handles rotation.",
+        "confirm": ""
+      },
+      {
+        "id": "memory-medium",
+        "cause": "emptyDir medium is Memory.",
+        "fix": "It counts against the memory limit, not disk. Size it accordingly.",
+        "confirm": ""
+      },
+      {
+        "id": "needs-volume",
+        "cause": "The workload genuinely needs persistent scratch.",
+        "fix": "Use a PVC rather than emptyDir.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "No further evictions.",
+      "Limits are declared.",
+      "Logs go to stdout."
+    ],
+    "escalate": [
+      "The eviction message",
+      "Declared ephemeral-storage limits",
+      "What is consuming the volume"
+    ]
+  },
+  {
+    "id": "k8s-two-services-same-selector",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Services & Networking",
+    "title": "Traffic reaches the wrong pods",
+    "summary": "Requests to one service land on another workload's pods.",
+    "aliases": [
+      "wrong pods traffic",
+      "overlapping selector",
+      "two services same pods",
+      "selector collision",
+      "traffic to wrong app"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/services-networking/service/",
+    "inputs": [
+      {
+        "key": "service",
+        "label": "Service",
+        "example": "checkout-api"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See which pods back the service",
+        "cmd": "kubectl get endpointslices -n {namespace} -l kubernetes.io/service-name={service} -o jsonpath='{.items[*].endpoints[*].targetRef.name}'",
+        "risk": "safe",
+        "look": "The pod names. Anything unexpected here means the selector is matching more than intended."
+      },
+      {
+        "title": "Read the selector",
+        "cmd": "kubectl get svc {service} -n {namespace} -o jsonpath='{.spec.selector}'",
+        "risk": "safe",
+        "look": "A broad selector such as a single app label matches every workload carrying it, including other versions.",
+        "signals": [
+          {
+            "match": "^\\{\"app\":",
+            "means": "A single-label selector. Broad enough to catch unrelated pods.",
+            "goto": "cause:selector-too-broad"
+          }
+        ]
+      },
+      {
+        "title": "Find every service using overlapping labels",
+        "cmd": "kubectl get svc -n {namespace} -o wide",
+        "risk": "safe",
+        "look": "Two services with the same selector both receive the same pods, which is legal and almost never intended."
+      },
+      {
+        "title": "Check the pods' labels",
+        "cmd": "kubectl get pods -n {namespace} --show-labels",
+        "risk": "safe",
+        "look": "Which pods carry the matching labels. A canary or an old ReplicaSet still labelled the same way is the usual culprit."
+      }
+    ],
+    "causes": [
+      {
+        "id": "selector-too-broad",
+        "cause": "The selector matches more pods than intended.",
+        "fix": "Add a version or component label so each service targets exactly its own workload.",
+        "confirm": ""
+      },
+      {
+        "id": "old-replicaset",
+        "cause": "Pods from an old ReplicaSet still match.",
+        "fix": "They should have been removed. Check the rollout completed.",
+        "confirm": ""
+      },
+      {
+        "id": "canary-overlap",
+        "cause": "A canary shares the selector.",
+        "fix": "Give the canary a distinguishing label and a separate service.",
+        "confirm": ""
+      },
+      {
+        "id": "copy-paste",
+        "cause": "A service was copied and the selector not updated.",
+        "fix": "Fix the selector. This is the most common origin.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Only the intended pods back the service.",
+      "No two services share a selector unintentionally."
+    ],
+    "escalate": [
+      "Which pods are endpoints",
+      "The service selectors in the namespace",
+      "Pod labels"
+    ]
+  },
+  {
+    "id": "k8s-rollback-deployment",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Workloads",
+    "title": "A deployment made things worse and needs reverting",
+    "summary": "A release is causing errors and you need the previous version back quickly.",
+    "aliases": [
+      "rollback deployment",
+      "revert release",
+      "undo deployment",
+      "previous version",
+      "bad release",
+      "rollout undo"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment",
+    "inputs": [
+      {
+        "key": "deploy",
+        "label": "Deployment",
+        "example": "checkout-api"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See the revision history",
+        "cmd": "kubectl rollout history deployment/{deploy} -n {namespace}",
+        "risk": "safe",
+        "look": "The revisions available. Only revisionHistoryLimit are kept, so the one you want may already be gone.",
+        "signals": [
+          {
+            "match": "REVISION",
+            "means": "Revisions exist. Check which one was last known good.",
+            "goto": "cause:can-rollback"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "No history retained. Rollback is not available.",
+            "goto": "cause:no-history"
+          }
+        ]
+      },
+      {
+        "title": "Check what changed in a revision",
+        "cmd": "kubectl rollout history deployment/{deploy} -n {namespace} --revision=<n>",
+        "risk": "safe",
+        "look": "The pod template for that revision. Confirm it is the version you actually want before rolling back to it."
+      },
+      {
+        "title": "Roll back to the previous revision",
+        "cmd": "kubectl rollout undo deployment/{deploy} -n {namespace}",
+        "risk": "state",
+        "look": "A new rollout begins. Watch rollout status rather than assuming it completed.",
+        "note": "Starts a rolling update back to the previous pod template. It does not undo anything outside the Deployment: database migrations, ConfigMap changes and external state all remain as the bad release left them. If the release ran a migration, rolling back the image alone can make things worse."
+      },
+      {
+        "title": "Confirm the rollback landed",
+        "cmd": "kubectl rollout status deployment/{deploy} -n {namespace}",
+        "risk": "safe",
+        "look": "Successful completion, then check the application actually recovered rather than just the pods being Ready."
+      }
+    ],
+    "causes": [
+      {
+        "id": "can-rollback",
+        "cause": "A previous revision is available.",
+        "fix": "rollout undo. Then fix forward properly rather than leaving it rolled back.",
+        "confirm": ""
+      },
+      {
+        "id": "no-history",
+        "cause": "No revisions retained.",
+        "fix": "Redeploy the previous image tag explicitly. Raise revisionHistoryLimit for next time.",
+        "confirm": ""
+      },
+      {
+        "id": "migration-ran",
+        "cause": "A database migration was applied.",
+        "fix": "Rolling back the image may break against the new schema. Migrations should be backward compatible for exactly this reason.",
+        "confirm": ""
+      },
+      {
+        "id": "config-changed",
+        "cause": "A ConfigMap or Secret also changed.",
+        "fix": "Those are not part of the Deployment revision. Revert them separately.",
+        "confirm": ""
+      },
+      {
+        "id": "gitops-reverts",
+        "cause": "A GitOps controller will re-sync the bad version.",
+        "fix": "Revert in Git instead. Rolling back in the cluster will be undone within minutes.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The previous version is running.",
+      "The application has recovered.",
+      "The fix is reflected in Git if GitOps manages it."
+    ],
+    "escalate": [
+      "Revision history",
+      "What changed between revisions",
+      "Whether a migration ran"
+    ]
+  },
+  {
+    "id": "k8s-logs-too-large",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Observability",
+    "title": "Container logs are unusable or overwhelming",
+    "summary": "So much output that finding the relevant line is impractical.",
+    "aliases": [
+      "too many logs",
+      "logs flooding",
+      "cannot find error logs",
+      "log noise",
+      "grep kubectl logs",
+      "since flag"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/cluster-administration/logging/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      },
+      {
+        "key": "deploy",
+        "label": "Workload label",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Narrow by time rather than line count",
+        "cmd": "kubectl logs {pod} -n {namespace} --since=10m",
+        "risk": "safe",
+        "look": "Time-bounded output around the incident. Far more useful than a fixed tail when the app is chatty."
+      },
+      {
+        "title": "Filter to the lines that matter",
+        "cmd": "kubectl logs {pod} -n {namespace} --since=1h | findstr /I \"error fatal panic exception\"",
+        "risk": "safe",
+        "look": "The first error usually explains the cascade. Later ones are often consequences."
+      },
+      {
+        "title": "Read across all pods of the workload",
+        "cmd": "kubectl logs -n {namespace} -l app={deploy} --since=15m --prefix --max-log-requests=10",
+        "risk": "safe",
+        "look": "The prefix flag names the pod on each line, which matters when only one replica is misbehaving."
+      },
+      {
+        "title": "Check the log volume itself",
+        "cmd": "kubectl logs {pod} -n {namespace} --since=1m | measure-object -line",
+        "risk": "safe",
+        "look": "Lines per minute. Thousands means the log level is wrong for production, which is a fixable problem rather than something to live with.",
+        "signals": [
+          {
+            "match": "[1-9]\\d{3,}",
+            "means": "Thousands of lines a minute. The log level is too verbose.",
+            "goto": "cause:log-level"
+          }
+        ]
+      }
+    ],
+    "causes": [
+      {
+        "id": "log-level",
+        "cause": "The application logs at debug level.",
+        "fix": "Set it to info in production. Debug logging in production costs money and hides real errors.",
+        "confirm": ""
+      },
+      {
+        "id": "no-structure",
+        "cause": "Logs are unstructured text.",
+        "fix": "Structured JSON makes filtering possible. Worth the change if the app is noisy.",
+        "confirm": ""
+      },
+      {
+        "id": "health-check-noise",
+        "cause": "Probe requests are logged.",
+        "fix": "Exclude the health path from access logging.",
+        "confirm": ""
+      },
+      {
+        "id": "rotated-away",
+        "cause": "The line you need was rotated out.",
+        "fix": "Only the current file is available through kubectl. Ship logs to a collector.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-container",
+        "cause": "Reading a sidecar rather than the app.",
+        "fix": "Use -c with the container name.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "You can find the relevant lines.",
+      "Log volume is proportional to real events."
+    ],
+    "escalate": [
+      "Log volume per minute",
+      "The first error in the window",
+      "Whether logs are structured"
+    ]
   }
 ]

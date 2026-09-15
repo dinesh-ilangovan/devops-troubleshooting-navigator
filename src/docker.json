@@ -4028,5 +4028,382 @@
       "Which form is used",
       "Path and Args on the running container"
     ]
+  },
+  {
+    "id": "docker-compose-network-isolation",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Compose",
+    "title": "Services in different compose projects cannot talk",
+    "summary": "Containers that should communicate cannot resolve or reach each other.",
+    "aliases": [
+      "compose networks",
+      "cannot reach other project",
+      "external network",
+      "two compose files",
+      "service not found compose"
+    ],
+    "source": "https://docs.docker.com/reference/compose-file/networks/",
+    "inputs": [
+      {
+        "key": "service",
+        "label": "Service",
+        "example": "api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "List the networks each project created",
+        "cmd": "docker network ls",
+        "risk": "safe",
+        "look": "Compose creates a network per project, named after the project. Containers only resolve names within their own network."
+      },
+      {
+        "title": "Check which networks the container joined",
+        "cmd": "docker inspect $(docker compose ps -q {service}) --format '{{json .NetworkSettings.Networks}}'",
+        "risk": "safe",
+        "look": "The network names. Two containers must share at least one to reach each other by name.",
+        "signals": [
+          {
+            "match": "_default",
+            "means": "On the project's default network only. Nothing outside that project is reachable.",
+            "goto": "cause:separate-projects"
+          }
+        ]
+      },
+      {
+        "title": "Check whether an external network is declared",
+        "cmd": "findstr /C:\"external\" docker-compose.yml",
+        "risk": "safe",
+        "look": "An external network lets several projects share one. Without it, each project is isolated by design."
+      },
+      {
+        "title": "Test resolution across projects",
+        "cmd": "docker compose exec {service} getent hosts <other-service>",
+        "risk": "safe",
+        "look": "Empty means the name is not resolvable from here, which confirms they are on separate networks."
+      }
+    ],
+    "causes": [
+      {
+        "id": "separate-projects",
+        "cause": "Each project has its own network.",
+        "fix": "Create a shared external network and attach both projects to it.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-name",
+        "cause": "Using the container name rather than the service name.",
+        "fix": "Within a project, the service name is the resolvable name.",
+        "confirm": ""
+      },
+      {
+        "id": "network-not-created",
+        "cause": "The external network does not exist.",
+        "fix": "docker network create it before bringing the projects up.",
+        "confirm": ""
+      },
+      {
+        "id": "should-be-one-project",
+        "cause": "Two projects that always run together.",
+        "fix": "Merge them into one compose file. Simpler than sharing a network.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Services resolve each other by name.",
+      "The arrangement is declared in the compose files."
+    ],
+    "escalate": [
+      "Which networks exist",
+      "Which networks each container joined",
+      "Whether an external network is declared"
+    ]
+  },
+  {
+    "id": "docker-user-namespace-permissions",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Storage & Disk",
+    "title": "Files created by a container have odd ownership on the host",
+    "summary": "Files appear owned by a high-numbered user, or root-owned files clutter a bind mount.",
+    "aliases": [
+      "root owned files",
+      "userns",
+      "file ownership container",
+      "cannot delete files created by container",
+      "uid mapping"
+    ],
+    "source": "https://docs.docker.com/engine/security/userns-remap/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      },
+      {
+        "key": "path",
+        "label": "Host path",
+        "example": "./data"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check ownership on the host",
+        "cmd": "ls -ln {path}",
+        "risk": "safe",
+        "look": "Numeric UIDs. A file owned by 0 means the container ran as root and wrote through the mount as root."
+      },
+      {
+        "title": "Check what user the container runs as",
+        "cmd": "docker inspect {container} --format 'user={{.Config.User}}'",
+        "risk": "safe",
+        "look": "Empty means root. Anything the container writes to a bind mount lands as root on the host too.",
+        "signals": [
+          {
+            "match": "user=$",
+            "means": "Running as root. Bind mount writes are root-owned on the host.",
+            "goto": "cause:runs-as-root"
+          }
+        ]
+      },
+      {
+        "title": "Check whether user namespace remapping is on",
+        "cmd": "docker info --format '{{.SecurityOptions}}'",
+        "risk": "safe",
+        "look": "userns remapping shifts container UIDs to a high host range, which explains ownership by a UID like 100000."
+      },
+      {
+        "title": "Run as your own user instead",
+        "cmd": "docker run --user $(id -u):$(id -g) ...",
+        "risk": "state",
+        "look": "New files in the mount carry your UID.",
+        "note": "Changes the UID the process runs as. Files it creates will be owned by you, but the container may fail if the image expects to write to paths owned by root, such as a package cache or a log directory it created at build time. Test before adopting it everywhere."
+      }
+    ],
+    "causes": [
+      {
+        "id": "runs-as-root",
+        "cause": "The container runs as root.",
+        "fix": "Pass --user with your UID, or set USER in the Dockerfile.",
+        "confirm": ""
+      },
+      {
+        "id": "userns-remap",
+        "cause": "User namespace remapping shifts UIDs.",
+        "fix": "Expected. The high UID is the mapped range.",
+        "confirm": ""
+      },
+      {
+        "id": "cannot-delete",
+        "cause": "Root-owned files you cannot remove.",
+        "fix": "sudo chown them back, or delete from inside a container running as root.",
+        "confirm": ""
+      },
+      {
+        "id": "named-volume-better",
+        "cause": "A bind mount is used for data the host does not need.",
+        "fix": "Use a named volume. Ownership stops being your problem.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "New files carry the expected ownership.",
+      "You can manage them from the host without sudo."
+    ],
+    "escalate": [
+      "Numeric ownership on the host",
+      "The container's user",
+      "Whether userns remapping is enabled"
+    ]
+  },
+  {
+    "id": "docker-slow-container-start",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Performance",
+    "title": "Containers take a long time to start",
+    "summary": "docker run or compose up takes far longer than it should before the app responds.",
+    "aliases": [
+      "slow container start",
+      "startup slow docker",
+      "takes long to start",
+      "container boot slow",
+      "slow up"
+    ],
+    "source": "https://docs.docker.com/engine/containers/start-containers-automatically/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Time the phases separately",
+        "cmd": "docker events --since 1m --filter container={container}",
+        "risk": "safe",
+        "look": "The create, start and health events with timestamps. The gap between them tells you which phase is slow."
+      },
+      {
+        "title": "Check whether the image is being pulled",
+        "cmd": "docker images --format '{{.Repository}}:{{.Tag}} {{.CreatedSince}}'",
+        "risk": "safe",
+        "look": "A cold pull dominates startup. Once cached, start should take a second or two."
+      },
+      {
+        "title": "Check what the entrypoint does before serving",
+        "cmd": "docker logs {container} --timestamps | head -20",
+        "risk": "safe",
+        "look": "Timestamps on the first lines show where time goes. Migrations or dependency waits in the entrypoint are common.",
+        "signals": [
+          {
+            "match": "waiting for|retry|connect",
+            "means": "The entrypoint waits on a dependency before starting.",
+            "goto": "cause:waits-for-dep"
+          }
+        ]
+      },
+      {
+        "title": "Check the health check start period",
+        "cmd": "docker inspect {container} --format '{{json .Config.Healthcheck}}'",
+        "risk": "safe",
+        "look": "A long start_period delays the healthy state even after the app is serving, which makes dependent services wait unnecessarily."
+      }
+    ],
+    "causes": [
+      {
+        "id": "cold-pull",
+        "cause": "The image is being pulled.",
+        "fix": "Pre-pull it, or use a smaller image.",
+        "confirm": ""
+      },
+      {
+        "id": "waits-for-dep",
+        "cause": "The entrypoint blocks on a dependency.",
+        "fix": "Move the retry into the application so it can start and serve health checks while waiting.",
+        "confirm": ""
+      },
+      {
+        "id": "migrations-on-start",
+        "cause": "Migrations run at container start.",
+        "fix": "Run them as a separate job, not on every replica's start.",
+        "confirm": ""
+      },
+      {
+        "id": "start-period-long",
+        "cause": "The health check start period is generous.",
+        "fix": "Lower it once you know the real startup time.",
+        "confirm": ""
+      },
+      {
+        "id": "large-image",
+        "cause": "The image is very large.",
+        "fix": "Multi-stage builds and a slim base cut this dramatically.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Start time is a few seconds on a warm cache.",
+      "Dependent services are not left waiting."
+    ],
+    "escalate": [
+      "Event timestamps per phase",
+      "First log lines with timestamps",
+      "Health check start period"
+    ]
+  },
+  {
+    "id": "docker-cannot-remove-image-in-use",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Images",
+    "title": "Cannot free disk because images are in use",
+    "summary": "Pruning reclaims nothing because everything is referenced.",
+    "aliases": [
+      "image in use",
+      "cannot prune",
+      "nothing reclaimed",
+      "prune does nothing",
+      "disk not freed docker"
+    ],
+    "source": "https://docs.docker.com/engine/manage-resources/pruning/",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "See where the space actually is",
+        "cmd": "docker system df -v",
+        "risk": "safe",
+        "look": "The RECLAIMABLE column per category. Zero reclaimable with high usage means everything is referenced by something."
+      },
+      {
+        "title": "Find which containers hold images",
+        "cmd": "docker ps -a --format '{{.Names}} {{.Image}} {{.Status}}'",
+        "risk": "safe",
+        "look": "Stopped containers hold their images just as firmly as running ones. Those are usually the blockers.",
+        "signals": [
+          {
+            "match": "Exited",
+            "means": "Stopped containers are holding images.",
+            "goto": "cause:stopped-containers"
+          }
+        ]
+      },
+      {
+        "title": "Check for images referenced by several tags",
+        "cmd": "docker images --digests",
+        "risk": "safe",
+        "look": "The same image ID under several tags is counted once on disk. Removing one tag frees nothing."
+      },
+      {
+        "title": "Remove stopped containers first, then images",
+        "cmd": "docker container prune",
+        "risk": "destructive",
+        "look": "Reclaimable image space appears once the containers holding them are gone.",
+        "note": "Deletes every stopped container along with its writable layer and its logs. Any container someone intended to restart or inspect is gone permanently. Run docker ps -a first and read the list line by line before confirming."
+      }
+    ],
+    "causes": [
+      {
+        "id": "stopped-containers",
+        "cause": "Stopped containers reference the images.",
+        "fix": "Prune containers first. Image pruning then has something to remove.",
+        "confirm": ""
+      },
+      {
+        "id": "multiple-tags",
+        "cause": "Several tags point at one image.",
+        "fix": "Untagging one frees nothing. Remove all references.",
+        "confirm": ""
+      },
+      {
+        "id": "build-cache",
+        "cause": "The space is build cache, not images.",
+        "fix": "docker builder prune targets it specifically.",
+        "confirm": ""
+      },
+      {
+        "id": "volumes",
+        "cause": "The space is in volumes.",
+        "fix": "Volumes are never touched by image pruning. Inspect before removing any.",
+        "confirm": ""
+      },
+      {
+        "id": "vm-not-shrinking",
+        "cause": "Docker Desktop's VM disk does not shrink.",
+        "fix": "Reclaimed space is reused but the virtual disk stays allocated. That is expected.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Disk usage drops meaningfully.",
+      "Nothing needed was deleted."
+    ],
+    "escalate": [
+      "docker system df -v output",
+      "Which containers hold images",
+      "Whether the space is cache or volumes"
+    ]
   }
 ]

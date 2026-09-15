@@ -2948,5 +2948,194 @@
       "What git ls-files records",
       "Whether CI builds"
     ]
+  },
+  {
+    "id": "git-commit-signing-fails",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Remotes",
+    "title": "Commit signing fails or shows unverified",
+    "summary": "Commits are rejected, or appear unverified on the hosting platform.",
+    "aliases": [
+      "gpg failed to sign",
+      "signing failed",
+      "unverified commit",
+      "ssh signing",
+      "commit not verified",
+      "secret key not available"
+    ],
+    "source": "https://git-scm.com/docs/git-commit",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Read the signing error",
+        "cmd": "git commit -m test",
+        "risk": "safe",
+        "look": "The message names whether the key is missing, the agent is unreachable, or the format is wrong.",
+        "signals": [
+          {
+            "match": "gpg failed to sign",
+            "means": "The signing backend could not produce a signature.",
+            "goto": "cause:gpg-broken"
+          },
+          {
+            "match": "secret key not available",
+            "means": "The configured key is not present on this machine.",
+            "goto": "cause:key-missing"
+          },
+          {
+            "match": "No such file or directory",
+            "means": "The signing program path is wrong.",
+            "goto": "cause:wrong-program"
+          }
+        ]
+      },
+      {
+        "title": "Check the signing configuration",
+        "cmd": "git config --show-origin user.signingkey gpg.format commit.gpgsign",
+        "risk": "safe",
+        "look": "format ssh uses an SSH key; the default uses GPG. Mixing the two configurations is a common cause."
+      },
+      {
+        "title": "Test the backend directly",
+        "cmd": "gpg --list-secret-keys --keyid-format=long",
+        "risk": "safe",
+        "look": "The key must be present and not expired. An expired key signs nothing and the error is unhelpful."
+      },
+      {
+        "title": "Check the platform knows the key",
+        "cmd": "git log --show-signature -1",
+        "risk": "safe",
+        "look": "Locally valid but unverified on the platform means the public key was never uploaded there, or the committer email does not match it."
+      }
+    ],
+    "causes": [
+      {
+        "id": "key-missing",
+        "cause": "The configured key is not on this machine.",
+        "fix": "Import it, or configure a key that exists here.",
+        "confirm": ""
+      },
+      {
+        "id": "gpg-broken",
+        "cause": "The GPG agent cannot sign.",
+        "fix": "Check GPG_TTY is exported. Passphrase prompts fail without it.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-program",
+        "cause": "gpg.program points somewhere wrong.",
+        "fix": "Set it to the real path, or unset it to use the default.",
+        "confirm": ""
+      },
+      {
+        "id": "email-mismatch",
+        "cause": "The signing key's email differs from the commit email.",
+        "fix": "They must match for the platform to mark it verified.",
+        "confirm": ""
+      },
+      {
+        "id": "not-uploaded",
+        "cause": "The public key is not registered on the platform.",
+        "fix": "Upload it. Local signing alone shows unverified.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Commits sign without error.",
+      "The platform shows them verified."
+    ],
+    "escalate": [
+      "The signing error",
+      "Signing configuration and format",
+      "Whether the key exists and is unexpired"
+    ]
+  },
+  {
+    "id": "git-partial-staging",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Working Tree",
+    "title": "Need to commit only some changes in a file",
+    "summary": "One file contains two unrelated changes and only one should be committed.",
+    "aliases": [
+      "stage part of file",
+      "git add patch",
+      "partial commit",
+      "split changes",
+      "commit some lines",
+      "interactive add"
+    ],
+    "source": "https://git-scm.com/docs/git-add",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "File",
+        "example": "src/api.js"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See the changes to split",
+        "cmd": "git diff {file}",
+        "risk": "safe",
+        "look": "The hunks. Each one can be staged independently, which is what makes a clean commit possible."
+      },
+      {
+        "title": "Stage interactively hunk by hunk",
+        "cmd": "git add -p {file}",
+        "risk": "safe",
+        "look": "y stages a hunk, n skips it, s splits it smaller, e opens it for manual editing. This is the core tool for clean history."
+      },
+      {
+        "title": "Check what is staged against what is not",
+        "cmd": "git diff --cached {file} && git diff {file}",
+        "risk": "safe",
+        "look": "The first shows what will be committed, the second what remains. Both should be what you intend."
+      },
+      {
+        "title": "Verify the staged version actually works",
+        "cmd": "git stash push --keep-index",
+        "risk": "state",
+        "look": "The working tree contains only the staged changes. Test, commit, then pop.",
+        "note": "Temporarily sets aside everything not staged, so you can test exactly what you are about to commit. Recover it with git stash pop afterwards. Forgetting the pop leaves your remaining work on the stash, which people then assume is lost."
+      }
+    ],
+    "causes": [
+      {
+        "id": "use-add-p",
+        "cause": "Both changes are in one file.",
+        "fix": "git add -p to stage selectively. This is what it is for.",
+        "confirm": ""
+      },
+      {
+        "id": "hunk-too-big",
+        "cause": "A hunk contains both changes.",
+        "fix": "Press s to split, or e to edit the hunk manually.",
+        "confirm": ""
+      },
+      {
+        "id": "untested-commit",
+        "cause": "The staged version was never tested.",
+        "fix": "stash --keep-index, test, then commit.",
+        "confirm": ""
+      },
+      {
+        "id": "should-be-two-commits",
+        "cause": "The changes are genuinely unrelated.",
+        "fix": "Two commits. Reviewers and future bisects will thank you.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The commit contains only the intended change.",
+      "The staged version builds and passes tests.",
+      "Nothing was left on the stash."
+    ],
+    "escalate": [
+      "The diff before staging",
+      "What is staged versus unstaged",
+      "Whether the staged version was tested"
+    ]
   }
 ]
