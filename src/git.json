@@ -3137,5 +3137,110 @@
       "What is staged versus unstaged",
       "Whether the staged version was tested"
     ]
+  },
+  {
+    "id": "git-accidentally-committed-secret",
+    "tier": "guide",
+    "technology": "Git",
+    "category": "Security",
+    "title": "A secret was committed",
+    "summary": "Credentials are in the repository history and must be treated as compromised.",
+    "aliases": [
+      "committed secret",
+      "password in git",
+      "api key committed",
+      "remove secret history",
+      "leaked credential git"
+    ],
+    "source": "https://docs.github.com/en/code-security/secret-scanning",
+    "inputs": [
+      {
+        "key": "file",
+        "label": "File",
+        "example": "config/.env"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Find where it entered history",
+        "cmd": "git log --oneline --all -- {file}",
+        "risk": "safe",
+        "look": "Every commit touching the file. The earliest one is when exposure began, and that is what matters for the rotation decision."
+      },
+      {
+        "title": "Check whether it was pushed",
+        "cmd": "git branch -r --contains $(git log --format=%H -1 -- {file})",
+        "risk": "safe",
+        "look": "Any remote branch means it left your machine. From that moment it must be treated as public.",
+        "signals": [
+          {
+            "match": "origin/",
+            "means": "Pushed. Rotate the credential now, before anything else.",
+            "goto": "cause:pushed"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "Local only. Rewriting is straightforward.",
+            "goto": "cause:local-only"
+          }
+        ]
+      },
+      {
+        "title": "Stop tracking it going forward",
+        "cmd": "git rm --cached {file} && echo {file} >> .gitignore",
+        "risk": "state",
+        "look": "git status shows the removal staged and the path ignored.",
+        "note": "Removes the file from the index while leaving it on disk, and ignores it in future. This does not remove it from history: the secret remains fully recoverable from any clone. Rotation is still required if it was ever pushed."
+      },
+      {
+        "title": "Rewrite history if it never left your machine",
+        "cmd": "git reset --soft HEAD~1",
+        "risk": "destructive",
+        "look": "git log no longer shows the commit. The working tree is unchanged.",
+        "note": "Undoes the last commit while keeping the changes staged, so you can recommit without the file. Only safe while unpushed. If the commit is on a remote, rewriting creates divergence for everyone and still does not undo the exposure — rotate instead."
+      }
+    ],
+    "causes": [
+      {
+        "id": "pushed",
+        "cause": "The secret reached a remote.",
+        "fix": "Rotate it immediately. History rewriting is secondary and does not undo exposure.",
+        "confirm": ""
+      },
+      {
+        "id": "local-only",
+        "cause": "It never left your machine.",
+        "fix": "Rewrite the commit and add the path to .gitignore.",
+        "confirm": ""
+      },
+      {
+        "id": "in-old-commit",
+        "cause": "It is deep in history.",
+        "fix": "Removing it needs a coordinated rewrite across the team. Rotate first regardless.",
+        "confirm": ""
+      },
+      {
+        "id": "should-not-exist",
+        "cause": "Secrets are in the repository at all.",
+        "fix": "Move them to a secret manager. .gitignore is a safety net, not a strategy.",
+        "confirm": ""
+      },
+      {
+        "id": "scanning-caught-it",
+        "cause": "A scanner flagged it.",
+        "fix": "Treat that as a real incident, not a false positive to dismiss.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The credential has been rotated.",
+      "The path is ignored going forward.",
+      "Secrets live in a secret manager."
+    ],
+    "escalate": [
+      "Which commit introduced it",
+      "Whether it was pushed",
+      "Confirmation the credential was rotated"
+    ]
   }
 ]

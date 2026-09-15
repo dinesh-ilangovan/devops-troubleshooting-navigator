@@ -5912,5 +5912,430 @@
       "The first error in the window",
       "Whether logs are structured"
     ]
+  },
+  {
+    "id": "k8s-secret-rotation",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Configuration",
+    "title": "Rotated a secret but pods still use the old value",
+    "summary": "A credential was rotated in the secret store yet the application keeps failing with the old one.",
+    "aliases": [
+      "secret rotated",
+      "old credential",
+      "rotation not picked up",
+      "secret updated no effect",
+      "credential rotation"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/configuration/secret/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      },
+      {
+        "key": "deploy",
+        "label": "Deployment",
+        "example": "checkout-api"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm the secret itself changed",
+        "cmd": "kubectl get secret <name> -n {namespace} -o jsonpath='{.metadata.resourceVersion}'",
+        "risk": "safe",
+        "look": "A changed resourceVersion proves the update landed. If it has not moved, the rotation never reached the cluster."
+      },
+      {
+        "title": "Check how the pod consumes it",
+        "cmd": "kubectl get deploy {deploy} -n {namespace} -o jsonpath='{.spec.template.spec.containers[*].envFrom}'",
+        "risk": "safe",
+        "look": "Environment variables are fixed at container start and will never refresh, however many times you rotate.",
+        "signals": [
+          {
+            "match": "secretRef|secretKeyRef",
+            "means": "Consumed as environment. A restart is mandatory.",
+            "goto": "cause:env-fixed"
+          }
+        ]
+      },
+      {
+        "title": "Check when the pods started",
+        "cmd": "kubectl get pods -n {namespace} -l app={deploy} -o jsonpath='{.items[*].status.startTime}'",
+        "risk": "safe",
+        "look": "Pods older than the rotation still hold the previous value in memory."
+      },
+      {
+        "title": "Restart to pick it up",
+        "cmd": "kubectl rollout restart deployment/{deploy} -n {namespace}",
+        "risk": "state",
+        "look": "New pods with fresh timestamps authenticate successfully.",
+        "note": "Replaces every pod with a rolling update. If the new credential is wrong, the new pods fail and you lose capacity gradually rather than all at once. Verify the secret contents are correct before restarting, not after."
+      }
+    ],
+    "causes": [
+      {
+        "id": "env-fixed",
+        "cause": "Consumed as environment variables.",
+        "fix": "Restart. To automate it, hash the secret into a pod annotation so rotation triggers a roll.",
+        "confirm": ""
+      },
+      {
+        "id": "volume-delay",
+        "cause": "Mounted as a volume.",
+        "fix": "It refreshes on the kubelet sync period, about a minute. subPath mounts never refresh.",
+        "confirm": ""
+      },
+      {
+        "id": "app-caches",
+        "cause": "The application read it once at startup.",
+        "fix": "Restart, or add reload support in the app.",
+        "confirm": ""
+      },
+      {
+        "id": "not-propagated",
+        "cause": "An external secrets operator has not synced yet.",
+        "fix": "Check its sync interval and status.",
+        "confirm": ""
+      },
+      {
+        "id": "both-old-and-new",
+        "cause": "Old pods and new pods coexist mid-rollout.",
+        "fix": "Expected briefly. The credential must accept both during the window.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "All pods authenticate with the new credential.",
+      "The old one can be revoked safely."
+    ],
+    "escalate": [
+      "Secret resourceVersion",
+      "How the pod consumes it",
+      "Pod start times against the rotation time"
+    ]
+  },
+  {
+    "id": "k8s-multiple-clusters-confusion",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Access & RBAC",
+    "title": "Resources appear missing",
+    "summary": "Something you created cannot be found, or a namespace looks empty.",
+    "aliases": [
+      "resource not found",
+      "namespace empty",
+      "cannot find pod",
+      "created but missing",
+      "no resources found"
+    ],
+    "source": "https://kubernetes.io/docs/reference/kubectl/",
+    "inputs": [
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Confirm which cluster and namespace",
+        "cmd": "kubectl config current-context && kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}'",
+        "risk": "safe",
+        "look": "The context and its default namespace. An empty namespace means commands without -n go to default."
+      },
+      {
+        "title": "Search across all namespaces",
+        "cmd": "kubectl get pods -A | findstr <name>",
+        "risk": "safe",
+        "look": "The resource may exist in a namespace you did not expect, particularly after a Helm release changed its target.",
+        "signals": [
+          {
+            "match": "\\w+\\s+\\w+",
+            "means": "Found elsewhere. It was a namespace problem, not a missing resource.",
+            "goto": "cause:wrong-namespace"
+          },
+          {
+            "match": "^\\s*$",
+            "means": "Not present in this cluster at all.",
+            "goto": "cause:wrong-cluster"
+          }
+        ]
+      },
+      {
+        "title": "Check whether the kind is namespaced",
+        "cmd": "kubectl api-resources | findstr <kind>",
+        "risk": "safe",
+        "look": "Cluster-scoped resources ignore -n entirely. Looking for one in a namespace always comes back empty."
+      },
+      {
+        "title": "Check RBAC is not hiding it",
+        "cmd": "kubectl auth can-i list <kind> -n {namespace}",
+        "risk": "safe",
+        "look": "A denied list returns nothing rather than an error in some tools, which looks identical to the resource not existing."
+      }
+    ],
+    "causes": [
+      {
+        "id": "wrong-namespace",
+        "cause": "It exists in a different namespace.",
+        "fix": "Use -n, or set a default on the context.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-cluster",
+        "cause": "It is in another cluster.",
+        "fix": "Check current-context. This is the most expensive version of this mistake.",
+        "confirm": ""
+      },
+      {
+        "id": "cluster-scoped",
+        "cause": "The kind is not namespaced.",
+        "fix": "Drop the -n flag.",
+        "confirm": ""
+      },
+      {
+        "id": "rbac-hidden",
+        "cause": "You lack list permission.",
+        "fix": "auth can-i confirms it. The resource may exist and be invisible to you.",
+        "confirm": ""
+      },
+      {
+        "id": "deleted",
+        "cause": "It was deleted.",
+        "fix": "Check events, or the audit log if available.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The resource is found, or confirmed genuinely absent.",
+      "The context and namespace are the intended ones."
+    ],
+    "escalate": [
+      "Current context and default namespace",
+      "Whether it exists in another namespace",
+      "Whether you can list that kind"
+    ]
+  },
+  {
+    "id": "k8s-pod-ready-but-failing",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Pods & Containers",
+    "title": "Pod is Ready but requests fail",
+    "summary": "Kubernetes reports everything healthy while users see errors.",
+    "aliases": [
+      "ready but broken",
+      "healthy but failing",
+      "probe passes errors",
+      "false healthy",
+      "readiness lying"
+    ],
+    "source": "https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/",
+    "inputs": [
+      {
+        "key": "pod",
+        "label": "Pod",
+        "example": "checkout-api-7d9f6b8c5-x4k2m"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check what the readiness probe actually tests",
+        "cmd": "kubectl get pod {pod} -n {namespace} -o jsonpath='{.spec.containers[*].readinessProbe}'",
+        "risk": "safe",
+        "look": "A probe hitting a path that returns 200 unconditionally proves nothing. That is the usual reason Ready and working diverge.",
+        "signals": [
+          {
+            "match": "\"path\":\"/\"",
+            "means": "Probing the root path. It may return 200 even when the app is broken.",
+            "goto": "cause:shallow-probe"
+          },
+          {
+            "match": "tcpSocket",
+            "means": "A TCP probe only proves the port is open, not that the app works.",
+            "goto": "cause:tcp-only"
+          }
+        ]
+      },
+      {
+        "title": "Call the real endpoint from inside",
+        "cmd": "kubectl exec {pod} -n {namespace} -- wget -qO- http://localhost:8080/health",
+        "risk": "safe",
+        "look": "What the probe sees. Then call a real business endpoint and compare. A difference explains everything."
+      },
+      {
+        "title": "Read the application logs for errors",
+        "cmd": "kubectl logs {pod} -n {namespace} --since=10m | findstr /I \"error exception fail\"",
+        "risk": "safe",
+        "look": "Errors while Ready means the probe is not measuring what matters."
+      },
+      {
+        "title": "Check downstream dependencies",
+        "cmd": "kubectl get endpointslices -n {namespace}",
+        "risk": "safe",
+        "look": "An app that is up but cannot reach its database serves errors while passing a shallow health check."
+      }
+    ],
+    "causes": [
+      {
+        "id": "shallow-probe",
+        "cause": "The readiness probe does not test real function.",
+        "fix": "Make it check the dependencies the app needs to serve, without being expensive.",
+        "confirm": ""
+      },
+      {
+        "id": "tcp-only",
+        "cause": "A TCP probe only checks the port.",
+        "fix": "Use an HTTP probe against a meaningful endpoint.",
+        "confirm": ""
+      },
+      {
+        "id": "dependency-down",
+        "cause": "The app is healthy but a dependency is not.",
+        "fix": "The probe should reflect that if the app cannot serve without it.",
+        "confirm": ""
+      },
+      {
+        "id": "partial-failure",
+        "cause": "Only some requests fail.",
+        "fix": "A single health check cannot capture this. Use metrics and alerting instead.",
+        "confirm": ""
+      },
+      {
+        "id": "probe-too-deep",
+        "cause": "The probe checks too much and flaps.",
+        "fix": "Balance. It should fail when the app cannot serve, and not otherwise.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Ready reflects whether the app can actually serve.",
+      "Error rate matches the reported health."
+    ],
+    "escalate": [
+      "What the readiness probe checks",
+      "Result of calling a real endpoint",
+      "Recent application errors"
+    ]
+  },
+  {
+    "id": "k8s-anti-affinity-not-working",
+    "tier": "guide",
+    "technology": "Kubernetes",
+    "category": "Scheduling",
+    "title": "All replicas land on one node",
+    "summary": "A workload meant to be spread ends up concentrated, so one node failure takes everything.",
+    "aliases": [
+      "replicas same node",
+      "anti-affinity not working",
+      "not spread",
+      "all pods one node",
+      "topology spread not applied"
+    ],
+    "source": "https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/",
+    "inputs": [
+      {
+        "key": "deploy",
+        "label": "Deployment",
+        "example": "checkout-api"
+      },
+      {
+        "key": "namespace",
+        "label": "Namespace",
+        "example": "production"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See the actual distribution",
+        "cmd": "kubectl get pods -n {namespace} -l app={deploy} -o wide",
+        "risk": "safe",
+        "look": "The NODE column across replicas. Several on one node means spreading is not being enforced."
+      },
+      {
+        "title": "Read the spreading rules",
+        "cmd": "kubectl get deploy {deploy} -n {namespace} -o jsonpath='{.spec.template.spec.affinity}{.spec.template.spec.topologySpreadConstraints}'",
+        "risk": "safe",
+        "look": "Preferred anti-affinity is a hint the scheduler may ignore under pressure. Required is enforced.",
+        "signals": [
+          {
+            "match": "preferredDuringScheduling",
+            "means": "A preference only. The scheduler may place them together.",
+            "goto": "cause:preferred-only"
+          },
+          {
+            "match": "^\\{\\}$|^$",
+            "means": "No spreading rules at all.",
+            "goto": "cause:no-rules"
+          }
+        ]
+      },
+      {
+        "title": "Check the label selector matches",
+        "cmd": "kubectl get pods -n {namespace} -l app={deploy} --show-labels",
+        "risk": "safe",
+        "look": "Anti-affinity matches on labels. A selector that does not match the pods themselves enforces nothing."
+      },
+      {
+        "title": "Check there are enough nodes",
+        "cmd": "kubectl get nodes",
+        "risk": "safe",
+        "look": "Required anti-affinity with more replicas than nodes leaves the surplus Pending forever, which is a different failure."
+      }
+    ],
+    "causes": [
+      {
+        "id": "no-rules",
+        "cause": "No anti-affinity or spread constraints.",
+        "fix": "Add topologySpreadConstraints. Simpler than anti-affinity for most cases.",
+        "confirm": ""
+      },
+      {
+        "id": "preferred-only",
+        "cause": "The rule is a preference.",
+        "fix": "Use requiredDuringSchedulingIgnoredDuringExecution if spreading genuinely matters.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-selector",
+        "cause": "The selector does not match the pods.",
+        "fix": "It must match the workload's own labels.",
+        "confirm": ""
+      },
+      {
+        "id": "not-enough-nodes",
+        "cause": "Fewer nodes than replicas.",
+        "fix": "Required rules leave the surplus Pending. Use maxSkew instead.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-topology-key",
+        "cause": "The topology key is not on the nodes.",
+        "fix": "Check the key exists as a node label.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Replicas are spread across nodes or zones.",
+      "No node holds a majority.",
+      "Nothing is stuck Pending."
+    ],
+    "escalate": [
+      "Where each replica landed",
+      "The spreading rules",
+      "Node count and topology labels"
+    ]
   }
 ]

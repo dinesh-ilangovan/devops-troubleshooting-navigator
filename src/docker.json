@@ -4405,5 +4405,210 @@
       "Which containers hold images",
       "Whether the space is cache or volumes"
     ]
+  },
+  {
+    "id": "docker-image-vulnerabilities",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Images",
+    "title": "Image fails a security scan",
+    "summary": "A scanner blocks the image on vulnerabilities and you need to know what is actionable.",
+    "aliases": [
+      "vulnerability scan",
+      "cve image",
+      "trivy",
+      "scan failed",
+      "critical vulnerabilities",
+      "security gate"
+    ],
+    "source": "https://docs.docker.com/reference/cli/docker/scout/",
+    "inputs": [
+      {
+        "key": "image",
+        "label": "Image",
+        "example": "registry.local/checkout-api:1.4.2"
+      }
+    ],
+    "steps": [
+      {
+        "title": "See what the base image contributes",
+        "cmd": "docker image inspect {image} --format '{{.Config.Image}}' && docker history {image} | tail -5",
+        "risk": "safe",
+        "look": "Most findings usually come from the base image rather than your code. That determines whether the fix is a rebuild or a code change."
+      },
+      {
+        "title": "Check the base image age",
+        "cmd": "docker image inspect {image} --format '{{.Created}}'",
+        "risk": "safe",
+        "look": "An old base accumulates known vulnerabilities even if nothing in your application changed."
+      },
+      {
+        "title": "Separate fixable from unfixable",
+        "cmd": "docker scout cves {image} --only-fixed 2>nul || echo 'use your scanner with a fixed-only filter'",
+        "risk": "safe",
+        "look": "Findings with no available fix cannot be resolved by rebuilding. Distinguishing them stops wasted effort.",
+        "signals": [
+          {
+            "match": "0 vulnerable|no vulnerabilities",
+            "means": "Nothing fixable remains. The rest need a base image change or an exception.",
+            "goto": "cause:unfixable"
+          }
+        ]
+      },
+      {
+        "title": "Rebuild against a current base",
+        "cmd": "docker build --pull -t {image} .",
+        "risk": "state",
+        "look": "A rescan shows fewer findings. Anything remaining needs a decision rather than another rebuild.",
+        "note": "--pull forces a fresh base image rather than the cached one, which is how most findings are resolved. The new base may change behaviour: library versions move and defaults can shift. Test the result rather than pushing it straight through."
+      }
+    ],
+    "causes": [
+      {
+        "id": "old-base",
+        "cause": "The base image is out of date.",
+        "fix": "Rebuild with --pull. Schedule periodic rebuilds so this does not accumulate.",
+        "confirm": ""
+      },
+      {
+        "id": "fat-base",
+        "cause": "A full OS base carries many packages you do not use.",
+        "fix": "Move to slim or distroless. Fewer packages means fewer findings.",
+        "confirm": ""
+      },
+      {
+        "id": "unfixable",
+        "cause": "No upstream fix is available.",
+        "fix": "Document an exception with a review date. Rebuilding will not help.",
+        "confirm": ""
+      },
+      {
+        "id": "app-dependency",
+        "cause": "The finding is in your own dependencies.",
+        "fix": "Update the dependency, not the base image.",
+        "confirm": ""
+      },
+      {
+        "id": "scanner-noise",
+        "cause": "Findings are not reachable in your usage.",
+        "fix": "Triage properly. Blocking on unreachable findings trains people to ignore the scanner.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The scan passes, or remaining findings are documented exceptions.",
+      "Rebuilds are scheduled rather than reactive."
+    ],
+    "escalate": [
+      "Which layer contributes the findings",
+      "Base image age",
+      "Which findings have fixes available"
+    ]
+  },
+  {
+    "id": "docker-cannot-connect-service",
+    "tier": "guide",
+    "technology": "Docker",
+    "category": "Networking & DNS",
+    "title": "Application cannot reach its database container",
+    "summary": "A service container cannot connect to another container by name.",
+    "aliases": [
+      "cannot connect database",
+      "service name not resolving",
+      "connection refused between containers",
+      "db container unreachable"
+    ],
+    "source": "https://docs.docker.com/engine/network/",
+    "inputs": [
+      {
+        "key": "container",
+        "label": "Container",
+        "example": "checkout-api"
+      },
+      {
+        "key": "target",
+        "label": "Target service",
+        "example": "postgres"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Resolve the name from inside",
+        "cmd": "docker exec {container} getent hosts {target}",
+        "risk": "safe",
+        "look": "An IP means DNS works and the problem is the port or the listener. Nothing means they are not on a common user-defined network.",
+        "signals": [
+          {
+            "match": "^\\s*$",
+            "means": "The name does not resolve from here.",
+            "goto": "cause:not-same-network"
+          },
+          {
+            "match": "\\d+\\.\\d+",
+            "means": "Resolves. Move on to the port.",
+            "goto": "step:2"
+          }
+        ]
+      },
+      {
+        "title": "Check the target is listening and accepting",
+        "cmd": "docker exec {target} sh -c \"ss -tlnp 2>/dev/null || netstat -tlnp\"",
+        "risk": "safe",
+        "look": "Bound to 0.0.0.0 is reachable; bound to 127.0.0.1 is not, no matter how correct the network is."
+      },
+      {
+        "title": "Check the port being dialled",
+        "cmd": "docker exec {container} sh -c \"printenv | findstr -i host port\"",
+        "risk": "safe",
+        "look": "Between containers, use the internal port. A published host port is for traffic arriving from outside."
+      },
+      {
+        "title": "Check the target is actually ready",
+        "cmd": "docker inspect {target} --format '{{.State.Health.Status}} {{.State.Status}}'",
+        "risk": "safe",
+        "look": "A database still starting refuses connections. That is a timing problem, not a networking one."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-same-network",
+        "cause": "The containers are on different networks.",
+        "fix": "Put both on the same user-defined network. Compose does this within a project.",
+        "confirm": ""
+      },
+      {
+        "id": "bound-localhost",
+        "cause": "The target listens on loopback only.",
+        "fix": "Bind 0.0.0.0 in its configuration.",
+        "confirm": ""
+      },
+      {
+        "id": "wrong-port",
+        "cause": "Dialling the published host port.",
+        "fix": "Use the container's internal port between containers.",
+        "confirm": ""
+      },
+      {
+        "id": "not-ready-yet",
+        "cause": "The target is still starting.",
+        "fix": "Add retry logic. depends_on without condition does not wait for readiness.",
+        "confirm": ""
+      },
+      {
+        "id": "credentials",
+        "cause": "Reachable but rejecting.",
+        "fix": "A different problem. Check the credentials and the database's own logs.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The application connects.",
+      "It reconnects after both restart."
+    ],
+    "escalate": [
+      "Whether the name resolves",
+      "What the target binds to",
+      "Which port is being dialled"
+    ]
   }
 ]

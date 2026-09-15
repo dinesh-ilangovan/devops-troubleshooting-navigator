@@ -2632,5 +2632,104 @@
       "Workspace and account",
       "Whether a snapshot exists"
     ]
+  },
+  {
+    "id": "tf-state-corrupted",
+    "tier": "guide",
+    "technology": "Terraform",
+    "category": "State",
+    "title": "State file is corrupt or unreadable",
+    "summary": "Terraform cannot parse state, so no operation can run.",
+    "aliases": [
+      "state corrupt",
+      "cannot read state",
+      "invalid state",
+      "state version",
+      "unmarshal state",
+      "state file damaged"
+    ],
+    "source": "https://developer.hashicorp.com/terraform/language/state",
+    "inputs": [],
+    "steps": [
+      {
+        "title": "Read the exact parse error",
+        "cmd": "terraform plan",
+        "risk": "safe",
+        "look": "Version mismatch, JSON parse error and unsupported format are different problems with different recoveries.",
+        "signals": [
+          {
+            "match": "state snapshot was created by Terraform v",
+            "means": "The state was written by a newer version than the CLI you are running.",
+            "goto": "cause:version-newer"
+          },
+          {
+            "match": "unmarshal|invalid character",
+            "means": "The file is genuinely malformed.",
+            "goto": "cause:malformed"
+          }
+        ]
+      },
+      {
+        "title": "Pull a copy before touching anything",
+        "cmd": "terraform state pull > state-backup.json",
+        "risk": "safe",
+        "look": "Always take this first. Every recovery option below risks making things worse, and this is your undo."
+      },
+      {
+        "title": "Check for an earlier version in the backend",
+        "cmd": "aws s3api list-object-versions --bucket <bucket> --prefix <key> --max-items 5",
+        "risk": "safe",
+        "look": "Versioned backends keep prior state. Restoring a known-good version is far safer than editing JSON by hand."
+      },
+      {
+        "title": "Restore a previous version",
+        "cmd": "aws s3api get-object --bucket <bucket> --key <key> --version-id <id> restored.json",
+        "risk": "state",
+        "look": "A plan runs and proposes no unexpected creation.",
+        "note": "Downloads an earlier state to a local file. Pushing it back with terraform state push overwrites current state, so anything applied since that version becomes invisible to Terraform and will be proposed for creation again. Run a refresh-only plan immediately after and read it carefully."
+      }
+    ],
+    "causes": [
+      {
+        "id": "version-newer",
+        "cause": "State was written by a newer Terraform.",
+        "fix": "Use the same version. State format is forward-only; downgrading is not supported.",
+        "confirm": ""
+      },
+      {
+        "id": "malformed",
+        "cause": "The file is genuinely damaged.",
+        "fix": "Restore from backend versioning. Hand-editing state is a last resort.",
+        "confirm": ""
+      },
+      {
+        "id": "no-versioning",
+        "cause": "The backend has no versioning.",
+        "fix": "Enable it now. This is why it exists.",
+        "confirm": ""
+      },
+      {
+        "id": "concurrent-write",
+        "cause": "Two applies wrote simultaneously.",
+        "fix": "Enable state locking. This is exactly what it prevents.",
+        "confirm": ""
+      },
+      {
+        "id": "partial-upload",
+        "cause": "A push was interrupted.",
+        "fix": "Restore the previous version.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "Terraform reads state successfully.",
+      "A plan proposes no unexpected changes.",
+      "Backend versioning and locking are enabled."
+    ],
+    "escalate": [
+      "The parse error",
+      "Whether the backend has versioning",
+      "The refresh-only plan after restoring"
+    ]
   }
 ]

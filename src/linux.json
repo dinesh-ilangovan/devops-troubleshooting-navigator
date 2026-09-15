@@ -3748,5 +3748,216 @@
       "Whether mount -a succeeds",
       "Whether the identifier is a UUID"
     ]
+  },
+  {
+    "id": "linux-service-cannot-read-file",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Access",
+    "title": "Service cannot read a file that exists",
+    "summary": "A daemon reports permission denied on a path you can read yourself.",
+    "aliases": [
+      "service permission denied",
+      "cannot read config",
+      "daemon cannot access",
+      "selinux denied",
+      "protecthome"
+    ],
+    "source": "https://man7.org/linux/man-pages/man5/systemd.exec.5.html",
+    "inputs": [
+      {
+        "key": "unit",
+        "label": "Unit",
+        "example": "checkout-api.service"
+      },
+      {
+        "key": "file",
+        "label": "File",
+        "example": "/etc/app/config.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check ownership and permissions",
+        "cmd": "ls -l {file} && systemctl show {unit} -p User -p Group",
+        "risk": "safe",
+        "look": "The file's owner against the service's user. Readable by you as root means nothing about a service running as a low-privilege account."
+      },
+      {
+        "title": "Check every parent directory",
+        "cmd": "namei -l {file}",
+        "risk": "safe",
+        "look": "Each component of the path must be traversable. A directory missing the execute bit blocks access even when the file itself is readable."
+      },
+      {
+        "title": "Check systemd sandboxing",
+        "cmd": "systemctl show {unit} -p ProtectHome -p ProtectSystem -p ReadWritePaths -p PrivateTmp",
+        "risk": "safe",
+        "look": "Hardening directives hide parts of the filesystem from the service. A file under /home is invisible with ProtectHome on.",
+        "signals": [
+          {
+            "match": "ProtectHome=(yes|read-only)",
+            "means": "Paths under /home are hidden from this service.",
+            "goto": "cause:protecthome"
+          },
+          {
+            "match": "ProtectSystem=strict",
+            "means": "Most of the filesystem is read-only for this unit.",
+            "goto": "cause:protectsystem"
+          }
+        ]
+      },
+      {
+        "title": "Check SELinux or AppArmor",
+        "cmd": "sudo ausearch -m avc -ts recent 2>/dev/null | tail -10",
+        "risk": "safe",
+        "look": "A denial here means the file permissions are fine and the mandatory access control layer is blocking it. Completely different fix."
+      }
+    ],
+    "causes": [
+      {
+        "id": "wrong-owner",
+        "cause": "The service user cannot read the file.",
+        "fix": "chown or chgrp it to the service's group and set group read.",
+        "confirm": ""
+      },
+      {
+        "id": "directory-traverse",
+        "cause": "A parent directory blocks traversal.",
+        "fix": "Every component needs the execute bit for that user.",
+        "confirm": ""
+      },
+      {
+        "id": "protecthome",
+        "cause": "ProtectHome hides the path.",
+        "fix": "Move the file out of /home, or add it to ReadWritePaths.",
+        "confirm": ""
+      },
+      {
+        "id": "protectsystem",
+        "cause": "ProtectSystem makes the path read-only.",
+        "fix": "Add it to ReadWritePaths if writes are needed.",
+        "confirm": ""
+      },
+      {
+        "id": "selinux",
+        "cause": "SELinux denies access.",
+        "fix": "Set the right context with chcon or restorecon. Do not disable SELinux.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The service reads the file.",
+      "The permission granted is the narrowest that works."
+    ],
+    "escalate": [
+      "File ownership and mode",
+      "namei output for the full path",
+      "Any sandboxing directives or AVC denials"
+    ]
+  },
+  {
+    "id": "linux-network-interface-down",
+    "tier": "guide",
+    "technology": "Linux",
+    "category": "Networking",
+    "title": "Network interface is down after reboot",
+    "summary": "The host has no connectivity, or a secondary interface did not come up.",
+    "aliases": [
+      "interface down",
+      "no network after reboot",
+      "nic not up",
+      "netplan",
+      "networkmanager not managing",
+      "eth0 down"
+    ],
+    "source": "https://man7.org/linux/man-pages/man8/ip.8.html",
+    "inputs": [
+      {
+        "key": "iface",
+        "label": "Interface",
+        "example": "eth0"
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check the interface state",
+        "cmd": "ip -br addr show",
+        "risk": "safe",
+        "look": "UP with an address is working. DOWN means it was never brought up; UP with no address means DHCP or static configuration failed.",
+        "signals": [
+          {
+            "match": "DOWN",
+            "means": "The interface is administratively down.",
+            "goto": "cause:not-up"
+          },
+          {
+            "match": "UP\\s+$",
+            "means": "Up but no address assigned.",
+            "goto": "cause:no-address"
+          }
+        ]
+      },
+      {
+        "title": "Check which manager owns it",
+        "cmd": "networkctl status {iface} 2>/dev/null || nmcli device status",
+        "risk": "safe",
+        "look": "unmanaged means no tool is configuring it, which is why it never comes up on boot."
+      },
+      {
+        "title": "Check the configuration on disk",
+        "cmd": "ls /etc/netplan/ /etc/NetworkManager/system-connections/ 2>/dev/null",
+        "risk": "safe",
+        "look": "Where the persistent configuration lives. A manual ip command never survives a reboot."
+      },
+      {
+        "title": "Bring it up to confirm the hardware works",
+        "cmd": "sudo ip link set {iface} up",
+        "risk": "state",
+        "look": "ip -br addr shows it UP. Then fix the persistent configuration.",
+        "note": "Brings the interface up for this boot only. It does not persist, so this is a test rather than a fix. On a remote host, changing interface state can drop your own session if you pick the wrong interface."
+      }
+    ],
+    "causes": [
+      {
+        "id": "not-up",
+        "cause": "The interface is administratively down.",
+        "fix": "Fix the persistent configuration. A manual ip link does not survive reboot.",
+        "confirm": ""
+      },
+      {
+        "id": "no-address",
+        "cause": "No address was assigned.",
+        "fix": "Check DHCP reachability, or the static configuration.",
+        "confirm": ""
+      },
+      {
+        "id": "unmanaged",
+        "cause": "No network manager owns the interface.",
+        "fix": "Declare it in netplan or NetworkManager.",
+        "confirm": ""
+      },
+      {
+        "id": "renamed",
+        "cause": "The interface name changed.",
+        "fix": "Predictable names change when hardware moves. Check ip link for the real name.",
+        "confirm": ""
+      },
+      {
+        "id": "driver-missing",
+        "cause": "The kernel has no driver for the NIC.",
+        "fix": "Check dmesg. The interface will not appear at all.",
+        "confirm": ""
+      }
+    ],
+    "verify": [
+      "The interface is up with an address after a reboot.",
+      "Connectivity works."
+    ],
+    "escalate": [
+      "Output of ip -br addr",
+      "Which manager owns the interface",
+      "The persistent configuration"
+    ]
   }
 ]
